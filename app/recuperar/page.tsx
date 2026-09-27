@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
+import AuthLayout from '../components/AuthLayout'
 
 export default function RecoverPage() {
   const [username, setUsername] = useState('')
@@ -35,76 +37,76 @@ export default function RecoverPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-neutral-950 text-neutral-100 flex items-center justify-center px-4">
-        <div className="w-full max-w-sm text-center">
-          <h1 className="text-2xl font-bold mb-4">Listo!</h1>
-          <p className="text-neutral-400 mb-6">
-            Tu contrasena se cambio correctamente. Ya puedes iniciar sesion con la nueva.
+      <AuthLayout>
+        <div className="text-center">
+          <h1 className="text-xl font-display font-semibold mb-3 text-neutral-50">¡Listo!</h1>
+          <p className="text-neutral-400 mb-6 text-sm leading-relaxed">
+            Tu contraseña se cambió correctamente. Ya puedes iniciar sesión con la nueva.
           </p>
-          <a
+          <Link
             href="/login"
-            className="inline-block bg-white text-black text-sm font-medium rounded-full px-4 py-2"
+            className="inline-block bg-garnet-600 hover:bg-garnet-500 text-white text-sm font-medium rounded-full px-5 py-2.5 transition"
           >
-            Ir a iniciar sesion
-          </a>
+            Ir a iniciar sesión
+          </Link>
         </div>
-      </div>
+      </AuthLayout>
     )
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-bold mb-2 text-center">Recuperar cuenta</h1>
-        <p className="text-neutral-500 text-sm text-center mb-6">
-          Escribe tu usuario, tu palabra secreta, y la nueva contrasena que quieras usar.
-        </p>
-        <form onSubmit={handleRecover} className="space-y-4">
-          <div>
-            <label className="block mb-1 text-sm text-neutral-400">Nombre de usuario</label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block mb-1 text-sm text-neutral-400">Palabra secreta</label>
-            <input
-              type="text"
-              value={securityWord}
-              onChange={(e) => setSecurityWord(e.target.value)}
-              required
-              className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block mb-1 text-sm text-neutral-400">Nueva contrasena</label>
-            <input
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              required
-              minLength={6}
-              className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-sm"
-            />
-          </div>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-white text-black text-sm font-medium rounded-full py-2"
-          >
-            {loading ? 'Verificando...' : 'Cambiar contrasena'}
-          </button>
-        </form>
-        <p className="text-center text-xs text-neutral-500 mt-6 leading-relaxed">
-          No pudiste recuperar tu cuenta? Comunicate con el programador de la pagina por
-          Discord: <span className="text-neutral-300">Juanfe</span>
-        </p>
-      </div>
-    </div>
+    <AuthLayout>
+      <h1 className="text-xl font-display font-semibold mb-2 text-center text-neutral-50">
+        Recuperar cuenta
+      </h1>
+      <p className="text-neutral-500 text-sm text-center mb-6">
+        Escribe tu usuario, tu palabra secreta, y la nueva contraseña que quieras usar.
+      </p>
+      <form onSubmit={handleRecover} className="space-y-4">
+        <div>
+          <label className="block mb-1 text-sm text-neutral-400">Nombre de usuario</label>
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+            className="w-full bg-ink-900 border border-ink-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-garnet-600"
+          />
+        </div>
+        <div>
+          <label className="block mb-1 text-sm text-neutral-400">Palabra secreta</label>
+          <input
+            type="text"
+            value={securityWord}
+            onChange={(e) => setSecurityWord(e.target.value)}
+            required
+            className="w-full bg-ink-900 border border-ink-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-garnet-600"
+          />
+        </div>
+        <div>
+          <label className="block mb-1 text-sm text-neutral-400">Nueva contraseña</label>
+          <input
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            required
+            minLength={6}
+            className="w-full bg-ink-900 border border-ink-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-garnet-600"
+          />
+        </div>
+        {error && <p className="text-garnet-400 text-sm">{error}</p>}
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-garnet-600 hover:bg-garnet-500 disabled:opacity-60 text-white text-sm font-medium rounded-full py-2.5 transition"
+        >
+          {loading ? 'Verificando...' : 'Cambiar contraseña'}
+        </button>
+      </form>
+      <p className="text-center text-xs text-neutral-500 mt-6 leading-relaxed">
+        ¿No pudiste recuperar tu cuenta? Comunícate con el programador de la página por Discord:{' '}
+        <span className="text-neutral-300">Juanfe</span>
+      </p>
+    </AuthLayout>
   )
 }

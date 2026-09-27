@@ -1,0 +1,251 @@
+'use client'
+
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import Link from 'next/link'
+import { usePathname, useRouter } from 'next/navigation'
+import { supabase } from '../lib/supabaseClient'
+import Logo from './Logo'
+import {
+  HomeIcon,
+  UserIcon,
+  MessageIcon,
+  BellIcon,
+  LogoutIcon,
+  LoginIcon,
+  type IconProps,
+} from './icons'
+
+type SessionState = {
+  loading: boolean
+  userId: string | null
+  username: string | null
+  avatarUrl: string | null
+  refresh: () => void
+}
+
+const AppSessionContext = createContext<SessionState>({
+  loading: true,
+  userId: null,
+  username: null,
+  avatarUrl: null,
+  refresh: () => {},
+})
+
+export function useAppSession() {
+  return useContext(AppSessionContext)
+}
+
+type NavItem = {
+  href: string
+  label: string
+  shortLabel?: string
+  icon: (props: IconProps) => React.ReactElement
+  match: (pathname: string) => boolean
+}
+
+function DirectMessagesTeaser() {
+  const onClick = () =>
+    window.alert('Muy pronto vas a poder mandar mensajes directos a otros estudiantes 💬')
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-sm text-neutral-500 hover:bg-ink-800/60 transition"
+    >
+      <span className="flex items-center gap-3">
+        <MessageIcon className="w-5 h-5" />
+        Mensajes directos
+      </span>
+      <span className="text-[10px] uppercase tracking-wide bg-ink-700 text-neutral-400 rounded-full px-2 py-0.5">
+        Pronto
+      </span>
+    </button>
+  )
+}
+
+export default function AppShell({ children }: { children: ReactNode }) {
+  const [loading, setLoading] = useState(true)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [username, setUsername] = useState<string | null>(null)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const pathname = usePathname()
+  const router = useRouter()
+
+  const load = async () => {
+    const { data: authData } = await supabase.auth.getUser()
+    const user = authData.user
+    if (!user) {
+      setUserId(null)
+      setUsername(null)
+      setAvatarUrl(null)
+      setLoading(false)
+      return
+    }
+    setUserId(user.id)
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('username, avatar_url')
+      .eq('id', user.id)
+      .maybeSingle()
+    setUsername(profile?.username ?? null)
+    setAvatarUrl(profile?.avatar_url ?? null)
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    function run() {
+      load()
+    }
+    run()
+    const { data: sub } = supabase.auth.onAuthStateChange(() => {
+      load()
+    })
+    return () => sub.subscription.unsubscribe()
+  }, [])
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
+
+  const navItems: NavItem[] = [
+    { href: '/', label: 'Inicio', icon: HomeIcon, match: (p) => p === '/' },
+    ...(username
+      ? [
+          {
+            href: `/perfil/${username}`,
+            label: 'Mi perfil',
+            icon: UserIcon,
+            match: (p: string) => p.startsWith('/perfil/'),
+          },
+          {
+            href: '/notificaciones',
+            label: 'Notificaciones',
+            shortLabel: 'Avisos',
+            icon: BellIcon,
+            match: (p: string) => p === '/notificaciones',
+          },
+        ]
+      : []),
+  ]
+
+  return (
+    <AppSessionContext.Provider value={{ loading, userId, username, avatarUrl, refresh: load }}>
+      <div className="min-h-screen bg-ink-950 text-neutral-100 md:flex">
+        {/* Sidebar de escritorio */}
+        <aside className="hidden md:flex md:flex-col md:w-64 lg:w-72 md:shrink-0 md:h-screen md:sticky md:top-0 border-r border-ink-800 bg-ink-900/60 px-4 py-6">
+          <Link href="/" className="px-2 mb-8 inline-block">
+            <Logo size="md" />
+          </Link>
+
+          <nav className="flex-1 space-y-1">
+            {navItems.map((item) => {
+              const active = item.match(pathname)
+              const Icon = item.icon
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition ${
+                    active
+                      ? 'bg-garnet-600/90 text-white shadow-[0_8px_24px_-8px_rgba(200,27,62,0.7)]'
+                      : 'text-neutral-300 hover:bg-ink-800'
+                  }`}
+                >
+                  <Icon filled={active} className="w-5 h-5" />
+                  {item.label}
+                </Link>
+              )
+            })}
+
+            <DirectMessagesTeaser />
+          </nav>
+
+          <div className="pt-4 border-t border-ink-800">
+            {loading ? null : userId ? (
+              <div className="flex items-center gap-3 px-2">
+                <div className="w-9 h-9 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center shrink-0">
+                  {avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={avatarUrl} alt={username ?? ''} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-sm font-semibold text-garnet-400">
+                      {(username ?? '?').charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-neutral-200 truncate">@{username}</p>
+                  <button
+                    onClick={handleLogout}
+                    className="text-xs text-neutral-500 hover:text-garnet-400 flex items-center gap-1 transition"
+                  >
+                    <LogoutIcon className="w-3.5 h-3.5" />
+                    Cerrar sesión
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                className="flex items-center gap-2 justify-center bg-garnet-600 hover:bg-garnet-500 text-white text-sm font-medium rounded-xl py-2.5 transition"
+              >
+                <LoginIcon className="w-4 h-4" />
+                Iniciar sesión
+              </Link>
+            )}
+          </div>
+        </aside>
+
+        {/* Barra superior movil */}
+        <header className="md:hidden sticky top-0 z-30 flex items-center justify-center border-b border-ink-800 bg-ink-950/90 backdrop-blur px-4 py-3">
+          <Logo size="sm" />
+        </header>
+
+        <main className="flex-1 min-w-0 pb-20 md:pb-0">{children}</main>
+
+        {/* Barra inferior movil */}
+        <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-ink-800 bg-ink-900/95 backdrop-blur px-2 pb-[env(safe-area-inset-bottom,0px)]">
+          <div className="flex items-center justify-around py-2">
+            {navItems.map((item) => {
+              const active = item.match(pathname)
+              const Icon = item.icon
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-[11px] ${
+                    active ? 'text-garnet-400' : 'text-neutral-500'
+                  }`}
+                >
+                  <Icon filled={active} className="w-5 h-5" />
+                  {item.shortLabel ?? item.label}
+                </Link>
+              )
+            })}
+            <button
+              type="button"
+              onClick={() =>
+                window.alert('Muy pronto vas a poder mandar mensajes directos a otros estudiantes 💬')
+              }
+              className="flex flex-col items-center gap-0.5 px-3 py-1 text-[11px] text-neutral-600"
+            >
+              <MessageIcon className="w-5 h-5" />
+              Mensajes
+            </button>
+            {!loading && !userId && (
+              <Link
+                href="/login"
+                className="flex flex-col items-center gap-0.5 px-3 py-1 text-[11px] text-garnet-400"
+              >
+                <LoginIcon className="w-5 h-5" />
+                Entrar
+              </Link>
+            )}
+          </div>
+        </nav>
+      </div>
+    </AppSessionContext.Provider>
+  )
+}

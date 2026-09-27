@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0c0c0f;
+  --foreground: #f2f1ef;
 }
 
 @theme inline {
@@ -10,17 +10,55 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
+  --font-display: var(--font-cinzel);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Escala de grises tipo "Netflix": nunca negro puro, va subiendo de tono */
+  --color-ink-950: #0c0c0f;
+  --color-ink-900: #131317;
+  --color-ink-800: #1b1b20;
+  --color-ink-700: #24242b;
+  --color-ink-600: #333339;
+  --color-ink-500: #4a4a52;
+
+  /* Rojo granate propio (mas oscuro y particular que un rojo de boton generico) */
+  --color-garnet-700: #7a0f24;
+  --color-garnet-600: #a3122e;
+  --color-garnet-500: #c81b3e;
+  --color-garnet-400: #e6435f;
+  --color-garnet-300: #f38ba0;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Sombra suave "elevada" en vez de bordes de color por todas partes */
+.surface-card {
+  background-color: var(--color-ink-800);
+  box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.03) inset, 0 10px 30px -12px rgba(0, 0, 0, 0.6);
+}
+
+.surface-raised {
+  background-color: var(--color-ink-700);
+  box-shadow: 0 12px 32px -14px rgba(0, 0, 0, 0.7);
+}
+
+::selection {
+  background-color: var(--color-garnet-600);
+  color: white;
+}
+
+/* Scrollbar discreta, en tono con la paleta */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-ink-600);
+  border-radius: 999px;
+  border: 2px solid var(--color-ink-950);
 }

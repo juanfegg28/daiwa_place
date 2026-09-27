@@ -2,16 +2,50 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { supabase } from '../lib/supabaseClient'
+import AuthLayout from '../components/AuthLayout'
+import ProfilePreviewCard from '../components/ProfilePreviewCard'
+import { useAvatarCropper } from '../components/AvatarCropper'
+import { CameraIcon } from '../components/icons'
+import { ESTADOS_SENTIMENTALES } from '../lib/constants'
+
+const usernameRegex = /^[a-z0-9_.]+$/
 
 export default function RegisterPage() {
   const [idStudent, setIdStudent] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [securityWord, setSecurityWord] = useState('')
+  const [bio, setBio] = useState('')
+  const [grado, setGrado] = useState('')
+  const [birthday, setBirthday] = useState('')
+  const [estadoPersonal, setEstadoPersonal] = useState('')
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [bannerFile, setBannerFile] = useState<File | null>(null)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+
+  const { openCropper, cropperElement } = useAvatarCropper((file, previewUrl) => {
+    setAvatarFile(file)
+    setAvatarPreview(previewUrl)
+  })
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null
+    if (file) openCropper(file)
+    e.target.value = ''
+  }
+
+  const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null
+    setBannerFile(file)
+    if (bannerPreview) URL.revokeObjectURL(bannerPreview)
+    setBannerPreview(file ? URL.createObjectURL(file) : null)
+  }
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -19,6 +53,12 @@ export default function RegisterPage() {
     setLoading(true)
 
     const cleanUsername = username.trim().toLowerCase()
+
+    if (!usernameRegex.test(cleanUsername)) {
+      setError('El usuario solo puede tener letras, números, puntos y guion bajo, sin espacios ni símbolos')
+      setLoading(false)
+      return
+    }
 
     const { data: existing } = await supabase
       .from('profiles')
@@ -45,19 +85,69 @@ export default function RegisterPage() {
       return
     }
 
-    if (data.user) {
-      const { error: profileError } = await supabase.from('profiles').insert({
-        id: data.user.id,
-        username: cleanUsername,
-        id_student: idStudent.trim(),
-        security_word: securityWord.trim(),
-      })
+    if (!data.user) {
+      setError('No se pudo crear la cuenta')
+      setLoading(false)
+      return
+    }
 
-      if (profileError) {
-        setError('Cuenta creada, pero falló el perfil: ' + profileError.message)
-        setLoading(false)
-        return
+    const userId = data.user.id
+    let avatarUrl: string | null = null
+    let bannerUrl: string | null = null
+    const uploadWarnings: string[] = []
+
+    if (avatarFile) {
+      const path = `${userId}/avatar.jpg`
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(path, avatarFile, { upsert: true })
+      if (uploadError) {
+        uploadWarnings.push('Foto de perfil: ' + uploadError.message)
+      } else {
+        const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)
+        avatarUrl = urlData.publicUrl
       }
+    }
+
+    if (bannerFile) {
+      const ext = bannerFile.name.split('.').pop() || 'jpg'
+      const path = `${userId}/banner.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(path, bannerFile, { upsert: true })
+      if (uploadError) {
+        uploadWarnings.push('Banner: ' + uploadError.message)
+      } else {
+        const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)
+        bannerUrl = urlData.publicUrl
+      }
+    }
+
+    const { error: profileError } = await supabase.from('profiles').insert({
+      id: userId,
+      username: cleanUsername,
+      id_student: idStudent.trim() || null,
+      security_word: securityWord.trim(),
+      bio: bio.trim() || null,
+      grado: grado.trim() || null,
+      birthday: birthday || null,
+      estado_personal: estadoPersonal || null,
+      avatar_url: avatarUrl,
+      banner_url: bannerUrl,
+    })
+
+    if (profileError) {
+      setError('Cuenta creada, pero falló el perfil: ' + profileError.message)
+      setLoading(false)
+      return
+    }
+
+    if (uploadWarnings.length > 0) {
+      window.alert(
+        'Tu cuenta se creó, pero no se pudo guardar:\n\n' +
+          uploadWarnings.join('\n') +
+          '\n\nRevisa el bucket "avatars" en Supabase (que exista y tenga permisos de subida).'
+      )
     }
 
     setLoading(false)
@@ -65,66 +155,153 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-bold mb-6 text-center">Crear cuenta en Daiwa Place</h1>
-        <form onSubmit={handleRegister} className="space-y-4">
+    <AuthLayout wide>
+      <h1 className="text-xl font-display font-semibold mb-1 text-center text-neutral-50">
+        Crear cuenta en Daiwa Place
+      </h1>
+      <p className="text-neutral-500 text-sm text-center mb-6">Únete a la comunidad</p>
+
+      {(avatarPreview || bannerPreview) && (
+        <ProfilePreviewCard
+          displayName={idStudent}
+          username={username}
+          bio={bio}
+          grado={grado}
+          birthday={birthday}
+          estadoPersonal={estadoPersonal}
+          avatarPreview={avatarPreview}
+          bannerPreview={bannerPreview}
+        />
+      )}
+
+      <form onSubmit={handleRegister} className="space-y-4">
+        <div>
+          <label className="block mb-1 text-sm text-neutral-400">Nombre de tu personaje</label>
+          <input
+            type="text"
+            value={idStudent}
+            onChange={(e) => setIdStudent(e.target.value)}
+            required
+            className="w-full bg-ink-900 border border-ink-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-garnet-600"
+          />
+        </div>
+
+        <div>
+          <label className="block mb-1 text-sm text-neutral-400">Usuario (@) — con esto entrarás</label>
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+            className="w-full bg-ink-900 border border-ink-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-garnet-600"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block mb-1 text-sm text-neutral-400">ID de estudiante (nombre de tu personaje)</label>
+            <label className="block mb-1 text-sm text-neutral-400">Grado</label>
             <input
               type="text"
-              value={idStudent}
-              onChange={(e) => setIdStudent(e.target.value)}
-              required
-              className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-sm"
+              value={grado}
+              onChange={(e) => setGrado(e.target.value)}
+              placeholder="ej. 3er año"
+              className="w-full bg-ink-900 border border-ink-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-garnet-600"
             />
           </div>
           <div>
-            <label className="block mb-1 text-sm text-neutral-400">Usuario (@) — con esto entrarás</label>
+            <label className="block mb-1 text-sm text-neutral-400">Cumpleaños</label>
             <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-sm"
+              type="date"
+              value={birthday}
+              onChange={(e) => setBirthday(e.target.value)}
+              className="w-full bg-ink-900 border border-ink-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-garnet-600"
             />
           </div>
-          <div>
-            <label className="block mb-1 text-sm text-neutral-400">Contraseña</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block mb-1 text-sm text-neutral-400">
-              Palabra secreta (para recuperar tu cuenta)
-            </label>
-            <input
-              type="text"
-              value={securityWord}
-              onChange={(e) => setSecurityWord(e.target.value)}
-              required
-              className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2 text-sm"
-            />
-          </div>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-white text-black text-sm font-medium rounded-full py-2"
+        </div>
+
+        <div>
+          <label className="block mb-1 text-sm text-neutral-400">Biografía</label>
+          <textarea
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            rows={2}
+            maxLength={200}
+            className="w-full bg-ink-900 border border-ink-700 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:border-garnet-600"
+          />
+        </div>
+
+        <div>
+          <label className="block mb-1 text-sm text-neutral-400">Situación sentimental</label>
+          <select
+            value={estadoPersonal}
+            onChange={(e) => setEstadoPersonal(e.target.value)}
+            className="w-full bg-ink-900 border border-ink-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-garnet-600"
           >
-            {loading ? 'Creando...' : 'Registrarme'}
-          </button>
-        </form>
-        <p className="text-center text-sm text-neutral-500 mt-4">
-  ¿Ya tienes cuenta? <a href="/login" className="text-white underline">Inicia sesión</a>
-</p>
-      </div>
-    </div>
+            <option value="">Prefiero no decir</option>
+            {ESTADOS_SENTIMENTALES.map((op) => (
+              <option key={op} value={op}>
+                {op}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex gap-3">
+          <label className="flex-1 flex items-center justify-center gap-2 cursor-pointer text-sm text-neutral-300 border border-ink-700 hover:bg-ink-800 rounded-xl py-2.5 transition">
+            <CameraIcon className="w-4 h-4" />
+            Foto de perfil
+            <input type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
+          </label>
+          <label className="flex-1 flex items-center justify-center gap-2 cursor-pointer text-sm text-neutral-300 border border-ink-700 hover:bg-ink-800 rounded-xl py-2.5 transition">
+            <CameraIcon className="w-4 h-4" />
+            Banner
+            <input type="file" accept="image/*" onChange={handleBannerChange} className="hidden" />
+          </label>
+        </div>
+
+        <div>
+          <label className="block mb-1 text-sm text-neutral-400">Contraseña</label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={6}
+            className="w-full bg-ink-900 border border-ink-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-garnet-600"
+          />
+        </div>
+
+        <div>
+          <label className="block mb-1 text-sm text-neutral-400">
+            Palabra secreta (para recuperar tu cuenta)
+          </label>
+          <input
+            type="text"
+            value={securityWord}
+            onChange={(e) => setSecurityWord(e.target.value)}
+            required
+            className="w-full bg-ink-900 border border-ink-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-garnet-600"
+          />
+        </div>
+
+        {error && <p className="text-garnet-400 text-sm">{error}</p>}
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-garnet-600 hover:bg-garnet-500 disabled:opacity-60 text-white text-sm font-medium rounded-full py-2.5 transition"
+        >
+          {loading ? 'Creando...' : 'Registrarme'}
+        </button>
+      </form>
+
+      <p className="text-center text-sm text-neutral-500 mt-4">
+        ¿Ya tienes cuenta?{' '}
+        <Link href="/login" className="text-garnet-400 hover:underline">
+          Inicia sesión
+        </Link>
+      </p>
+
+      {cropperElement}
+    </AuthLayout>
   )
 }
