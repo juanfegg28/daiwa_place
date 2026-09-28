@@ -7,10 +7,8 @@ import { supabase } from '../../lib/supabaseClient'
 import AppShell, { useAppSession } from '../../components/AppShell'
 import PostCard from '../../components/PostCard'
 import { EditIcon, GraduationCapIcon, CalendarIcon, HeartIcon } from '../../components/icons'
+import { PROFILE_POST_SELECT } from '../../lib/queries'
 import type { Post } from '../../lib/types'
-
-const PROFILE_POST_SELECT =
-  'id, content, created_at, likes(user_id), comments(id, content, created_at, parent_comment_id, profiles!comments_user_id_fkey(username, avatar_url), comment_likes(user_id))'
 
 type Profile = {
   id: string
@@ -156,7 +154,10 @@ function ProfileContent() {
 
   return (
     <div className="pb-10">
-      <div className="w-full h-40 sm:h-52 bg-gradient-to-r from-garnet-700 via-garnet-600 to-ink-900 relative">
+      <div
+        className="w-full max-h-64 bg-gradient-to-r from-garnet-700 via-garnet-600 to-ink-900 relative"
+        style={{ aspectRatio: '3 / 1' }}
+      >
         {profile.banner_url && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={profile.banner_url} alt="Banner" className="absolute inset-0 w-full h-full object-cover" />
@@ -243,6 +244,7 @@ function ProfileContent() {
                 onToggleLike={handleLike}
                 onToggleCommentLike={handleLikeComment}
                 onAddComment={handleAddComment}
+                onRefresh={() => loadPosts(profile.id)}
               />
             ))
           )}

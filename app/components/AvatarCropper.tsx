@@ -2,22 +2,55 @@
 
 import { useRef, useState } from 'react'
 
-const CROPPER_SIZE = 260 // tamaño en pantalla del circulo (px)
-const OUTPUT_SIZE = 480 // tamaño final de la imagen guardada (px)
+export type CropperOptions = {
+  /** ancho / alto del recorte (1 = cuadrado, 3 = banner 3:1) */
+  aspect?: number
+  /** forma del marco: círculo (foto de perfil) o rectángulo (banner) */
+  shape?: 'circle' | 'rect'
+  /** ancho en píxeles de la imagen final guardada */
+  outputWidth?: number
+  title?: string
+  fileName?: string
+}
+
+/** Recorte 3:1 para el banner del perfil */
+export const BANNER_CROP: CropperOptions = {
+  aspect: 3,
+  shape: 'rect',
+  outputWidth: 1500,
+  title: 'Acomoda tu banner',
+  fileName: 'banner.jpg',
+}
+
+const CIRCLE_FRAME_W = 260 // ancho en pantalla del marco circular (px)
+const RECT_FRAME_W = 320 // ancho en pantalla del marco rectangular (px)
 
 /**
- * Hook que da un editor circular de foto de perfil: arrastrar para mover,
- * una barra para hacer zoom, y "Listo" para confirmar el recorte.
+ * Hook que da un editor de recorte: arrastrar para mover, una barra para hacer zoom
+ * y "Listo" para confirmar. Sirve para la foto de perfil (círculo, por defecto)
+ * y para el banner (rectángulo 3:1, pasando BANNER_CROP).
  *
  * Uso:
- *   const { openCropper, cropperElement } = useAvatarCropper((file, previewUrl) => {
- *     setAvatarFile(file)
- *     setAvatarPreview(previewUrl)
- *   })
+ *   const { openCropper, cropperElement } = useAvatarCropper((file, previewUrl) => { ... })
+ *   const banner = useAvatarCropper((file, previewUrl) => { ... }, BANNER_CROP)
  *   <input type="file" onChange={(e) => e.target.files?.[0] && openCropper(e.target.files[0])} />
  *   {cropperElement}
  */
-export function useAvatarCropper(onConfirm: (file: File, previewUrl: string) => void) {
+export function useAvatarCropper(
+  onConfirm: (file: File, previewUrl: string) => void,
+  options: CropperOptions = {}
+) {
+  const aspect = options.aspect ?? 1
+  const shape = options.shape ?? 'circle'
+  const outputWidth = options.outputWidth ?? 480
+  const title = options.title ?? 'Acomoda tu foto de perfil'
+  const fileName = options.fileName ?? 'avatar.jpg'
+
+  const FRAME_W = shape === 'circle' ? CIRCLE_FRAME_W : RECT_FRAME_W
+  const FRAME_H = FRAME_W / aspect
+  const OUTPUT_W = outputWidth
+  const OUTPUT_H = Math.round(outputWidth / aspect)
+
   const [showCropper, setShowCropper] = useState(false)
   const [cropSrc, setCropSrc] = useState<string | null>(null)
   const [imgSize, setImgSize] = useState<{ width: number; height: number } | null>(null)
@@ -36,8 +69,8 @@ export function useAvatarCropper(onConfirm: (file: File, previewUrl: string) => 
     if (!imgSize) return { x, y }
     const displayW = imgSize.width * scale
     const displayH = imgSize.height * scale
-    const minX = CROPPER_SIZE - displayW
-    const minY = CROPPER_SIZE - displayH
+    const minX = FRAME_W - displayW
+    const minY = FRAME_H - displayH
     return {
       x: Math.min(0, Math.max(minX, x)),
       y: Math.min(0, Math.max(minY, y)),
@@ -57,14 +90,15 @@ export function useAvatarCropper(onConfirm: (file: File, previewUrl: string) => 
     const img = cropImgRef.current
     if (!img) return
     const { naturalWidth, naturalHeight } = img
-    const base = CROPPER_SIZE / Math.min(naturalWidth, naturalHeight)
+    // La imagen siempre cubre todo el marco (sin bordes vacíos)
+    const base = Math.max(FRAME_W / naturalWidth, FRAME_H / naturalHeight)
     setImgSize({ width: naturalWidth, height: naturalHeight })
     setBaseScale(base)
     const displayW = naturalWidth * base
     const displayH = naturalHeight * base
     setOffset({
-      x: (CROPPER_SIZE - displayW) / 2,
-      y: (CROPPER_SIZE - displayH) / 2,
+      x: (FRAME_W - displayW) / 2,
+      y: (FRAME_H - displayH) / 2,
     })
   }
 
@@ -75,11 +109,12 @@ export function useAvatarCropper(onConfirm: (file: File, previewUrl: string) => 
     }
     const oldScale = baseScale * zoom
     const newScale = baseScale * value
-    const center = CROPPER_SIZE / 2
-    const imgPointX = (center - offset.x) / oldScale
-    const imgPointY = (center - offset.y) / oldScale
-    const newOffsetX = center - imgPointX * newScale
-    const newOffsetY = center - imgPointY * newScale
+    const centerX = FRAME_W / 2
+    const centerY = FRAME_H / 2
+    const imgPointX = (centerX - offset.x) / oldScale
+    const imgPointY = (centerY - offset.y) / oldScale
+    const newOffsetX = centerX - imgPointX * newScale
+    const newOffsetY = centerY - imgPointY * newScale
     setZoom(value)
     setOffset(clampOffset(newOffsetX, newOffsetY, newScale))
   }
@@ -120,22 +155,23 @@ export function useAvatarCropper(onConfirm: (file: File, previewUrl: string) => 
     if (!img || !imgSize) return
 
     const canvas = document.createElement('canvas')
-    canvas.width = OUTPUT_SIZE
-    canvas.height = OUTPUT_SIZE
+    canvas.width = OUTPUT_W
+    canvas.height = OUTPUT_H
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
     const scale = baseScale * zoom
     const sourceX = -offset.x / scale
     const sourceY = -offset.y / scale
-    const sourceSize = CROPPER_SIZE / scale
+    const sourceW = FRAME_W / scale
+    const sourceH = FRAME_H / scale
 
-    ctx.drawImage(img, sourceX, sourceY, sourceSize, sourceSize, 0, 0, OUTPUT_SIZE, OUTPUT_SIZE)
+    ctx.drawImage(img, sourceX, sourceY, sourceW, sourceH, 0, 0, OUTPUT_W, OUTPUT_H)
 
     canvas.toBlob(
       (blob) => {
         if (!blob) return
-        const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' })
+        const file = new File([blob], fileName, { type: 'image/jpeg' })
         const url = URL.createObjectURL(blob)
         onConfirm(file, url)
         close()
@@ -149,27 +185,28 @@ export function useAvatarCropper(onConfirm: (file: File, previewUrl: string) => 
     showCropper && cropSrc ? (
       <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center px-4">
         <div className="surface-raised border border-ink-700 rounded-2xl p-5 w-full max-w-sm">
-          <h2 className="text-center text-sm font-semibold mb-1 text-neutral-100">
-            Acomoda tu foto de perfil
-          </h2>
+          <h2 className="text-center text-sm font-semibold mb-1 text-neutral-100">{title}</h2>
           <p className="text-center text-xs text-neutral-500 mb-4">
             Arrastra la imagen para moverla y usa la barra para hacer zoom
           </p>
 
           <div
-            className="relative mx-auto rounded-full overflow-hidden border-4 border-garnet-600 bg-ink-950 cursor-grab active:cursor-grabbing touch-none select-none"
-            style={{ width: CROPPER_SIZE, height: CROPPER_SIZE }}
+            className={`relative mx-auto overflow-hidden border-4 border-garnet-600 bg-ink-950 cursor-grab active:cursor-grabbing touch-none select-none ${
+              shape === 'circle' ? 'rounded-full' : 'rounded-lg'
+            }`}
+            style={{ width: FRAME_W, height: FRAME_H, boxSizing: 'content-box' }}
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             onPointerLeave={handlePointerUp}
           >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               ref={cropImgRef}
               src={cropSrc}
               onLoad={handleImageLoad}
               draggable={false}
-              alt="Ajustar foto de perfil"
+              alt="Ajustar imagen"
               style={{
                 position: 'absolute',
                 left: offset.x,

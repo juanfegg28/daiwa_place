@@ -42,7 +42,10 @@ export default function ProfilePreviewCard({
       <div className="text-center text-xs text-neutral-500 py-2 border-b border-ink-700 bg-ink-900/60">
         Así se verá tu perfil
       </div>
-      <div className="w-full h-28 bg-gradient-to-r from-garnet-700 via-garnet-600 to-ink-900 relative">
+      <div
+        className="w-full bg-gradient-to-r from-garnet-700 via-garnet-600 to-ink-900 relative"
+        style={{ aspectRatio: '3 / 1' }}
+      >
         {bannerPreview && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={bannerPreview} alt="Banner" className="absolute inset-0 w-full h-full object-cover" />

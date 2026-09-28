@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabaseClient'
 import Logo from './Logo'
+import { APP_VERSION } from '../lib/changelog'
 import {
   HomeIcon,
   UserIcon,
@@ -162,6 +163,17 @@ export default function AppShell({ children }: { children: ReactNode }) {
             <DirectMessagesTeaser />
           </nav>
 
+          <Link
+            href="/novedades"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Ver las notas de la última actualización"
+            className="mb-3 inline-flex items-center gap-2 self-start px-3 py-1.5 rounded-full text-[11px] text-neutral-500 hover:text-garnet-400 hover:bg-ink-800 transition"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-garnet-500" />
+            v{APP_VERSION} · Novedades
+          </Link>
+
           <div className="pt-4 border-t border-ink-800">
             {loading ? null : userId ? (
               <div className="flex items-center gap-3 px-2">
@@ -201,6 +213,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
         {/* Barra superior movil */}
         <header className="md:hidden sticky top-0 z-30 flex items-center justify-center border-b border-ink-800 bg-ink-950/90 backdrop-blur px-4 py-3">
           <Logo size="sm" />
+          <Link
+            href="/novedades"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-[11px] text-neutral-500 hover:text-garnet-400 transition"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-garnet-500" />v{APP_VERSION}
+          </Link>
         </header>
 
         <main className="flex-1 min-w-0 pb-20 md:pb-0">{children}</main>

@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { supabase } from '../lib/supabaseClient'
 import AuthLayout from '../components/AuthLayout'
 import ProfilePreviewCard from '../components/ProfilePreviewCard'
-import { useAvatarCropper } from '../components/AvatarCropper'
+import { useAvatarCropper, BANNER_CROP } from '../components/AvatarCropper'
 import { CameraIcon } from '../components/icons'
 import { ESTADOS_SENTIMENTALES } from '../lib/constants'
 
@@ -40,11 +40,18 @@ export default function RegisterPage() {
     e.target.value = ''
   }
 
+  const { openCropper: openBannerCropper, cropperElement: bannerCropperElement } = useAvatarCropper(
+    (file, previewUrl) => {
+      setBannerFile(file)
+      setBannerPreview(previewUrl)
+    },
+    BANNER_CROP
+  )
+
   const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null
-    setBannerFile(file)
-    if (bannerPreview) URL.revokeObjectURL(bannerPreview)
-    setBannerPreview(file ? URL.createObjectURL(file) : null)
+    if (file) openBannerCropper(file)
+    e.target.value = ''
   }
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -224,10 +231,11 @@ export default function RegisterPage() {
           <textarea
             value={bio}
             onChange={(e) => setBio(e.target.value)}
-            rows={2}
-            maxLength={200}
+            rows={3}
+            maxLength={300}
             className="w-full bg-ink-900 border border-ink-700 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:border-garnet-600"
           />
+          <p className="text-xs text-neutral-600 mt-1">{bio.length}/300</p>
         </div>
 
         <div>
@@ -302,6 +310,7 @@ export default function RegisterPage() {
       </p>
 
       {cropperElement}
+      {bannerCropperElement}
     </AuthLayout>
   )
 }

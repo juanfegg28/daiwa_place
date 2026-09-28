@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { supabase } from '../lib/supabaseClient'
 import AppShell, { useAppSession } from '../components/AppShell'
 import ProfilePreviewCard from '../components/ProfilePreviewCard'
-import { useAvatarCropper } from '../components/AvatarCropper'
+import { useAvatarCropper, BANNER_CROP } from '../components/AvatarCropper'
 import { CameraIcon } from '../components/icons'
 import { ESTADOS_SENTIMENTALES } from '../lib/constants'
 
@@ -39,6 +39,14 @@ function EditProfileForm() {
     setAvatarFile(file)
     setAvatarPreview(previewUrl)
   })
+
+  const { openCropper: openBannerCropper, cropperElement: bannerCropperElement } = useAvatarCropper(
+    (file, previewUrl) => {
+      setBannerFile(file)
+      setBannerPreview(previewUrl)
+    },
+    BANNER_CROP
+  )
 
   const loadProfile = async (id: string) => {
     const { data } = await supabase
@@ -81,8 +89,8 @@ function EditProfileForm() {
 
   const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null
-    setBannerFile(file)
-    if (file) setBannerPreview(URL.createObjectURL(file))
+    if (file) openBannerCropper(file)
+    e.target.value = ''
   }
 
   const handleSave = async (e: React.FormEvent) => {
@@ -211,10 +219,10 @@ function EditProfileForm() {
             value={bio}
             onChange={(e) => setBio(e.target.value)}
             rows={3}
-            maxLength={200}
+            maxLength={300}
             className="w-full bg-ink-900 border border-ink-700 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:border-garnet-600"
           />
-          <p className="text-xs text-neutral-600 mt-1">{bio.length}/200</p>
+          <p className="text-xs text-neutral-600 mt-1">{bio.length}/300</p>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -278,6 +286,7 @@ function EditProfileForm() {
       </form>
 
       {cropperElement}
+      {bannerCropperElement}
     </div>
   )
 }
