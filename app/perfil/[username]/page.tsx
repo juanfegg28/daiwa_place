@@ -6,7 +6,15 @@ import Link from 'next/link'
 import { supabase } from '../../lib/supabaseClient'
 import AppShell, { useAppSession } from '../../components/AppShell'
 import PostCard from '../../components/PostCard'
-import { EditIcon, GraduationCapIcon, CalendarIcon, HeartIcon } from '../../components/icons'
+import ProfileActions from '../../components/ProfileActions'
+import {
+  EditIcon,
+  GraduationCapIcon,
+  CalendarIcon,
+  HeartIcon,
+  SnowflakeIcon,
+  BlockIcon,
+} from '../../components/icons'
 import { PROFILE_POST_SELECT } from '../../lib/queries'
 import type { Post } from '../../lib/types'
 
@@ -20,6 +28,8 @@ type Profile = {
   birthday: string | null
   grado: string | null
   estado_personal: string | null
+  is_frozen: boolean
+  posts_visibility: 'public' | 'followers'
   created_at: string
 }
 
@@ -42,6 +52,12 @@ function ProfileContent() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
 
+  const [followersCount, setFollowersCount] = useState(0)
+  const [followingCount, setFollowingCount] = useState(0)
+  const [isFollowing, setIsFollowing] = useState(false)
+  const [iBlockedThem, setIBlockedThem] = useState(false)
+  const [theyBlockedMe, setTheyBlockedMe] = useState(false)
+
   const loadPosts = async (profileId: string) => {
     const { data } = await supabase
       .from('posts')
@@ -51,6 +67,38 @@ function ProfileContent() {
     setPosts((data as unknown as Post[]) ?? [])
   }
 
+  const loadFollowState = async (profileId: string) => {
+    const [{ count: followers }, { count: following }] = await Promise.all([
+      supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', profileId),
+      supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', profileId),
+    ])
+    setFollowersCount(followers ?? 0)
+    setFollowingCount(following ?? 0)
+
+    if (userId && userId !== profileId) {
+      const { data: followRow } = await supabase
+        .from('follows')
+        .select('follower_id')
+        .eq('follower_id', userId)
+        .eq('following_id', profileId)
+        .maybeSingle()
+      setIsFollowing(!!followRow)
+
+      const { data: blockRows } = await supabase
+        .from('blocks')
+        .select('blocker_id, blocked_id')
+        .or(
+          `and(blocker_id.eq.${userId},blocked_id.eq.${profileId}),and(blocker_id.eq.${profileId},blocked_id.eq.${userId})`
+        )
+      setIBlockedThem(!!blockRows?.some((b) => b.blocker_id === userId))
+      setTheyBlockedMe(!!blockRows?.some((b) => b.blocker_id === profileId))
+    } else {
+      setIsFollowing(false)
+      setIBlockedThem(false)
+      setTheyBlockedMe(false)
+    }
+  }
+
   const loadEverything = async () => {
     setLoading(true)
     setNotFound(false)
@@ -58,7 +106,7 @@ function ProfileContent() {
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select(
-        'id, username, id_student, bio, avatar_url, banner_url, birthday, grado, estado_personal, created_at'
+        'id, username, id_student, bio, avatar_url, banner_url, birthday, grado, estado_personal, is_frozen, posts_visibility, created_at'
       )
       .eq('username', usernameParam.toLowerCase())
       .maybeSingle()
@@ -70,7 +118,7 @@ function ProfileContent() {
     }
 
     setProfile(profileData)
-    await loadPosts(profileData.id)
+    await Promise.all([loadPosts(profileData.id), loadFollowState(profileData.id)])
     setLoading(false)
   }
 
@@ -81,6 +129,15 @@ function ProfileContent() {
     run()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usernameParam])
+
+  // Vuelve a calcular follow/bloqueo cuando la sesión termina de cargar (userId cambia de null a un id)
+  useEffect(() => {
+    function run() {
+      if (profile) loadFollowState(profile.id)
+    }
+    run()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId])
 
   const handleLike = async (post: Post) => {
     if (!userId) {
@@ -151,6 +208,9 @@ function ProfileContent() {
   }
 
   const isMyProfile = myUsername === profile.username
+  const isBlockedEitherWay = iBlockedThem || theyBlockedMe
+  const isPrivateForMe =
+    !isMyProfile && !isBlockedEitherWay && profile.posts_visibility === 'followers' && !isFollowing
 
   return (
     <div className="pb-10">
@@ -177,7 +237,7 @@ function ProfileContent() {
             )}
           </div>
 
-          {isMyProfile && (
+          {isMyProfile ? (
             <Link
               href="/editar-perfil"
               className="mb-2 flex items-center gap-1.5 text-sm border border-ink-600 text-neutral-300 rounded-full px-4 py-1.5 hover:bg-ink-800 transition"
@@ -185,70 +245,131 @@ function ProfileContent() {
               <EditIcon className="w-4 h-4" />
               Editar perfil
             </Link>
+          ) : (
+            <div className="mb-2">
+              <ProfileActions
+                currentUserId={userId}
+                targetUserId={profile.id}
+                targetUsername={profile.username}
+                isFollowing={isFollowing}
+                isBlockedByMe={iBlockedThem}
+                onFollowChange={(f) => {
+                  setIsFollowing(f)
+                  setFollowersCount((c) => Math.max(0, c + (f ? 1 : -1)))
+                }}
+                onBlockChange={(b) => setIBlockedThem(b)}
+              />
+            </div>
           )}
         </div>
 
         <div className="mb-4">
-          <h1 className="text-xl font-semibold text-neutral-50">{profile.id_student || profile.username}</h1>
+          <h1 className="text-xl font-semibold text-neutral-50 flex items-center gap-2">
+            {profile.id_student || profile.username}
+            {profile.is_frozen && (
+              <span
+                title="Cuenta congelada"
+                className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide bg-ink-800 text-neutral-400 rounded-full px-2 py-0.5"
+              >
+                <SnowflakeIcon className="w-3 h-3" />
+                Congelada
+              </span>
+            )}
+          </h1>
           <p className="text-neutral-500 text-sm">{'@' + profile.username}</p>
         </div>
 
-        {profile.bio && (
-          <p className="text-sm text-neutral-200 mb-3 leading-relaxed whitespace-pre-wrap">{profile.bio}</p>
-        )}
-
-        {(profile.grado || profile.birthday || profile.estado_personal) && (
-          <div className="flex flex-wrap gap-1.5 mb-2">
-            {profile.grado && (
-              <span className="inline-flex items-center gap-1.5 bg-ink-800/70 border border-ink-700 text-neutral-300 text-xs font-medium px-3 py-1.5 rounded-full">
-                <GraduationCapIcon className="w-3.5 h-3.5 text-garnet-400" />
-                {profile.grado}
-              </span>
-            )}
-            {profile.birthday && (
-              <span className="inline-flex items-center gap-1.5 bg-ink-800/70 border border-ink-700 text-neutral-300 text-xs font-medium px-3 py-1.5 rounded-full">
-                <CalendarIcon className="w-3.5 h-3.5 text-garnet-400" />
-                {formatBirthday(profile.birthday)}
-              </span>
-            )}
-            {profile.estado_personal && (
-              <span className="inline-flex items-center gap-1.5 bg-ink-800/70 border border-ink-700 text-neutral-300 text-xs font-medium px-3 py-1.5 rounded-full">
-                <HeartIcon className="w-3.5 h-3.5 text-garnet-400" />
-                {profile.estado_personal}
-              </span>
+        {isBlockedEitherWay ? (
+          <div className="surface-card rounded-2xl p-6 text-center my-6">
+            <BlockIcon className="w-6 h-6 mx-auto mb-2 text-neutral-500" />
+            {iBlockedThem ? (
+              <>
+                <p className="text-neutral-200 text-sm font-medium mb-1">Bloqueaste a @{profile.username}</p>
+                <p className="text-neutral-500 text-xs">
+                  No pueden interactuar mientras dure el bloqueo. Puedes desbloquear desde el botón de arriba o
+                  desde Configuración → Cuentas bloqueadas.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-neutral-200 text-sm font-medium mb-1">Este perfil no está disponible</p>
+                <p className="text-neutral-500 text-xs">No puedes ver sus publicaciones ni interactuar por ahora.</p>
+              </>
             )}
           </div>
+        ) : (
+          <>
+            {profile.bio && (
+              <p className="text-sm text-neutral-200 mb-3 leading-relaxed whitespace-pre-wrap">{profile.bio}</p>
+            )}
+
+            {(profile.grado || profile.birthday || profile.estado_personal) && (
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {profile.grado && (
+                  <span className="inline-flex items-center gap-1.5 bg-ink-800/70 border border-ink-700 text-neutral-300 text-xs font-medium px-3 py-1.5 rounded-full">
+                    <GraduationCapIcon className="w-3.5 h-3.5 text-garnet-400" />
+                    {profile.grado}
+                  </span>
+                )}
+                {profile.birthday && (
+                  <span className="inline-flex items-center gap-1.5 bg-ink-800/70 border border-ink-700 text-neutral-300 text-xs font-medium px-3 py-1.5 rounded-full">
+                    <CalendarIcon className="w-3.5 h-3.5 text-garnet-400" />
+                    {formatBirthday(profile.birthday)}
+                  </span>
+                )}
+                {profile.estado_personal && (
+                  <span className="inline-flex items-center gap-1.5 bg-ink-800/70 border border-ink-700 text-neutral-300 text-xs font-medium px-3 py-1.5 rounded-full">
+                    <HeartIcon className="w-3.5 h-3.5 text-garnet-400" />
+                    {profile.estado_personal}
+                  </span>
+                )}
+              </div>
+            )}
+
+            <p className="text-xs text-neutral-600 mb-4">Se unió en {formatJoinDate(profile.created_at)}</p>
+
+            <div className="flex gap-4 text-sm mb-6 pb-4 border-b border-ink-800">
+              <span>
+                <b className="text-neutral-100">{posts.length}</b>{' '}
+                <span className="text-neutral-500">publicaciones</span>
+              </span>
+              <span>
+                <b className="text-neutral-100">{followersCount}</b>{' '}
+                <span className="text-neutral-500">seguidores</span>
+              </span>
+              <span>
+                <b className="text-neutral-100">{followingCount}</b>{' '}
+                <span className="text-neutral-500">seguidos</span>
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              {posts.length === 0 ? (
+                <p className="text-neutral-500 text-sm text-center py-10">
+                  {isMyProfile
+                    ? 'Todavía no has publicado nada.'
+                    : isPrivateForMe
+                      ? `Este perfil es solo para seguidores. Sigue a @${profile.username} para ver sus publicaciones.`
+                      : 'Todavía no hay publicaciones.'}
+                </p>
+              ) : (
+                posts.map((post) => (
+                  <PostCard
+                    key={post.id}
+                    post={post}
+                    currentUserId={userId}
+                    showAuthor={false}
+                    authorIsFrozen={profile.is_frozen}
+                    onToggleLike={handleLike}
+                    onToggleCommentLike={handleLikeComment}
+                    onAddComment={handleAddComment}
+                    onRefresh={() => loadPosts(profile.id)}
+                  />
+                ))
+              )}
+            </div>
+          </>
         )}
-
-        <p className="text-xs text-neutral-600 mb-4">Se unió en {formatJoinDate(profile.created_at)}</p>
-
-        <div className="flex gap-4 text-sm mb-6 pb-4 border-b border-ink-800">
-          <span>
-            <b className="text-neutral-100">{posts.length}</b>{' '}
-            <span className="text-neutral-500">publicaciones</span>
-          </span>
-        </div>
-
-        <div className="space-y-4">
-          {posts.length === 0 ? (
-            <p className="text-neutral-500 text-sm text-center py-10">
-              {isMyProfile ? 'Todavía no has publicado nada.' : 'Todavía no hay publicaciones.'}
-            </p>
-          ) : (
-            posts.map((post) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                currentUserId={userId}
-                showAuthor={false}
-                onToggleLike={handleLike}
-                onToggleCommentLike={handleLikeComment}
-                onAddComment={handleAddComment}
-                onRefresh={() => loadPosts(profile.id)}
-              />
-            ))
-          )}
-        </div>
       </div>
     </div>
   )

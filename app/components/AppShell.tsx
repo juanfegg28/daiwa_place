@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabaseClient'
+import { applyTheme, type ThemeMode } from '../lib/theme'
 import Logo from './Logo'
 import { APP_VERSION } from '../lib/changelog'
 import {
@@ -11,6 +12,8 @@ import {
   UserIcon,
   MessageIcon,
   BellIcon,
+  SearchIcon,
+  SettingsIcon,
   LogoutIcon,
   LoginIcon,
   type IconProps,
@@ -86,11 +89,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
     setUserId(user.id)
     const { data: profile } = await supabase
       .from('profiles')
-      .select('username, avatar_url')
+      .select('username, avatar_url, theme, accent_color')
       .eq('id', user.id)
       .maybeSingle()
     setUsername(profile?.username ?? null)
     setAvatarUrl(profile?.avatar_url ?? null)
+    applyTheme((profile?.theme as ThemeMode) ?? 'dark', profile?.accent_color ?? null)
     setLoading(false)
   }
 
@@ -107,6 +111,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
+    applyTheme('dark', null)
     router.push('/login')
   }
 
@@ -119,6 +124,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
             label: 'Mi perfil',
             icon: UserIcon,
             match: (p: string) => p.startsWith('/perfil/'),
+          },
+          {
+            href: '/explorar',
+            label: 'Explorar',
+            shortLabel: 'Buscar',
+            icon: SearchIcon,
+            match: (p: string) => p === '/explorar',
           },
           {
             href: '/notificaciones',
@@ -150,7 +162,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                   href={item.href}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition ${
                     active
-                      ? 'bg-garnet-600/90 text-white shadow-[0_8px_24px_-8px_rgba(200,27,62,0.7)]'
+                      ? 'bg-garnet-600/90 text-white shadow-[0_8px_24px_-8px_var(--color-garnet-500)]'
                       : 'text-neutral-300 hover:bg-ink-800'
                   }`}
                 >
@@ -162,6 +174,20 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
             <DirectMessagesTeaser />
           </nav>
+
+          {username && (
+            <Link
+              href="/configuracion"
+              className={`mb-1 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition ${
+                pathname === '/configuracion'
+                  ? 'bg-ink-800 text-neutral-100'
+                  : 'text-neutral-300 hover:bg-ink-800'
+              }`}
+            >
+              <SettingsIcon className="w-5 h-5" />
+              Configuración
+            </Link>
+          )}
 
           <Link
             href="/novedades"
@@ -213,14 +239,25 @@ export default function AppShell({ children }: { children: ReactNode }) {
         {/* Barra superior movil */}
         <header className="md:hidden sticky top-0 z-30 flex items-center justify-center border-b border-ink-800 bg-ink-950/90 backdrop-blur px-4 py-3">
           <Logo size="sm" />
-          <Link
-            href="/novedades"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5 text-[11px] text-neutral-500 hover:text-garnet-400 transition"
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-garnet-500" />v{APP_VERSION}
-          </Link>
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+            {username && (
+              <Link
+                href="/configuracion"
+                aria-label="Configuración"
+                className="p-1.5 rounded-full text-neutral-500 hover:text-garnet-400 hover:bg-ink-800 transition"
+              >
+                <SettingsIcon className="w-[18px] h-[18px]" />
+              </Link>
+            )}
+            <Link
+              href="/novedades"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-[11px] text-neutral-500 hover:text-garnet-400 transition px-1.5"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-garnet-500" />v{APP_VERSION}
+            </Link>
+          </div>
         </header>
 
         <main className="flex-1 min-w-0 pb-20 md:pb-0">{children}</main>
@@ -235,7 +272,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg text-[11px] ${
+                  className={`flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-lg text-[10.5px] ${
                     active ? 'text-garnet-400' : 'text-neutral-500'
                   }`}
                 >
@@ -249,7 +286,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               onClick={() =>
                 window.alert('Muy pronto vas a poder mandar mensajes directos a otros estudiantes 💬')
               }
-              className="flex flex-col items-center gap-0.5 px-3 py-1 text-[11px] text-neutral-600"
+              className="flex flex-col items-center gap-0.5 px-2.5 py-1 text-[10.5px] text-neutral-600"
             >
               <MessageIcon className="w-5 h-5" />
               Mensajes
@@ -257,7 +294,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             {!loading && !userId && (
               <Link
                 href="/login"
-                className="flex flex-col items-center gap-0.5 px-3 py-1 text-[11px] text-garnet-400"
+                className="flex flex-col items-center gap-0.5 px-2.5 py-1 text-[10.5px] text-garnet-400"
               >
                 <LoginIcon className="w-5 h-5" />
                 Entrar

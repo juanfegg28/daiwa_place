@@ -5,8 +5,18 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabaseClient'
 import { POST_IMAGES_BUCKET } from '../lib/queries'
+import { renderContentWithHashtags } from '../lib/hashtags'
 import type { Post, Comment } from '../lib/types'
-import { HeartIcon, CommentIcon, SendIcon, ReplyIcon, EditIcon, TrashIcon, LinkIcon } from './icons'
+import {
+  HeartIcon,
+  CommentIcon,
+  SendIcon,
+  ReplyIcon,
+  EditIcon,
+  TrashIcon,
+  LinkIcon,
+  SnowflakeIcon,
+} from './icons'
 import KebabMenu, { type MenuItem } from './KebabMenu'
 import ConfirmDialog from './ConfirmDialog'
 import PostImages from './PostImages'
@@ -21,6 +31,11 @@ type PostCardProps = {
   detail?: boolean
   /** Abre la sección de comentarios desde el inicio */
   defaultExpanded?: boolean
+  /**
+   * En el perfil (showAuthor=false) el autor no viaja embebido en la publicación,
+   * así que la página de perfil le pasa aquí si ESA cuenta está congelada.
+   */
+  authorIsFrozen?: boolean
   onToggleLike: (post: Post) => void
   onToggleCommentLike: (commentId: string, alreadyLiked: boolean) => void
   onAddComment: (postId: string, text: string, parentCommentId?: string | null) => Promise<void> | void
@@ -84,6 +99,7 @@ function countDescendants(id: string, map: Map<string, Comment[]>): number {
 type ThreadContextValue = {
   childrenByParent: Map<string, Comment[]>
   currentUserId: string | null
+  interactionsDisabled: boolean
   onToggleCommentLike: (commentId: string, alreadyLiked: boolean) => void
   replyingTo: string | null
   setReplyingTo: (id: string | null) => void
@@ -235,14 +251,15 @@ function CommentThread({ comment, depth }: { comment: Comment; depth: number }) 
             <div className="flex items-center gap-3 mt-1 ml-1">
               <button
                 onClick={() => t.onToggleCommentLike(comment.id, likedByMe)}
-                className={`flex items-center gap-1 text-[11px] transition ${
+                disabled={t.interactionsDisabled}
+                className={`flex items-center gap-1 text-[11px] transition disabled:opacity-40 ${
                   likedByMe ? 'text-garnet-500' : 'text-neutral-600 hover:text-garnet-400'
                 }`}
               >
                 <HeartIcon filled={likedByMe} className="w-3 h-3" />
                 {comment.comment_likes.length}
               </button>
-              {t.currentUserId && (
+              {t.currentUserId && !t.interactionsDisabled && (
                 <button
                   onClick={() => {
                     t.setReplyingTo(isReplyingHere ? null : comment.id)
@@ -336,6 +353,7 @@ export default function PostCard({
   showAuthor = true,
   detail = false,
   defaultExpanded = false,
+  authorIsFrozen,
   onToggleLike,
   onToggleCommentLike,
   onAddComment,
@@ -366,6 +384,8 @@ export default function PostCard({
   const author = post.profiles
   const isMine = !!currentUserId && post.user_id === currentUserId
   const images = post.images ?? []
+  const isFrozen = (authorIsFrozen ?? author?.is_frozen ?? false) && !isMine
+  const interactionsDisabled = isFrozen
 
   // Árbol de comentarios: principales vs. respuestas agrupadas por su padre
   const childrenByParent = new Map<string, Comment[]>()
@@ -536,6 +556,26 @@ export default function PostCard({
     </p>
   )
 
+  // Jerarquía de nombres: nombre del personaje grande y en blanco arriba,
+  // @usuario chico y gris abajo.
+  const nameBlock = author ? (
+    <div className="leading-tight min-w-0">
+      <Link href={`/perfil/${author.username}`} className="block text-[15px] font-bold text-neutral-50 hover:text-garnet-400 truncate">
+        {author.id_student || author.username}
+      </Link>
+      <Link href={`/perfil/${author.username}`} className="block text-xs text-neutral-600 hover:text-garnet-400 truncate">
+        @{author.username}
+      </Link>
+      {timeLine}
+    </div>
+  ) : (
+    <div className="leading-tight min-w-0">
+      <span className="block text-[15px] font-bold text-neutral-50">Estudiante</span>
+      <span className="block text-xs text-neutral-600">@usuario</span>
+      {timeLine}
+    </div>
+  )
+
   return (
     <article className="surface-card rounded-2xl p-4">
       <div className="flex items-start justify-between gap-2 mb-3">
@@ -551,19 +591,7 @@ export default function PostCard({
               >
                 <MiniAvatar username={author?.username ?? 'usuario'} avatarUrl={author?.avatar_url ?? null} />
               </button>
-              <div className="leading-tight min-w-0">
-                {author ? (
-                  <Link
-                    href={`/perfil/${author.username}`}
-                    className="text-sm font-semibold text-neutral-100 hover:text-garnet-400"
-                  >
-                    @{author.username}
-                  </Link>
-                ) : (
-                  <span className="text-sm font-semibold text-neutral-100">@usuario</span>
-                )}
-                {timeLine}
-              </div>
+              {nameBlock}
             </>
           ) : (
             timeLine
@@ -614,7 +642,7 @@ export default function PostCard({
               canGoToProfile ? 'cursor-pointer' : ''
             }`}
           >
-            {post.content}
+            {renderContentWithHashtags(post.content)}
           </p>
         )
       )}
@@ -627,10 +655,18 @@ export default function PostCard({
 
       {actionError && <p className="text-xs text-garnet-400 mb-3">{actionError}</p>}
 
+      {isFrozen && (
+        <p className="flex items-center gap-1.5 text-[11px] text-neutral-500 mb-3">
+          <SnowflakeIcon className="w-3.5 h-3.5" />
+          Esta cuenta está congelada: nadie puede darle like ni comentar por ahora.
+        </p>
+      )}
+
       <div className="flex items-center gap-5 text-neutral-500">
         <button
           onClick={() => onToggleLike(post)}
-          className={`flex items-center gap-1.5 text-sm transition ${
+          disabled={interactionsDisabled}
+          className={`flex items-center gap-1.5 text-sm transition disabled:opacity-40 ${
             likedByMe ? 'text-garnet-500' : 'hover:text-garnet-400'
           }`}
         >
@@ -651,6 +687,7 @@ export default function PostCard({
           value={{
             childrenByParent,
             currentUserId,
+            interactionsDisabled,
             onToggleCommentLike,
             replyingTo,
             setReplyingTo,
@@ -691,7 +728,7 @@ export default function PostCard({
               </button>
             )}
 
-            {currentUserId ? (
+            {interactionsDisabled ? null : currentUserId ? (
               <div className="flex items-center gap-2 pt-1">
                 <input
                   type="text"

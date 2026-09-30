@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import AuthLayout from '../components/AuthLayout'
+import PasswordInput from '../components/PasswordInput'
 
 export default function RecoverPage() {
   const [username, setUsername] = useState('')
@@ -85,14 +86,7 @@ export default function RecoverPage() {
         </div>
         <div>
           <label className="block mb-1 text-sm text-neutral-400">Nueva contraseña</label>
-          <input
-            type="password"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            required
-            minLength={6}
-            className="w-full bg-ink-900 border border-ink-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-garnet-600"
-          />
+          <PasswordInput value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={6} autoComplete="new-password" />
         </div>
         {error && <p className="text-garnet-400 text-sm">{error}</p>}
         <button

@@ -1,6 +1,8 @@
 export type AuthorProfile = {
   username: string
   avatar_url: string | null
+  id_student: string | null
+  is_frozen: boolean
 } | null
 
 export type PostImage = {
@@ -31,4 +33,13 @@ export type Post = {
   profiles: AuthorProfile
   likes: { user_id: string }[]
   comments: Comment[]
+}
+
+export type ProfileSummary = {
+  id: string
+  username: string
+  id_student: string | null
+  avatar_url: string | null
+  followers_count?: number
+  created_at?: string
 }

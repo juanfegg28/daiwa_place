@@ -14,6 +14,49 @@ export const RELEASE_STAGE = 'beta'
 
 export const CHANGELOG: Release[] = [
   {
+    version: '0.9.5',
+    date: '2026-09-29',
+    title: 'Exploración, Conexión y Control',
+    sections: [
+      {
+        heading: 'Conexión entre estudiantes',
+        items: [
+          'Nuevo botón de Seguir / Siguiendo en cada perfil, con contador público de seguidores y seguidos.',
+          'Menú de tres puntitos en cada perfil: Reportar perfil (le llega al admin) y Bloquear usuario (deja de seguirse mutuamente y no pueden interactuar).',
+        ],
+      },
+      {
+        heading: 'Explorar',
+        items: [
+          'Nueva pestaña Explorar en la barra lateral, con buscador por nombre de personaje, @usuario o grado.',
+          'Cualquier #hashtag dentro de una publicación ahora es un enlace clicable a un muro exclusivo con todo lo de esa tendencia.',
+          'Sección de Tendencias con los 5 hashtags más usados, Top 5 Estudiantes Populares y Nuevos Ingresos para dar la bienvenida a quien acaba de llegar.',
+        ],
+      },
+      {
+        heading: 'Publicaciones más claras',
+        items: [
+          'El nombre del personaje ahora aparece grande y en blanco arriba de cada publicación, con el @usuario chico y discreto debajo — tanto en el inicio como en el perfil.',
+        ],
+      },
+      {
+        heading: 'Configuración nueva',
+        items: [
+          'Nueva página de Configuración con cinco secciones, cada una explicada: Cuenta y Seguridad (cambiar contraseña, cambiar palabra secreta, congelar cuenta, eliminar cuenta), Privacidad (publicaciones públicas o solo para seguidores, Modo Fantasma), Apariencia (modo claro/oscuro y color de acento personalizado con vista previa en vivo), Notificaciones (qué avisos quieres recibir) y Cuentas Bloqueadas.',
+          'Para cambiar la contraseña ahora se pide la palabra secreta, y para cambiar la palabra secreta se pide la contraseña — así nadie puede cambiar el otro dato sin saber el primero.',
+          'Botón de "ojito" para mostrar u ocultar la contraseña en el registro, inicio de sesión, recuperación de cuenta y en Configuración.',
+        ],
+      },
+      {
+        heading: 'Registro más seguro',
+        items: [
+          'El nombre de personaje ya no acepta fuentes "aesthetic" copiadas y pegadas (matemáticas, góticas, etc.) — solo letras normales.',
+          'La palabra secreta ahora queda protegida en la base de datos: ni siquiera se puede leer desde el navegador, solo el servidor la usa para verificarla.',
+        ],
+      },
+    ],
+  },
+  {
     version: '0.9.2',
     date: '2026-09-28',
     title: 'Fotos, edición y enlaces',

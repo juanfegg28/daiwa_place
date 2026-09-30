@@ -9,6 +9,8 @@ import ProfilePreviewCard from '../components/ProfilePreviewCard'
 import { useAvatarCropper, BANNER_CROP } from '../components/AvatarCropper'
 import { CameraIcon } from '../components/icons'
 import { ESTADOS_SENTIMENTALES } from '../lib/constants'
+import { hasFancyCharacters, FANCY_NAME_ERROR } from '../lib/nameFilter'
+import PasswordInput from '../components/PasswordInput'
 
 const usernameRegex = /^[a-z0-9_.]+$/
 
@@ -63,6 +65,12 @@ export default function RegisterPage() {
 
     if (!usernameRegex.test(cleanUsername)) {
       setError('El usuario solo puede tener letras, números, puntos y guion bajo, sin espacios ni símbolos')
+      setLoading(false)
+      return
+    }
+
+    if (hasFancyCharacters(idStudent.trim())) {
+      setError(FANCY_NAME_ERROR)
       setLoading(false)
       return
     }
@@ -269,14 +277,7 @@ export default function RegisterPage() {
 
         <div>
           <label className="block mb-1 text-sm text-neutral-400">Contraseña</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={6}
-            className="w-full bg-ink-900 border border-ink-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-garnet-600"
-          />
+          <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} autoComplete="new-password" />
         </div>
 
         <div>

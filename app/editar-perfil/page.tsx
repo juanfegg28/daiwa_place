@@ -9,6 +9,7 @@ import ProfilePreviewCard from '../components/ProfilePreviewCard'
 import { useAvatarCropper, BANNER_CROP } from '../components/AvatarCropper'
 import { CameraIcon } from '../components/icons'
 import { ESTADOS_SENTIMENTALES } from '../lib/constants'
+import { hasFancyCharacters, FANCY_NAME_ERROR } from '../lib/nameFilter'
 
 export default function EditProfilePage() {
   return (
@@ -99,6 +100,12 @@ function EditProfileForm() {
     setSaving(true)
     setError('')
     setSuccess(false)
+
+    if (hasFancyCharacters(idStudent.trim())) {
+      setError(FANCY_NAME_ERROR)
+      setSaving(false)
+      return
+    }
 
     let avatarUrl: string | null = avatarPreview && !avatarFile ? avatarPreview : null
     let bannerUrl: string | null = bannerPreview && !bannerFile ? bannerPreview : null

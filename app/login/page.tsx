@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '../lib/supabaseClient'
 import AuthLayout from '../components/AuthLayout'
+import PasswordInput from '../components/PasswordInput'
 
 export default function LoginPage() {
   const [username, setUsername] = useState('')
@@ -54,13 +55,7 @@ export default function LoginPage() {
         </div>
         <div>
           <label className="block mb-1 text-sm text-neutral-400">Contraseña</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="w-full bg-ink-900 border border-ink-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-garnet-600"
-          />
+          <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
         </div>
         {error && <p className="text-garnet-400 text-sm">{error}</p>}
         <button

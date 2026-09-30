@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Cinzel } from "next/font/google";
 import "./globals.css";
+import { THEME_INIT_SCRIPT } from "./lib/theme";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,9 +28,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="es"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${cinzel.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-ink-950 text-neutral-100">{children}</body>
+      <head>
+        {/* Aplica el modo claro/oscuro y el acento guardados ANTES de pintar, para no parpadear */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
+      <body className="min-h-full flex flex-col bg-ink-950 text-neutral-100" suppressHydrationWarning>
+        {children}
+      </body>
     </html>
   );
 }
