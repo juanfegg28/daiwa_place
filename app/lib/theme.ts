@@ -85,16 +85,23 @@ function hslToHex(h: number, s: number, l: number): string {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`
 }
 
-/** A partir de UN color, genera la rampa 300-700 que usan los botones y acentos. */
+/**
+ * A partir de UN color, genera la rampa 300-700 que usan los botones y acentos.
+ * OJO: antes esto forzaba un mínimo de 35% de saturación — para un negro, blanco
+ * o gris (saturación real 0%), el matiz queda indefinido y JS lo calcula como 0°
+ * (rojo), así que ese mínimo forzado convertía cualquier gris/negro/blanco en un
+ * rojo visible. Ahora se respeta la saturación real del color elegido: si es 0
+ * (gris puro), la rampa sale en grises, no en rojo.
+ */
 export function hexToAccentShades(hex: string) {
   const { h, s } = hexToHsl(hex)
-  const sat = Math.min(90, Math.max(35, s))
+  const sat = Math.min(90, s)
   return {
     300: hslToHex(h, sat, 78),
     400: hslToHex(h, sat, 62),
     500: hex,
-    600: hslToHex(h, Math.min(100, sat + 8), 36),
-    700: hslToHex(h, Math.min(100, sat + 8), 26),
+    600: hslToHex(h, Math.min(100, sat > 0 ? sat + 8 : 0), 36),
+    700: hslToHex(h, Math.min(100, sat > 0 ? sat + 8 : 0), 26),
   }
 }
 

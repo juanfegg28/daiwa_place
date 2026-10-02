@@ -31,11 +31,19 @@ export default function RoleBadges({
     <span className="inline-flex items-center gap-1 flex-wrap align-middle">
       {founder && (
         <span
-          title="Creador de Daiwa Place"
-          className={`inline-flex items-center gap-1 rounded-full font-semibold text-white bg-gradient-to-r from-amber-500 to-garnet-600 ${pad}`}
+          title="Creador de DaiwaPlace"
+          className={`inline-flex items-center gap-1 rounded-full font-semibold tracking-wide ${pad}`}
+          style={{
+            // Colores fijos (no variables CSS): esta insignia es intocable y
+            // nunca debe cambiar, ni con el acento de quien la mira ni con
+            // el color VIP de nadie.
+            background: 'linear-gradient(100deg, #f4c858 0%, #d79a2c 45%, #9a5a16 100%)',
+            color: '#2a1600',
+            boxShadow: '0 0 0 1px rgba(255,220,150,0.5) inset',
+          }}
         >
           <CrownIcon className={iconSize} />
-          Creador
+          Creador de DaiwaPlace
         </span>
       )}
       {roleNames.map((r) => (
