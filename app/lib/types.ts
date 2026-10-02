@@ -1,8 +1,14 @@
+export type RoleBadgeInfo = {
+  roles: { name: string; badge_color: string } | null
+}
+
 export type AuthorProfile = {
   username: string
   avatar_url: string | null
   id_student: string | null
   is_frozen: boolean
+  badge_color?: string | null
+  user_roles?: RoleBadgeInfo[]
 } | null
 
 export type PostImage = {

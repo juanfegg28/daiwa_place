@@ -122,8 +122,9 @@ export default function ProfileActions({
 
       <ReportDialog
         open={showReport}
+        mode="profile"
         targetUsername={targetUsername}
-        targetUserId={targetUserId}
+        reportedUserId={targetUserId}
         reporterId={currentUserId}
         onClose={() => setShowReport(false)}
       />

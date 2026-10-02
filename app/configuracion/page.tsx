@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AppShell, { useAppSession } from '../components/AppShell'
+import { isSupremeAdmin } from '../lib/permissions'
 import { supabase } from '../lib/supabaseClient'
 import { ShieldIcon, EyeIcon, SparklesIcon, BellIcon, BlockIcon } from '../components/icons'
 import type { ConfigProfile } from './types'
@@ -33,7 +34,7 @@ export default function ConfiguracionPage() {
 }
 
 function ConfiguracionContent() {
-  const { userId, username, loading: sessionLoading } = useAppSession()
+  const { userId, username, loading: sessionLoading, hasAnyRole } = useAppSession()
   const router = useRouter()
   const [profile, setProfile] = useState<ConfigProfile | null>(null)
   const [loading, setLoading] = useState(true)
@@ -42,7 +43,7 @@ function ConfiguracionContent() {
   const load = async (id: string) => {
     const { data } = await supabase
       .from('profiles')
-      .select('id, username, is_frozen, posts_visibility, ghost_mode, theme, accent_color, notif_prefs')
+      .select('id, username, is_frozen, posts_visibility, ghost_mode, theme, accent_color, badge_color, notif_prefs')
       .eq('id', id)
       .maybeSingle()
     if (data) {
@@ -54,6 +55,7 @@ function ConfiguracionContent() {
         ghost_mode: data.ghost_mode ?? false,
         theme: (data.theme as 'dark' | 'light') ?? 'dark',
         accent_color: data.accent_color ?? null,
+        badge_color: data.badge_color ?? null,
         notif_prefs: { ...DEFAULT_NOTIF_PREFS, ...(data.notif_prefs ?? {}) },
       })
     }
@@ -118,7 +120,13 @@ function ConfiguracionContent() {
         />
       )}
       {tab === 'privacidad' && <PrivacidadTab profile={profile} onUpdate={setProfile} />}
-      {tab === 'apariencia' && <AparienciaTab profile={profile} onUpdate={setProfile} />}
+      {tab === 'apariencia' && (
+        <AparienciaTab
+          profile={profile}
+          onUpdate={setProfile}
+          showVipBadge={hasAnyRole || isSupremeAdmin(username)}
+        />
+      )}
       {tab === 'notificaciones' && <NotificacionesTab profile={profile} onUpdate={setProfile} />}
       {tab === 'bloqueados' && <BloqueadosTab currentUserId={profile.id} />}
     </div>

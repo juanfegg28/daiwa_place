@@ -15,8 +15,9 @@ import {
   SnowflakeIcon,
   BlockIcon,
 } from '../../components/icons'
+import RoleBadges from '../../components/RoleBadge'
 import { PROFILE_POST_SELECT } from '../../lib/queries'
-import type { Post } from '../../lib/types'
+import type { Post, RoleBadgeInfo } from '../../lib/types'
 
 type Profile = {
   id: string
@@ -28,6 +29,7 @@ type Profile = {
   birthday: string | null
   grado: string | null
   estado_personal: string | null
+  badge_color: string | null
   is_frozen: boolean
   posts_visibility: 'public' | 'followers'
   created_at: string
@@ -52,6 +54,7 @@ function ProfileContent() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
 
+  const [roles, setRoles] = useState<RoleBadgeInfo[]>([])
   const [followersCount, setFollowersCount] = useState(0)
   const [followingCount, setFollowingCount] = useState(0)
   const [isFollowing, setIsFollowing] = useState(false)
@@ -106,7 +109,7 @@ function ProfileContent() {
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select(
-        'id, username, id_student, bio, avatar_url, banner_url, birthday, grado, estado_personal, is_frozen, posts_visibility, created_at'
+        'id, username, id_student, bio, avatar_url, banner_url, birthday, grado, estado_personal, badge_color, is_frozen, posts_visibility, created_at'
       )
       .eq('username', usernameParam.toLowerCase())
       .maybeSingle()
@@ -118,7 +121,14 @@ function ProfileContent() {
     }
 
     setProfile(profileData)
-    await Promise.all([loadPosts(profileData.id), loadFollowState(profileData.id)])
+    const loadRoles = async () => {
+      const { data } = await supabase
+        .from('user_roles')
+        .select('roles(name, badge_color)')
+        .eq('user_id', profileData.id)
+      setRoles((data as unknown as RoleBadgeInfo[]) ?? [])
+    }
+    await Promise.all([loadPosts(profileData.id), loadFollowState(profileData.id), loadRoles()])
     setLoading(false)
   }
 
@@ -226,7 +236,7 @@ function ProfileContent() {
 
       <div className="max-w-2xl mx-auto px-4 sm:px-6">
         <div className="relative z-10 -mt-14 sm:-mt-16 mb-4 flex justify-between items-end">
-          <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full border-4 border-ink-950 bg-ink-700 overflow-hidden flex items-center justify-center shadow-[0_0_0_2px_rgba(200,27,62,0.45)]">
+          <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full border-4 border-ink-950 bg-ink-700 overflow-hidden flex items-center justify-center shadow-[0_0_0_2px] shadow-garnet-500/45">
             {profile.avatar_url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={profile.avatar_url} alt={profile.username} className="w-full h-full object-cover" />
@@ -264,8 +274,9 @@ function ProfileContent() {
         </div>
 
         <div className="mb-4">
-          <h1 className="text-xl font-semibold text-neutral-50 flex items-center gap-2">
+          <h1 className="text-xl font-semibold text-neutral-50 flex items-center gap-2 flex-wrap">
             {profile.id_student || profile.username}
+            <RoleBadges username={profile.username} roles={roles} badgeColorOverride={profile.badge_color} />
             {profile.is_frozen && (
               <span
                 title="Cuenta congelada"

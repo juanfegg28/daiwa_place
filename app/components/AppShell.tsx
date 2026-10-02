@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabaseClient'
 import { applyTheme, type ThemeMode } from '../lib/theme'
 import Logo from './Logo'
 import { APP_VERSION } from '../lib/changelog'
+import { isSupremeAdmin, mergePermissions, type Permissions } from '../lib/permissions'
 import {
   HomeIcon,
   UserIcon,
@@ -14,6 +15,8 @@ import {
   BellIcon,
   SearchIcon,
   SettingsIcon,
+  ShieldAdminIcon,
+  WrenchIcon,
   LogoutIcon,
   LoginIcon,
   type IconProps,
@@ -24,6 +27,9 @@ type SessionState = {
   userId: string | null
   username: string | null
   avatarUrl: string | null
+  permissions: Permissions
+  isSupreme: boolean
+  hasAnyRole: boolean
   refresh: () => void
 }
 
@@ -32,6 +38,9 @@ const AppSessionContext = createContext<SessionState>({
   userId: null,
   username: null,
   avatarUrl: null,
+  permissions: {},
+  isSupreme: false,
+  hasAnyRole: false,
   refresh: () => {},
 })
 
@@ -68,21 +77,58 @@ function DirectMessagesTeaser() {
   )
 }
 
+function MaintenanceScreen({ onLogout }: { onLogout: () => void }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-ink-950 text-neutral-100 px-4">
+      <div className="max-w-sm text-center">
+        <div className="w-14 h-14 rounded-full bg-ink-800 flex items-center justify-center text-garnet-400 mx-auto mb-4">
+          <WrenchIcon className="w-6 h-6" />
+        </div>
+        <h1 className="text-lg font-display font-semibold text-neutral-50 mb-2">
+          Daiwa Place está en mantenimiento
+        </h1>
+        <p className="text-sm text-neutral-500 leading-relaxed mb-6">
+          Estamos arreglando algunas cosas por dentro. Vuelve a entrar en un rato — no tardamos.
+        </p>
+        <button
+          type="button"
+          onClick={onLogout}
+          className="text-xs text-neutral-500 hover:text-garnet-400 transition"
+        >
+          Cerrar sesión
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function AppShell({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
   const [username, setUsername] = useState<string | null>(null)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [permissions, setPermissions] = useState<Permissions>({})
+  const [hasAnyRole, setHasAnyRole] = useState(false)
+  const [maintenanceOn, setMaintenanceOn] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
 
   const load = async () => {
+    const { data: settingsRow } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'maintenance_mode')
+      .maybeSingle()
+    setMaintenanceOn(settingsRow?.value === true)
+
     const { data: authData } = await supabase.auth.getUser()
     const user = authData.user
     if (!user) {
       setUserId(null)
       setUsername(null)
       setAvatarUrl(null)
+      setPermissions({})
+      setHasAnyRole(false)
       setLoading(false)
       return
     }
@@ -95,6 +141,19 @@ export default function AppShell({ children }: { children: ReactNode }) {
     setUsername(profile?.username ?? null)
     setAvatarUrl(profile?.avatar_url ?? null)
     applyTheme((profile?.theme as ThemeMode) ?? 'dark', profile?.accent_color ?? null)
+
+    const { data: roleRows } = await supabase
+      .from('user_roles')
+      .select('roles(permissions)')
+      .eq('user_id', user.id)
+    const merged = mergePermissions(
+      ((roleRows as unknown as { roles: { permissions: Permissions } | null }[]) ?? [])
+        .map((r) => r.roles)
+        .filter((r): r is { permissions: Permissions } => !!r)
+    )
+    setPermissions(merged)
+    setHasAnyRole((roleRows ?? []).length > 0)
+
     setLoading(false)
   }
 
@@ -114,6 +173,9 @@ export default function AppShell({ children }: { children: ReactNode }) {
     applyTheme('dark', null)
     router.push('/login')
   }
+
+  const isSupreme = isSupremeAdmin(username)
+  const canSeeAdmin = isSupreme || hasAnyRole
 
   const navItems: NavItem[] = [
     { href: '/', label: 'Inicio', icon: HomeIcon, match: (p) => p === '/' },
@@ -139,12 +201,30 @@ export default function AppShell({ children }: { children: ReactNode }) {
             icon: BellIcon,
             match: (p: string) => p === '/notificaciones',
           },
+          ...(canSeeAdmin
+            ? [
+                {
+                  href: '/admin',
+                  label: 'Centro de Mando',
+                  shortLabel: 'Admin',
+                  icon: ShieldAdminIcon,
+                  match: (p: string) => p === '/admin',
+                },
+              ]
+            : []),
         ]
       : []),
   ]
 
+  // El mantenimiento solo bloquea a estudiantes normales (sin ningún rol ni Admin Supremo)
+  if (!loading && userId && maintenanceOn && !canSeeAdmin) {
+    return <MaintenanceScreen onLogout={handleLogout} />
+  }
+
   return (
-    <AppSessionContext.Provider value={{ loading, userId, username, avatarUrl, refresh: load }}>
+    <AppSessionContext.Provider
+      value={{ loading, userId, username, avatarUrl, permissions, isSupreme, hasAnyRole, refresh: load }}
+    >
       <div className="min-h-screen bg-ink-950 text-neutral-100 md:flex">
         {/* Sidebar de escritorio */}
         <aside className="hidden md:flex md:flex-col md:w-64 lg:w-72 md:shrink-0 md:h-screen md:sticky md:top-0 border-r border-ink-800 bg-ink-900/60 px-4 py-6">
@@ -162,7 +242,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
                   href={item.href}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition ${
                     active
-                      ? 'bg-garnet-600/90 text-white shadow-[0_8px_24px_-8px_var(--color-garnet-500)]'
+                      ? 'bg-garnet-600/90 text-white shadow-[0_8px_24px_-8px] shadow-garnet-600/70'
                       : 'text-neutral-300 hover:bg-ink-800'
                   }`}
                 >

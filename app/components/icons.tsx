@@ -514,6 +514,85 @@ export function ShieldIcon({ className = base }: IconProps) {
   )
 }
 
+export function CrownIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path
+        d="m3.5 8.5 3.3 2.3L12 5l5.2 5.8 3.3-2.3L19.5 18h-15L3.5 8.5Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <path d="M6.5 18h11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+export function MegaphoneIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path
+        d="M3.5 10.5v3a1 1 0 0 0 1 1h1.3l1.4 4.4a1 1 0 0 0 1 .7h1a1 1 0 0 0 .95-1.3L8.2 14.5"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M5.8 10.5h.9l9.8-4.3a1 1 0 0 1 1.4.9v10.8a1 1 0 0 1-1.4.9l-9.8-4.3h-.9v-4Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <path d="M19.5 9.5c.8.6 1.3 1.5 1.3 2.5s-.5 1.9-1.3 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+export function WrenchIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path
+        d="M14.5 5.5a4 4 0 0 0-5.3 4.7L4 15.4V20h4.6l5.2-5.2a4 4 0 0 0 4.7-5.3l-3 3-2.4-.7-.7-2.4 3-3Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+export function UserCogIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <circle cx="9.5" cy="7.8" r="2.8" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M4.5 18c.9-2.6 2.9-3.9 5-3.9s4.1 1.3 5 3.9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <circle cx="18" cy="16" r="2.2" stroke="currentColor" strokeWidth="1.4" />
+      <path
+        d="M18 12.7v.9M18 18.4v.9M21.3 16h-.9M15.6 16h-.9M20.4 13.6l-.65.65M16.25 17.75l-.65.65M20.4 18.4l-.65-.65M16.25 14.25l-.65-.65"
+        stroke="currentColor"
+        strokeWidth="1.3"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+export function ShieldAdminIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path
+        d="M12 3 4.5 6v5.5c0 5 3.2 7.9 7.5 9.5 4.3-1.6 7.5-4.5 7.5-9.5V6L12 3Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="10.2" r="1.7" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M9 14.8c.6-1.4 1.6-2.1 3-2.1s2.4.7 3 2.1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 export function CloseIcon({ className = base }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className}>

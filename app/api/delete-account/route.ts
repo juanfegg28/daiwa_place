@@ -1,12 +1,20 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
-// Elimina la cuenta para siempre: perfil, publicaciones, comentarios, likes,
-// follows, bloqueos, reportes y archivos guardados (avatar, banner, fotos de
-// publicaciones), y por último el usuario de autenticación.
+const SUPREME_ADMIN_USERNAMES = ['renshsh', 'are_you_rena']
+
+// Elimina una cuenta para siempre: perfil, publicaciones, comentarios, likes,
+// follows, bloqueos, reportes, roles asignados y archivos guardados (avatar,
+// banner, fotos de publicaciones), y por último el usuario de autenticación.
+//
+// Sin "targetUserId" en el body: la persona borra SU PROPIA cuenta (Configuración).
+// Con "targetUserId": es la Eliminación Maestra del Centro de Mando — solo
+// funciona si quien llama es Admin Supremo, verificado contra su propia sesión.
 export async function POST(request: Request) {
   const authHeader = request.headers.get('authorization') || ''
   const token = authHeader.replace('Bearer ', '').trim()
+  const body = await request.json().catch(() => ({}))
+  const requestedTargetId: string | undefined = body?.targetUserId
 
   if (!token) {
     return NextResponse.json({ error: 'No se encontró tu sesión, vuelve a iniciar sesión' }, { status: 401 })
@@ -20,13 +28,29 @@ export async function POST(request: Request) {
   if (userError || !userData.user) {
     return NextResponse.json({ error: 'Tu sesión no es válida, vuelve a iniciar sesión' }, { status: 401 })
   }
-  const userId = userData.user.id
+  const callerId = userData.user.id
 
   const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
+  let userId = callerId
+
+  if (requestedTargetId && requestedTargetId !== callerId) {
+    const { data: callerProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('username')
+      .eq('id', callerId)
+      .maybeSingle()
+    const isSupreme = !!callerProfile?.username && SUPREME_ADMIN_USERNAMES.includes(callerProfile.username.toLowerCase())
+    if (!isSupreme) {
+      return NextResponse.json({ error: 'No tienes permiso para eliminar cuentas de otras personas' }, { status: 403 })
+    }
+    userId = requestedTargetId
+  }
+
+  await supabaseAdmin.from('user_roles').delete().or(`user_id.eq.${userId}`)
   await supabaseAdmin.from('comment_likes').delete().eq('user_id', userId)
   await supabaseAdmin.from('likes').delete().eq('user_id', userId)
   await supabaseAdmin.from('comments').delete().eq('user_id', userId)

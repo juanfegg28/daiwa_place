@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from './lib/supabaseClient'
 import AppShell, { useAppSession } from './components/AppShell'
 import PostCard from './components/PostCard'
+import AnnouncementBanner from './components/AnnouncementBanner'
 import PostImages from './components/PostImages'
 import { ImageIcon } from './components/icons'
 import { prepareImage } from './lib/images'
@@ -218,6 +219,8 @@ function Feed() {
 
   return (
     <div className="max-w-xl mx-auto py-6 px-4">
+      <AnnouncementBanner />
+
       {username && (
         <form onSubmit={handlePost} className="surface-card rounded-2xl p-4 mb-6">
           <div className="flex gap-3">

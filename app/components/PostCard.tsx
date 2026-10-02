@@ -16,11 +16,14 @@ import {
   TrashIcon,
   LinkIcon,
   SnowflakeIcon,
+  FlagIcon,
 } from './icons'
 import KebabMenu, { type MenuItem } from './KebabMenu'
 import ConfirmDialog from './ConfirmDialog'
+import ReportDialog from './ReportDialog'
 import PostImages from './PostImages'
 import ImageLightbox from './ImageLightbox'
+import RoleBadges from './RoleBadge'
 
 type PostCardProps = {
   post: Post
@@ -375,6 +378,7 @@ export default function PostCard({
   const [deletingPost, setDeletingPost] = useState(false)
   const [actionError, setActionError] = useState('')
   const [copied, setCopied] = useState(false)
+  const [showReport, setShowReport] = useState(false)
   const [lightbox, setLightbox] = useState<number | null>(null)
   const closeLightbox = useCallback(() => setLightbox(null), [])
 
@@ -526,6 +530,9 @@ export default function PostCard({
 
   const postMenu: MenuItem[] = [
     { label: 'Copiar enlace', icon: <LinkIcon className="w-4 h-4" />, onClick: copyLink },
+    ...(!isMine && currentUserId
+      ? [{ label: 'Reportar publicación', icon: <FlagIcon className="w-4 h-4" />, onClick: () => setShowReport(true) }]
+      : []),
     ...(isMine
       ? [
           {
@@ -560,9 +567,12 @@ export default function PostCard({
   // @usuario chico y gris abajo.
   const nameBlock = author ? (
     <div className="leading-tight min-w-0">
-      <Link href={`/perfil/${author.username}`} className="block text-[15px] font-bold text-neutral-50 hover:text-garnet-400 truncate">
-        {author.id_student || author.username}
-      </Link>
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <Link href={`/perfil/${author.username}`} className="text-[15px] font-bold text-neutral-50 hover:text-garnet-400 truncate">
+          {author.id_student || author.username}
+        </Link>
+        <RoleBadges username={author.username} roles={author.user_roles} badgeColorOverride={author.badge_color} size="xs" />
+      </div>
       <Link href={`/perfil/${author.username}`} className="block text-xs text-neutral-600 hover:text-garnet-400 truncate">
         @{author.username}
       </Link>
@@ -759,6 +769,18 @@ export default function PostCard({
       )}
 
       {lightbox !== null && <ImageLightbox images={images} startIndex={lightbox} onClose={closeLightbox} />}
+
+      {currentUserId && author && (
+        <ReportDialog
+          open={showReport}
+          mode="post"
+          postId={post.id}
+          reportedUserId={post.user_id}
+          targetUsername={author.username}
+          reporterId={currentUserId}
+          onClose={() => setShowReport(false)}
+        />
+      )}
 
       <ConfirmDialog
         open={confirmDeletePost}

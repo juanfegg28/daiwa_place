@@ -14,6 +14,39 @@ export const RELEASE_STAGE = 'beta'
 
 export const CHANGELOG: Release[] = [
   {
+    version: '0.10.0',
+    date: '2026-10-01',
+    title: 'Autoridad, Control y Estatus (Centro de Mando)',
+    sections: [
+      {
+        heading: 'Sistema de roles y permisos',
+        items: [
+          'Nuevo Centro de Mando (ícono de escudo en la barra lateral), que solo aparece si tienes al menos un rol asignado — y cada quien solo ve ahí las herramientas que su rol le permite usar.',
+          'Taller de Roles: se pueden crear roles con nombre y color propios, y marcarles permisos agrupados por riesgo (🟢 seguros, 🟡 avanzados, 🔴 críticos).',
+          'Los roles se asignan a cualquier estudiante desde el mismo Centro de Mando, y aparecen como insignia pública junto a su nombre en el inicio y su perfil.',
+          'Insignia especial "Creador de Daiwa Place" fija para las cuentas fundadoras, aparte de cualquier rol.',
+        ],
+      },
+      {
+        heading: 'Reportes y moderación',
+        items: [
+          'Además de reportar un perfil, ahora se puede reportar una publicación directamente desde sus tres puntitos.',
+          'Bandeja de reportes con botones para ver la evidencia, eliminar la publicación, congelar la cuenta o marcar el caso como resuelto — cada botón solo sale si tienes el permiso correspondiente.',
+        ],
+      },
+      {
+        heading: 'Herramientas para el staff',
+        items: [
+          'Titiritero de Identidades: edita el perfil completo de cualquier estudiante sin necesitar su contraseña, para corregir perfiles que rompan el rol.',
+          'Anuncios Globales: un banner que se fija arriba del Inicio de todos los estudiantes.',
+          'Modo Mantenimiento: bloquea la página para estudiantes normales mientras se arregla algo, dejando libre el paso solo al staff.',
+          'Eliminación Maestra: borra la cuenta de cualquier estudiante directamente desde el Centro de Mando.',
+          'Nueva opción oculta en Configuración → Apariencia (solo para cuentas con rol): elegir el color exacto de tu propia insignia.',
+        ],
+      },
+    ],
+  },
+  {
     version: '0.9.5',
     date: '2026-09-29',
     title: 'Exploración, Conexión y Control',

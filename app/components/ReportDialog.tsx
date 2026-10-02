@@ -3,19 +3,25 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 
-export default function ReportDialog({
-  open,
-  targetUsername,
-  targetUserId,
-  reporterId,
-  onClose,
-}: {
+type ReportDialogProps = {
   open: boolean
+  mode: 'profile' | 'post'
   targetUsername: string
-  targetUserId: string
+  reportedUserId: string
+  postId?: string
   reporterId: string
   onClose: () => void
-}) {
+}
+
+export default function ReportDialog({
+  open,
+  mode,
+  targetUsername,
+  reportedUserId,
+  postId,
+  reporterId,
+  onClose,
+}: ReportDialogProps) {
   const [reason, setReason] = useState('')
   const [sending, setSending] = useState(false)
   const [done, setDone] = useState(false)
@@ -35,7 +41,9 @@ export default function ReportDialog({
     setError('')
     const { error: err } = await supabase.from('reports').insert({
       reporter_id: reporterId,
-      reported_user_id: targetUserId,
+      reported_user_id: reportedUserId,
+      post_id: mode === 'post' ? postId ?? null : null,
+      target_type: mode,
       reason: reason.trim() || null,
     })
     setSending(false)
@@ -45,6 +53,8 @@ export default function ReportDialog({
     }
     setDone(true)
   }
+
+  const title = mode === 'post' ? 'Reportar esta publicación' : `Reportar a @${targetUsername}`
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center px-4" onClick={close}>
@@ -58,8 +68,7 @@ export default function ReportDialog({
           <>
             <h2 className="text-base font-semibold text-neutral-50 mb-1.5">Reporte enviado</h2>
             <p className="text-sm text-neutral-400 mb-5 leading-relaxed">
-              Gracias por avisar. Por ahora el reporte queda guardado para cuando esté listo el panel de
-              administrador — mientras tanto, si es urgente, escríbele directo al admin por Discord.
+              Gracias por avisar. Queda guardado en la bandeja de reportes para que el equipo lo revise.
             </p>
             <button
               type="button"
@@ -71,9 +80,11 @@ export default function ReportDialog({
           </>
         ) : (
           <>
-            <h2 className="text-base font-semibold text-neutral-50 mb-1.5">Reportar a @{targetUsername}</h2>
+            <h2 className="text-base font-semibold text-neutral-50 mb-1.5">{title}</h2>
             <p className="text-sm text-neutral-400 mb-3 leading-relaxed">
-              Cuéntale al administrador qué está pasando. Es opcional, pero ayuda a revisar el caso más rápido.
+              {mode === 'post'
+                ? `Le llega al equipo de @${targetUsername}. Cuéntanos qué está pasando (opcional).`
+                : 'Cuéntale al equipo qué está pasando. Es opcional, pero ayuda a revisar el caso más rápido.'}
             </p>
             <textarea
               value={reason}

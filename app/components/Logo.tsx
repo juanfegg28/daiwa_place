@@ -10,7 +10,7 @@ export default function Logo({ size = 'md' }: { size?: keyof typeof sizes }) {
   const s = sizes[size]
   return (
     <div className={`flex items-center ${s.gap} text-garnet-400`}>
-      <SealIcon className={`${s.seal} shrink-0 drop-shadow-[0_0_10px_rgba(200,27,62,0.35)]`} />
+      <SealIcon className={`${s.seal} shrink-0 drop-shadow-[0_0_10px_color-mix(in_srgb,var(--color-garnet-500)_35%,transparent)]`} />
       <span
         className={`font-display font-semibold tracking-wide text-neutral-50 ${s.text}`}
         style={{ letterSpacing: '0.03em' }}

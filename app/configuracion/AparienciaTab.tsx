@@ -4,18 +4,22 @@ import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { applyTheme, ACCENT_PRESETS, DEFAULT_ACCENT, isValidHex } from '../lib/theme'
 import { HeartIcon, CommentIcon } from '../components/icons'
+import RoleBadges from '../components/RoleBadge'
 import type { ConfigProfile } from './types'
 
 export default function AparienciaTab({
   profile,
   onUpdate,
+  showVipBadge = false,
 }: {
   profile: ConfigProfile
   onUpdate: (p: ConfigProfile) => void
+  showVipBadge?: boolean
 }) {
   const [theme, setTheme] = useState<'dark' | 'light'>(profile.theme)
   const [accent, setAccent] = useState<string>(profile.accent_color ?? DEFAULT_ACCENT)
   const [customHex, setCustomHex] = useState<string>(profile.accent_color ?? '')
+  const [badgeColor, setBadgeColor] = useState<string>(profile.badge_color ?? '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const savedRef = useRef({ theme: profile.theme, accent: profile.accent_color })
@@ -36,14 +40,15 @@ export default function AparienciaTab({
     setSaving(true)
     setSaved(false)
     const accentToSave = accent.toLowerCase() === DEFAULT_ACCENT.toLowerCase() ? null : accent
+    const badgeColorToSave = showVipBadge && isValidHex(badgeColor) ? badgeColor : null
     const { error } = await supabase
       .from('profiles')
-      .update({ theme, accent_color: accentToSave })
+      .update({ theme, accent_color: accentToSave, badge_color: badgeColorToSave })
       .eq('id', profile.id)
     setSaving(false)
     if (!error) {
       savedRef.current = { theme, accent: accentToSave }
-      onUpdate({ ...profile, theme, accent_color: accentToSave })
+      onUpdate({ ...profile, theme, accent_color: accentToSave, badge_color: badgeColorToSave })
       applyTheme(theme, accentToSave)
       setSaved(true)
       window.setTimeout(() => setSaved(false), 2500)
@@ -132,6 +137,42 @@ export default function AparienciaTab({
         </div>
       </section>
 
+      {showVipBadge && (
+        <section className="surface-card rounded-2xl p-5">
+          <h2 className="text-base font-semibold text-neutral-50 mb-1">Color de tu insignia VIP</h2>
+          <p className="text-sm text-neutral-500 mb-4 leading-relaxed max-w-md">
+            Esta opción solo la ven las cuentas con un rol oficial. Elige el color exacto de tu placa de rol
+            (la insignia junto a tu nombre), independiente del color de acento del resto de tu interfaz. Si no
+            eliges nada, se usa el color por defecto del rol.
+          </p>
+          <div className="flex items-center gap-3">
+            <input
+              type="color"
+              value={isValidHex(badgeColor) ? badgeColor : '#c81b3e'}
+              onChange={(e) => setBadgeColor(e.target.value)}
+              aria-label="Elegir color de insignia"
+              className="w-10 h-10 rounded-lg border border-ink-700 bg-transparent cursor-pointer"
+            />
+            <input
+              type="text"
+              value={badgeColor}
+              onChange={(e) => setBadgeColor(e.target.value)}
+              placeholder="Color por defecto del rol"
+              className="w-40 bg-ink-900 border border-ink-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-garnet-600"
+            />
+            {badgeColor && (
+              <button
+                type="button"
+                onClick={() => setBadgeColor('')}
+                className="text-xs text-neutral-500 hover:text-garnet-400 transition"
+              >
+                Quitar
+              </button>
+            )}
+          </div>
+        </section>
+      )}
+
       <section>
         <h2 className="text-sm font-semibold text-neutral-400 mb-2">Vista previa</h2>
         <div className="surface-card rounded-2xl p-4">
@@ -140,7 +181,17 @@ export default function AparienciaTab({
               R
             </div>
             <div className="leading-tight">
-              <p className="text-[15px] font-bold text-neutral-50">Ren Shiraishi</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-[15px] font-bold text-neutral-50">Ren Shiraishi</p>
+                {showVipBadge && (
+                  <RoleBadges
+                    username="estudiante_staff"
+                    roles={[{ roles: { name: 'Staff', badge_color: '#c81b3e' } }]}
+                    badgeColorOverride={isValidHex(badgeColor) ? badgeColor : null}
+                    size="xs"
+                  />
+                )}
+              </div>
               <p className="text-xs text-neutral-600">@renshsh</p>
             </div>
           </div>
