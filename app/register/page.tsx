@@ -172,7 +172,7 @@ export default function RegisterPage() {
   return (
     <AuthLayout wide>
       <h1 className="text-xl font-display font-semibold mb-1 text-center text-neutral-50">
-        Crear cuenta en Daiwa Place
+        Crear cuenta en DaiwaPlace
       </h1>
       <p className="text-neutral-500 text-sm text-center mb-6">Únete a la comunidad</p>
 

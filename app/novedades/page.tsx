@@ -16,13 +16,13 @@ export default function NovedadesPage() {
     <AppShell>
       <div className="max-w-2xl mx-auto py-8 px-4">
         <h1 className="text-2xl font-display font-semibold mb-1 text-neutral-50">Novedades</h1>
-        <p className="text-neutral-500 text-sm mb-6">Todo lo que va cambiando en Daiwa Place</p>
+        <p className="text-neutral-500 text-sm mb-6">Todo lo que va cambiando en DaiwaPlace</p>
 
         {RELEASE_STAGE === 'beta' && (
           <div className="rounded-2xl border border-garnet-700/60 bg-garnet-700/10 px-4 py-3 mb-6">
             <p className="text-sm font-semibold text-garnet-300 mb-0.5">Etapa beta</p>
             <p className="text-xs text-neutral-400 leading-relaxed">
-              Daiwa Place todavía no se ha lanzado oficialmente. Estamos probando y puliendo detalles, así que
+              DaiwaPlace todavía no se ha lanzado oficialmente. Estamos probando y puliendo detalles, así que
               pueden aparecer cambios y errores mientras tanto.
             </p>
           </div>

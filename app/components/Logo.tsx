@@ -1,5 +1,3 @@
-import { SealIcon } from './icons'
-
 const sizes = {
   sm: { seal: 'w-6 h-6', text: 'text-base', gap: 'gap-1.5' },
   md: { seal: 'w-8 h-8', text: 'text-xl', gap: 'gap-2' },
@@ -10,12 +8,17 @@ export default function Logo({ size = 'md' }: { size?: keyof typeof sizes }) {
   const s = sizes[size]
   return (
     <div className={`flex items-center ${s.gap} text-garnet-400`}>
-      <SealIcon className={`${s.seal} shrink-0 drop-shadow-[0_0_10px_color-mix(in_srgb,var(--color-garnet-500)_35%,transparent)]`} />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/brand-moon.png"
+        alt="DaiwaPlace"
+        className={`${s.seal} shrink-0 rounded-full object-cover drop-shadow-[0_0_10px_color-mix(in_srgb,var(--color-garnet-500)_35%,transparent)]`}
+      />
       <span
         className={`font-display font-semibold tracking-wide text-neutral-50 ${s.text}`}
         style={{ letterSpacing: '0.03em' }}
       >
-        Daiwa Place
+        DaiwaPlace
       </span>
     </div>
   )

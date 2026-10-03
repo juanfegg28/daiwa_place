@@ -20,7 +20,7 @@ const cinzel = Cinzel({
 });
 
 export const metadata: Metadata = {
-  title: "Daiwa Place",
+  title: "DaiwaPlace",
   description: "La red social de Daiwa — comparte, comenta y conecta con tus compañeros.",
 };
 

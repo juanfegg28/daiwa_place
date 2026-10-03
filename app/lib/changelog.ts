@@ -1,4 +1,4 @@
-// Notas de versión de Daiwa Place.
+// Notas de versión de DaiwaPlace.
 // Para publicar una actualización nueva: agrega un objeto AL PRINCIPIO de la lista.
 // La versión que se ve en la barra lateral sale automáticamente del primer elemento.
 
@@ -9,10 +9,39 @@ export type Release = {
   sections: { heading: string; items: string[] }[]
 }
 
-// Daiwa Place todavía no se ha lanzado oficialmente: sigue en etapa beta.
+// DaiwaPlace todavía no se ha lanzado oficialmente: sigue en etapa beta.
 export const RELEASE_STAGE = 'beta'
 
 export const CHANGELOG: Release[] = [
+  {
+    version: '0.10.1',
+    date: '2026-10-02',
+    title: 'Ajustes visuales y carrusel de fotos',
+    sections: [
+      {
+        heading: 'Marca',
+        items: [
+          'Logo actualizado: ahora usa la luna en vez del escudo genérico, y el nombre pasó de "Daiwa Place" a "DaiwaPlace".',
+        ],
+      },
+      {
+        heading: 'Arreglos visuales',
+        items: [
+          'El ícono de comentarios y el de "Mensajes directos" ya no se ven recortados.',
+          'El ícono de Configuración ahora es un engranaje de verdad (antes parecía un sol).',
+          'La tarjeta de tu cuenta, abajo en la barra lateral de escritorio, ahora es un botón que te lleva directo a tu perfil, con tu nombre de personaje grande arriba y tu @usuario chico debajo — igual que en las publicaciones.',
+        ],
+      },
+      {
+        heading: 'Fotos',
+        items: [
+          'Las publicaciones con varias fotos ahora se ven como un carrusel estilo Instagram: una foto a la vez, con flechas para pasar con el mouse en computador y deslizando con el dedo en el celular.',
+          'Cada foto respeta su tamaño real, sin recortarla en cuadros forzados, y el tamaño del post se ajusta solo (de forma suave) según cada foto.',
+          'En pantallas grandes, el alto de la foto queda limitado para que el nombre del autor y los botones de like/comentar siempre se vean sin necesidad de hacer scroll.',
+        ],
+      },
+    ],
+  },
   {
     version: '0.10.0',
     date: '2026-10-01',
@@ -24,7 +53,7 @@ export const CHANGELOG: Release[] = [
           'Nuevo Centro de Mando (ícono de escudo en la barra lateral), que solo aparece si tienes al menos un rol asignado — y cada quien solo ve ahí las herramientas que su rol le permite usar.',
           'Taller de Roles: se pueden crear roles con nombre y color propios, y marcarles permisos agrupados por riesgo (🟢 seguros, 🟡 avanzados, 🔴 críticos).',
           'Los roles se asignan a cualquier estudiante desde el mismo Centro de Mando, y aparecen como insignia pública junto a su nombre en el inicio y su perfil.',
-          'Insignia especial "Creador de Daiwa Place" fija para las cuentas fundadoras, aparte de cualquier rol.',
+          'Insignia especial "Creador de DaiwaPlace" fija para las cuentas fundadoras, aparte de cualquier rol.',
         ],
       },
       {

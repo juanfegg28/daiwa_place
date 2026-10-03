@@ -53,15 +53,15 @@ export function MessageIcon({ className = base }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className}>
       <path
-        d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v6A2.5 2.5 0 0 1 17.5 15H10l-4.2 3.4a.6.6 0 0 1-.98-.47V15h-.3A2.5 2.5 0 0 1 2 12.5"
+        d="M4.5 5.5h15a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-9.8l-3.7 3.2a.6.6 0 0 1-1-.46V16.5h-.5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1Z"
         stroke="currentColor"
-        strokeWidth="1.8"
+        strokeWidth="1.7"
         strokeLinejoin="round"
         strokeLinecap="round"
       />
-      <circle cx="8" cy="9.5" r="0.9" fill="currentColor" />
-      <circle cx="12" cy="9.5" r="0.9" fill="currentColor" />
-      <circle cx="16" cy="9.5" r="0.9" fill="currentColor" />
+      <circle cx="8.5" cy="11" r="0.9" fill="currentColor" />
+      <circle cx="12" cy="11" r="0.9" fill="currentColor" />
+      <circle cx="15.5" cy="11" r="0.9" fill="currentColor" />
     </svg>
   )
 }
@@ -140,9 +140,9 @@ export function CommentIcon({ className = base }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className}>
       <path
-        d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v6A2.5 2.5 0 0 1 17.5 15H10l-4.2 3.4a.6.6 0 0 1-.98-.47V15h-.3A2.5 2.5 0 0 1 2 12.5"
+        d="M4.5 5.5h15a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-9.8l-3.7 3.2a.6.6 0 0 1-1-.46V16.5h-.5a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1Z"
         stroke="currentColor"
-        strokeWidth="1.8"
+        strokeWidth="1.7"
         strokeLinejoin="round"
         strokeLinecap="round"
       />
@@ -362,15 +362,23 @@ export function SearchIcon({ className = base }: IconProps) {
 }
 
 export function SettingsIcon({ className = base }: IconProps) {
+  const teeth = [0, 45, 90, 135, 180, 225, 270, 315]
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className}>
-      <circle cx="12" cy="12" r="2.9" stroke="currentColor" strokeWidth="1.6" />
-      <path
-        d="M12 3.5v2M12 18.5v2M20.5 12h-2M5.5 12h-2M17.7 6.3l-1.4 1.4M7.7 16.3l-1.4 1.4M17.7 17.7l-1.4-1.4M7.7 7.7 6.3 6.3"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
+      {teeth.map((deg) => (
+        <rect
+          key={deg}
+          x="10.9"
+          y="1.6"
+          width="2.2"
+          height="3.4"
+          rx="0.6"
+          fill="currentColor"
+          transform={`rotate(${deg} 12 12)`}
+        />
+      ))}
+      <circle cx="12" cy="12" r="7.2" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="12" cy="12" r="2.6" stroke="currentColor" strokeWidth="1.6" />
     </svg>
   )
 }

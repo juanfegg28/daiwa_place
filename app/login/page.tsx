@@ -40,7 +40,7 @@ export default function LoginPage() {
   return (
     <AuthLayout>
       <h1 className="text-xl font-display font-semibold mb-6 text-center text-neutral-50">
-        Entrar a Daiwa Place
+        Entrar a DaiwaPlace
       </h1>
       <form onSubmit={handleLogin} className="space-y-4">
         <div>

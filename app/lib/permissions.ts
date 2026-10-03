@@ -1,6 +1,6 @@
-// Sistema de permisos de Daiwa Place (Centro de Mando).
+// Sistema de permisos de DaiwaPlace (Centro de Mando).
 // Los dos nombres de abajo tienen bypass total (Admin Supremo, Nivel 0) y
-// además son quienes llevan la insignia fundacional "Creador de Daiwa Place".
+// además son quienes llevan la insignia fundacional "Creador de DaiwaPlace".
 // Debe coincidir SIEMPRE con la función is_supreme_admin(uid) del SQL.
 export const SUPREME_ADMIN_USERNAMES = ['renshsh', 'are_you_rena']
 

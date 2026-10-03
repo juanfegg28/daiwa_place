@@ -85,7 +85,7 @@ function MaintenanceScreen({ onLogout }: { onLogout: () => void }) {
           <WrenchIcon className="w-6 h-6" />
         </div>
         <h1 className="text-lg font-display font-semibold text-neutral-50 mb-2">
-          Daiwa Place está en mantenimiento
+          DaiwaPlace está en mantenimiento
         </h1>
         <p className="text-sm text-neutral-500 leading-relaxed mb-6">
           Estamos arreglando algunas cosas por dentro. Vuelve a entrar en un rato — no tardamos.
@@ -107,6 +107,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null)
   const [username, setUsername] = useState<string | null>(null)
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [idStudent, setIdStudent] = useState<string | null>(null)
   const [permissions, setPermissions] = useState<Permissions>({})
   const [hasAnyRole, setHasAnyRole] = useState(false)
   const [maintenanceOn, setMaintenanceOn] = useState(false)
@@ -127,6 +128,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       setUserId(null)
       setUsername(null)
       setAvatarUrl(null)
+      setIdStudent(null)
       setPermissions({})
       setHasAnyRole(false)
       setLoading(false)
@@ -135,11 +137,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
     setUserId(user.id)
     const { data: profile } = await supabase
       .from('profiles')
-      .select('username, avatar_url, theme, accent_color')
+      .select('username, avatar_url, id_student, theme, accent_color')
       .eq('id', user.id)
       .maybeSingle()
     setUsername(profile?.username ?? null)
     setAvatarUrl(profile?.avatar_url ?? null)
+    setIdStudent(profile?.id_student ?? null)
     applyTheme((profile?.theme as ThemeMode) ?? 'dark', profile?.accent_color ?? null)
 
     const { data: roleRows } = await supabase
@@ -282,27 +285,35 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
           <div className="pt-4 border-t border-ink-800">
             {loading ? null : userId ? (
-              <div className="flex items-center gap-3 px-2">
-                <div className="w-9 h-9 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center shrink-0">
-                  {avatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={avatarUrl} alt={username ?? ''} className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-sm font-semibold text-garnet-400">
-                      {(username ?? '?').charAt(0).toUpperCase()}
-                    </span>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm text-neutral-200 truncate">@{username}</p>
-                  <button
-                    onClick={handleLogout}
-                    className="text-xs text-neutral-500 hover:text-garnet-400 flex items-center gap-1 transition"
-                  >
-                    <LogoutIcon className="w-3.5 h-3.5" />
-                    Cerrar sesión
-                  </button>
-                </div>
+              <div className="space-y-1">
+                <Link
+                  href={`/perfil/${username}`}
+                  className="flex items-center gap-3 px-2 py-1.5 rounded-xl hover:bg-ink-800 transition group"
+                >
+                  <div className="w-9 h-9 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center shrink-0">
+                    {avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={avatarUrl} alt={username ?? ''} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-sm font-semibold text-garnet-400">
+                        {(username ?? '?').charAt(0).toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1 leading-tight">
+                    <p className="text-sm font-bold text-neutral-100 truncate group-hover:text-garnet-400 transition">
+                      {idStudent || username}
+                    </p>
+                    <p className="text-xs text-neutral-600 truncate">@{username}</p>
+                  </div>
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-1.5 px-2 text-xs text-neutral-500 hover:text-garnet-400 transition"
+                >
+                  <LogoutIcon className="w-3.5 h-3.5" />
+                  Cerrar sesión
+                </button>
               </div>
             ) : (
               <Link
