@@ -23,7 +23,7 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]['id']
 
-const DEFAULT_NOTIF_PREFS = { comments: true, mentions: true, likes: true }
+const DEFAULT_NOTIF_PREFS = { comments: true, mentions: true, likes: true, follows: true }
 
 export default function ConfiguracionPage() {
   return (

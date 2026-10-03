@@ -17,7 +17,7 @@ import {
 } from '../../components/icons'
 import RoleBadges from '../../components/RoleBadge'
 import { PROFILE_POST_SELECT } from '../../lib/queries'
-import type { Post, RoleBadgeInfo } from '../../lib/types'
+import type { AuthorProfile, Post, RoleBadgeInfo } from '../../lib/types'
 
 type Profile = {
   id: string
@@ -217,6 +217,18 @@ function ProfileContent() {
     )
   }
 
+  // Las publicaciones del perfil no traen al autor embebido (ya lo conocemos),
+  // así que se lo ponemos aquí para que se vean igual que en el feed: foto,
+  // nombre de personaje, @usuario y la insignia (la corona, solo con el ícono).
+  const postAuthor: AuthorProfile = {
+    username: profile.username,
+    avatar_url: profile.avatar_url,
+    id_student: profile.id_student,
+    is_frozen: profile.is_frozen,
+    badge_color: profile.badge_color,
+    user_roles: roles,
+  }
+
   const isMyProfile = myUsername === profile.username
   const isBlockedEitherWay = iBlockedThem || theyBlockedMe
   const isPrivateForMe =
@@ -367,9 +379,10 @@ function ProfileContent() {
                 posts.map((post) => (
                   <PostCard
                     key={post.id}
-                    post={post}
+                    post={{ ...post, profiles: postAuthor }}
                     currentUserId={userId}
-                    showAuthor={false}
+                    showAuthor
+                    onProfilePage
                     authorIsFrozen={profile.is_frozen}
                     onToggleLike={handleLike}
                     onToggleCommentLike={handleLikeComment}

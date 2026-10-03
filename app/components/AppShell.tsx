@@ -31,6 +31,12 @@ type SessionState = {
   isSupreme: boolean
   hasAnyRole: boolean
   refresh: () => void
+  /** Notificaciones sin leer de la persona (para el numerito de la campana) */
+  unreadNotifications: number
+  /** Sube cada vez que llega o cambia una notificación; la página de Notificaciones lo usa para recargarse sola */
+  notificationsVersion: number
+  /** Vuelve a contar las no leídas (se llama después de leer o borrar notificaciones) */
+  refreshNotifications: () => void
 }
 
 const AppSessionContext = createContext<SessionState>({
@@ -42,6 +48,9 @@ const AppSessionContext = createContext<SessionState>({
   isSupreme: false,
   hasAnyRole: false,
   refresh: () => {},
+  unreadNotifications: 0,
+  notificationsVersion: 0,
+  refreshNotifications: () => {},
 })
 
 export function useAppSession() {
@@ -54,6 +63,12 @@ type NavItem = {
   shortLabel?: string
   icon: (props: IconProps) => React.ReactElement
   match: (pathname: string) => boolean
+  /** Numerito rojo (ej. notificaciones sin leer). 0 o undefined = no se muestra */
+  badge?: number
+}
+
+function formatBadge(n: number) {
+  return n > 99 ? '99+' : String(n)
 }
 
 function DirectMessagesTeaser() {
@@ -111,6 +126,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const [permissions, setPermissions] = useState<Permissions>({})
   const [hasAnyRole, setHasAnyRole] = useState(false)
   const [maintenanceOn, setMaintenanceOn] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [notificationsVersion, setNotificationsVersion] = useState(0)
   const pathname = usePathname()
   const router = useRouter()
 
@@ -171,6 +188,51 @@ export default function AppShell({ children }: { children: ReactNode }) {
     return () => sub.subscription.unsubscribe()
   }, [])
 
+  const countUnread = async (id: string) => {
+    const { count } = await supabase
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('recipient_id', id)
+      .eq('read', false)
+    setUnreadCount(count ?? 0)
+  }
+
+  const refreshNotifications = () => {
+    if (userId) countUnread(userId)
+    setNotificationsVersion((v) => v + 1)
+  }
+
+  // Notificaciones en vivo: se escucha la tabla por Realtime, y además se
+  // recuenta cada minuto y al volver a la pestaña (por si Realtime no está
+  // activado en Supabase o se cortó la conexión).
+  useEffect(() => {
+    if (!userId) return
+    const id = userId
+    function recount() {
+      countUnread(id)
+    }
+    function bump() {
+      countUnread(id)
+      setNotificationsVersion((v) => v + 1)
+    }
+    recount()
+    const channel = supabase
+      .channel(`notifications-${id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications', filter: `recipient_id=eq.${id}` },
+        bump
+      )
+      .subscribe()
+    const interval = window.setInterval(recount, 60000)
+    window.addEventListener('focus', bump)
+    return () => {
+      window.clearInterval(interval)
+      window.removeEventListener('focus', bump)
+      supabase.removeChannel(channel)
+    }
+  }, [userId])
+
   const handleLogout = async () => {
     await supabase.auth.signOut()
     applyTheme('dark', null)
@@ -203,6 +265,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
             shortLabel: 'Avisos',
             icon: BellIcon,
             match: (p: string) => p === '/notificaciones',
+            badge: unreadCount,
           },
           ...(canSeeAdmin
             ? [
@@ -226,7 +289,19 @@ export default function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <AppSessionContext.Provider
-      value={{ loading, userId, username, avatarUrl, permissions, isSupreme, hasAnyRole, refresh: load }}
+      value={{
+        loading,
+        userId,
+        username,
+        avatarUrl,
+        permissions,
+        isSupreme,
+        hasAnyRole,
+        refresh: load,
+        unreadNotifications: userId ? unreadCount : 0,
+        notificationsVersion,
+        refreshNotifications,
+      }}
     >
       <div className="min-h-screen bg-ink-950 text-neutral-100 md:flex">
         {/* Sidebar de escritorio */}
@@ -251,6 +326,15 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 >
                   <Icon filled={active} className="w-5 h-5" />
                   {item.label}
+                  {!!item.badge && item.badge > 0 && (
+                    <span
+                      className={`ml-auto min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-semibold flex items-center justify-center ${
+                        active ? 'bg-white text-garnet-600' : 'bg-garnet-600 text-white'
+                      }`}
+                    >
+                      {formatBadge(item.badge)}
+                    </span>
+                  )}
                 </Link>
               )
             })}
@@ -367,7 +451,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
                     active ? 'text-garnet-400' : 'text-neutral-500'
                   }`}
                 >
-                  <Icon filled={active} className="w-5 h-5" />
+                  <span className="relative">
+                    <Icon filled={active} className="w-5 h-5" />
+                    {!!item.badge && item.badge > 0 && (
+                      <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 px-1 rounded-full bg-garnet-600 text-white text-[9.5px] font-semibold flex items-center justify-center">
+                        {formatBadge(item.badge)}
+                      </span>
+                    )}
+                  </span>
                   {item.shortLabel ?? item.label}
                 </Link>
               )

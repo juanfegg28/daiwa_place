@@ -49,3 +49,17 @@ export type ProfileSummary = {
   followers_count?: number
   created_at?: string
 }
+
+export type NotificationType = 'like_post' | 'like_comment' | 'comment' | 'reply' | 'follow'
+
+export type NotificationItem = {
+  id: string
+  type: NotificationType
+  read: boolean
+  created_at: string
+  post_id: string | null
+  comment_id: string | null
+  actor: { username: string; id_student: string | null; avatar_url: string | null } | null
+  post: { content: string; images: PostImage[] | null } | null
+  comment: { content: string } | null
+}

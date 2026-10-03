@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useCallback, useContext, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabaseClient'
@@ -46,6 +46,14 @@ type PostCardProps = {
   onRefresh: () => void | Promise<void>
   /** Se llama cuando el dueño borra la publicación (por defecto usa onRefresh) */
   onPostDeleted?: () => void
+  /**
+   * La publicación se está mostrando dentro del perfil de su propio autor:
+   * se ve igual que en el feed, pero el nombre y la foto ya no llevan a ningún
+   * lado (ya estamos en ese perfil).
+   */
+  onProfilePage?: boolean
+  /** Comentario al que se llegó desde una notificación: se abre su hilo, se desplaza hasta él y se resalta */
+  focusCommentId?: string | null
 }
 
 const ROOT_PREVIEW = 3 // comentarios principales visibles antes de "Ver más"
@@ -113,6 +121,9 @@ type ThreadContextValue = {
   /** Devuelven un mensaje de error, o null si todo salió bien */
   editComment: (id: string, text: string) => Promise<string | null>
   deleteComment: (id: string) => Promise<string | null>
+  /** Comentario destino de una notificación + sus ancestros (sus hilos no empiezan colapsados) */
+  focusPath: Set<string>
+  highlightId: string | null
 }
 
 const ThreadContext = createContext<ThreadContextValue | null>(null)
@@ -134,7 +145,7 @@ function CommentThread({ comment, depth }: { comment: Comment; depth: number }) 
   const isMine = !!t.currentUserId && comment.user_id === t.currentUserId
   const likedByMe = t.currentUserId ? comment.comment_likes.some((l) => l.user_id === t.currentUserId) : false
 
-  const [collapsed, setCollapsed] = useState(descendants > COLLAPSE_THRESHOLD)
+  const [collapsed, setCollapsed] = useState(descendants > COLLAPSE_THRESHOLD && !t.focusPath.has(comment.id))
   const [editing, setEditing] = useState(false)
   const [editText, setEditText] = useState(comment.content)
   const [saving, setSaving] = useState(false)
@@ -191,7 +202,7 @@ function CommentThread({ comment, depth }: { comment: Comment; depth: number }) 
     : []
 
   return (
-    <div>
+    <div id={`comment-${comment.id}`}>
       <div className="flex items-start gap-2">
         <MiniAvatar
           username={commentAuthor?.username ?? 'usuario'}
@@ -231,7 +242,11 @@ function CommentThread({ comment, depth }: { comment: Comment; depth: number }) 
             </div>
           ) : (
             <div className="flex items-start gap-1">
-              <div className="min-w-0 rounded-2xl rounded-tl-sm bg-ink-700 px-3 py-2">
+              <div
+                className={`min-w-0 rounded-2xl rounded-tl-sm bg-ink-700 px-3 py-2 transition ${
+                  t.highlightId === comment.id ? 'ring-2 ring-garnet-500/70' : ''
+                }`}
+              >
                 {commentAuthor ? (
                   <Link
                     href={`/perfil/${commentAuthor.username}`}
@@ -362,6 +377,8 @@ export default function PostCard({
   onAddComment,
   onRefresh,
   onPostDeleted,
+  onProfilePage = false,
+  focusCommentId = null,
 }: PostCardProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
   const [commentText, setCommentText] = useState('')
@@ -381,8 +398,26 @@ export default function PostCard({
   const [showReport, setShowReport] = useState(false)
   const [lightbox, setLightbox] = useState<number | null>(null)
   const closeLightbox = useCallback(() => setLightbox(null), [])
+  const [highlightId, setHighlightId] = useState<string | null>(null)
 
   const router = useRouter()
+
+  // Llegada desde una notificación: baja hasta el comentario y lo resalta unos segundos
+  useEffect(() => {
+    if (!detail || !focusCommentId) return
+    const scrollTimer = window.setTimeout(() => {
+      const el = document.getElementById(`comment-${focusCommentId}`)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        setHighlightId(focusCommentId)
+      }
+    }, 200)
+    const clearTimer = window.setTimeout(() => setHighlightId(null), 3800)
+    return () => {
+      window.clearTimeout(scrollTimer)
+      window.clearTimeout(clearTimer)
+    }
+  }, [detail, focusCommentId])
 
   const likedByMe = currentUserId ? post.likes.some((l) => l.user_id === currentUserId) : false
   const author = post.profiles
@@ -407,14 +442,24 @@ export default function PostCard({
     }
   }
 
+  const focusPath = new Set<string>()
+  if (focusCommentId) {
+    const byId = new Map(post.comments.map((c) => [c.id, c]))
+    let cursor = byId.get(focusCommentId)
+    while (cursor && !focusPath.has(cursor.id)) {
+      focusPath.add(cursor.id)
+      cursor = cursor.parent_comment_id ? byId.get(cursor.parent_comment_id) : undefined
+    }
+  }
+
   const showAllComments = detail || showAllRoots
   const visibleRoots = showAllComments ? rootComments : rootComments.slice(0, ROOT_PREVIEW)
   const hiddenRoots = rootComments.length - visibleRoots.length
 
-  const canGoToProfile = showAuthor && !!author && !detail
+  const canGoToProfile = showAuthor && !!author && !detail && !onProfilePage
 
   const goToProfile = () => {
-    if (author) router.push(`/perfil/${author.username}`)
+    if (author && !onProfilePage) router.push(`/perfil/${author.username}`)
   }
 
   const submitComment = async () => {
@@ -568,14 +613,28 @@ export default function PostCard({
   const nameBlock = author ? (
     <div className="leading-tight min-w-0">
       <div className="flex items-center gap-1.5 flex-wrap">
-        <Link href={`/perfil/${author.username}`} className="text-[15px] font-bold text-neutral-50 hover:text-garnet-400 truncate">
-          {author.id_student || author.username}
-        </Link>
-        <RoleBadges username={author.username} roles={author.user_roles} badgeColorOverride={author.badge_color} size="xs" />
+        {onProfilePage ? (
+          <span className="text-[15px] font-bold text-neutral-50 truncate">{author.id_student || author.username}</span>
+        ) : (
+          <Link href={`/perfil/${author.username}`} className="text-[15px] font-bold text-neutral-50 hover:text-garnet-400 truncate">
+            {author.id_student || author.username}
+          </Link>
+        )}
+        <RoleBadges
+          username={author.username}
+          roles={author.user_roles}
+          badgeColorOverride={author.badge_color}
+          size="xs"
+          founderStyle="icon"
+        />
       </div>
-      <Link href={`/perfil/${author.username}`} className="block text-xs text-neutral-600 hover:text-garnet-400 truncate">
-        @{author.username}
-      </Link>
+      {onProfilePage ? (
+        <span className="block text-xs text-neutral-600 truncate">@{author.username}</span>
+      ) : (
+        <Link href={`/perfil/${author.username}`} className="block text-xs text-neutral-600 hover:text-garnet-400 truncate">
+          @{author.username}
+        </Link>
+      )}
       {timeLine}
     </div>
   ) : (
@@ -595,8 +654,8 @@ export default function PostCard({
               <button
                 type="button"
                 onClick={goToProfile}
-                disabled={!author}
-                className="shrink-0 cursor-pointer"
+                disabled={!author || onProfilePage}
+                className={`shrink-0 ${onProfilePage ? 'cursor-default' : 'cursor-pointer'}`}
                 aria-label={author ? `Ver perfil de @${author.username}` : 'Ver perfil'}
               >
                 <MiniAvatar username={author?.username ?? 'usuario'} avatarUrl={author?.avatar_url ?? null} />
@@ -707,6 +766,8 @@ export default function PostCard({
             submitReply,
             editComment,
             deleteComment,
+            focusPath,
+            highlightId,
           }}
         >
           <div className="mt-4 pt-4 border-t border-ink-700 space-y-3">

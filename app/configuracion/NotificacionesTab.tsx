@@ -6,8 +6,9 @@ import type { ConfigProfile } from './types'
 
 const OPTIONS: { key: keyof ConfigProfile['notif_prefs']; label: string; description: string }[] = [
   { key: 'comments', label: 'Comentarios', description: 'Cuando alguien comenta una de tus publicaciones.' },
-  { key: 'mentions', label: 'Menciones y respuestas', description: 'Cuando alguien te menciona o responde uno de tus comentarios.' },
+  { key: 'mentions', label: 'Respuestas', description: 'Cuando alguien responde uno de tus comentarios.' },
   { key: 'likes', label: 'Likes', description: 'Cuando alguien le da like a tu publicación o a un comentario tuyo.' },
+  { key: 'follows', label: 'Nuevos seguidores', description: 'Cuando alguien empieza a seguirte.' },
 ]
 
 export default function NotificacionesTab({
@@ -32,9 +33,9 @@ export default function NotificacionesTab({
       <section className="surface-card rounded-2xl p-5">
         <h2 className="text-base font-semibold text-neutral-50 mb-1">Qué te queremos avisar</h2>
         <p className="text-sm text-neutral-500 mb-4 leading-relaxed max-w-md">
-          Elige qué tipo de actividad quieres que te avise la página. Esto se conecta con el panel de
-          Notificaciones que estamos terminando de construir — por ahora, tu preferencia queda guardada y
-          lista para cuando esté funcionando.
+          Elige qué tipo de actividad quieres que te avise la página. Lo que apagues aquí ya no te va a llegar
+          al panel de Notificaciones ni sumar al numerito de la campana. Lo que ya te había llegado antes se queda
+          en tu lista hasta que lo borres.
         </p>
         <div className="space-y-1">
           {OPTIONS.map((opt) => {

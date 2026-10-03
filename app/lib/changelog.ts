@@ -14,6 +14,37 @@ export const RELEASE_STAGE = 'beta'
 
 export const CHANGELOG: Release[] = [
   {
+    version: '0.11.0',
+    date: '2026-10-03',
+    title: 'Notificaciones',
+    sections: [
+      {
+        heading: 'Sistema de notificaciones',
+        items: [
+          'Ahora te llega un aviso cuando alguien le da like a tu publicación o a un comentario tuyo, comenta tu publicación, responde uno de tus comentarios o empieza a seguirte.',
+          'La campana de la barra lateral (y la de abajo en el celular) muestra un numerito con las notificaciones que todavía no has leído, y se actualiza sola, sin recargar la página.',
+          'Nueva pantalla de Notificaciones: las no leídas se ven resaltadas, puedes filtrar solo las \"Sin leer\", marcar todo como leído o borrar una por una.',
+          'Al tocar una notificación te lleva directo a la publicación (abriendo y marcando el comentario del que se trata) o al perfil de quien te siguió.',
+          'Si le quitas el like a algo o dejas de seguir a alguien, su aviso desaparece, para que nadie pueda llenarte de notificaciones dando y quitando likes.',
+          'No te llegan avisos de tus propias acciones ni de personas bloqueadas.',
+        ],
+      },
+      {
+        heading: 'Configuración',
+        items: [
+          'En Configuración → Notificaciones ya puedes elegir qué avisos recibir: comentarios, respuestas, likes y nuevos seguidores. Lo que apagues deja de llegarte.',
+        ],
+      },
+      {
+        heading: 'Perfiles y publicaciones',
+        items: [
+          'Las publicaciones dentro de un perfil ahora se ven igual que en el inicio: con la foto, el nombre del personaje y el @usuario de quien publica.',
+          'La insignia \"Creador de DaiwaPlace\" se ve completa solo en el encabezado del perfil. En las publicaciones (del inicio y del perfil) aparece solo la coronita.',
+        ],
+      },
+    ],
+  },
+  {
     version: '0.10.1',
     date: '2026-10-02',
     title: 'Ajustes visuales y carrusel de fotos',

@@ -26,6 +26,8 @@ function PostContent() {
   const [post, setPost] = useState<Post | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  // Si se llegó desde una notificación, viene el comentario a destacar: /post/ID?c=COMMENT_ID
+  const [focusCommentId, setFocusCommentId] = useState<string | null>(null)
 
   const loadPost = async () => {
     const { data, error } = await supabase.from('posts').select(POST_SELECT).eq('id', postId).maybeSingle()
@@ -41,6 +43,7 @@ function PostContent() {
 
   useEffect(() => {
     function run() {
+      setFocusCommentId(new URLSearchParams(window.location.search).get('c'))
       loadPost()
     }
     run()
@@ -112,6 +115,7 @@ function PostContent() {
           onAddComment={handleAddComment}
           onRefresh={loadPost}
           onPostDeleted={() => router.push('/')}
+          focusCommentId={focusCommentId}
         />
       )}
     </div>

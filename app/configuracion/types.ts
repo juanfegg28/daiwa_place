@@ -7,5 +7,5 @@ export type ConfigProfile = {
   theme: 'dark' | 'light'
   accent_color: string | null
   badge_color: string | null
-  notif_prefs: { comments: boolean; mentions: boolean; likes: boolean }
+  notif_prefs: { comments: boolean; mentions: boolean; likes: boolean; follows: boolean }
 }
