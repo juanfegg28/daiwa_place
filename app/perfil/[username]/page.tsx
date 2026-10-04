@@ -14,6 +14,7 @@ import {
   HeartIcon,
   SnowflakeIcon,
   BlockIcon,
+  UsersIcon,
 } from '../../components/icons'
 import RoleBadges from '../../components/RoleBadge'
 import { PROFILE_POST_SELECT } from '../../lib/queries'
@@ -58,6 +59,7 @@ function ProfileContent() {
   const [followersCount, setFollowersCount] = useState(0)
   const [followingCount, setFollowingCount] = useState(0)
   const [isFollowing, setIsFollowing] = useState(false)
+  const [followsMe, setFollowsMe] = useState(false)
   const [iBlockedThem, setIBlockedThem] = useState(false)
   const [theyBlockedMe, setTheyBlockedMe] = useState(false)
 
@@ -87,6 +89,14 @@ function ProfileContent() {
         .maybeSingle()
       setIsFollowing(!!followRow)
 
+      const { data: followsMeRow } = await supabase
+        .from('follows')
+        .select('follower_id')
+        .eq('follower_id', profileId)
+        .eq('following_id', userId)
+        .maybeSingle()
+      setFollowsMe(!!followsMeRow)
+
       const { data: blockRows } = await supabase
         .from('blocks')
         .select('blocker_id, blocked_id')
@@ -97,6 +107,7 @@ function ProfileContent() {
       setTheyBlockedMe(!!blockRows?.some((b) => b.blocker_id === profileId))
     } else {
       setIsFollowing(false)
+      setFollowsMe(false)
       setIBlockedThem(false)
       setTheyBlockedMe(false)
     }
@@ -299,7 +310,18 @@ function ProfileContent() {
               </span>
             )}
           </h1>
-          <p className="text-neutral-500 text-sm">{'@' + profile.username}</p>
+          <p className="text-neutral-500 text-sm flex items-center gap-2 flex-wrap">
+            {'@' + profile.username}
+            {!isMyProfile && isFollowing && followsMe && (
+              <span
+                title="Se siguen mutuamente"
+                className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide bg-garnet-700/20 text-garnet-300 rounded-full px-2 py-0.5"
+              >
+                <UsersIcon className="w-3 h-3" />
+                Amigos
+              </span>
+            )}
+          </p>
         </div>
 
         {isBlockedEitherWay ? (

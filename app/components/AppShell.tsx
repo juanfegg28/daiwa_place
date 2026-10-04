@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabaseClient'
@@ -37,6 +37,17 @@ type SessionState = {
   notificationsVersion: number
   /** Vuelve a contar las no leídas (se llama después de leer o borrar notificaciones) */
   refreshNotifications: () => void
+  /** Chats (aceptados) con mensajes sin leer: es el numerito del ícono de Mensajes. Las solicitudes NO suman aquí. */
+  unreadMessages: number
+  /** Solicitudes de mensaje sin leer (solo se muestran dentro de Mensajes → Solicitudes) */
+  messageRequests: number
+  /** Sube cuando llega algo nuevo de mensajes/notas; las pantallas de Mensajes lo usan para recargarse */
+  dmVersion: number
+  refreshDm: () => void
+  /** Ids de las personas conectadas ahora mismo (vacío si tú tienes apagado el estado "conectado") */
+  onlineIds: Set<string>
+  /** Si tú muestras (y ves) el estado "conectado" */
+  showOnline: boolean
 }
 
 const AppSessionContext = createContext<SessionState>({
@@ -51,6 +62,12 @@ const AppSessionContext = createContext<SessionState>({
   unreadNotifications: 0,
   notificationsVersion: 0,
   refreshNotifications: () => {},
+  unreadMessages: 0,
+  messageRequests: 0,
+  dmVersion: 0,
+  refreshDm: () => {},
+  onlineIds: new Set<string>(),
+  showOnline: true,
 })
 
 export function useAppSession() {
@@ -69,27 +86,6 @@ type NavItem = {
 
 function formatBadge(n: number) {
   return n > 99 ? '99+' : String(n)
-}
-
-function DirectMessagesTeaser() {
-  const onClick = () =>
-    window.alert('Muy pronto vas a poder mandar mensajes directos a otros estudiantes 💬')
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-sm text-neutral-500 hover:bg-ink-800/60 transition"
-    >
-      <span className="flex items-center gap-3">
-        <MessageIcon className="w-5 h-5" />
-        Mensajes directos
-      </span>
-      <span className="text-[10px] uppercase tracking-wide bg-ink-700 text-neutral-400 rounded-full px-2 py-0.5">
-        Pronto
-      </span>
-    </button>
-  )
 }
 
 function MaintenanceScreen({ onLogout }: { onLogout: () => void }) {
@@ -117,7 +113,14 @@ function MaintenanceScreen({ onLogout }: { onLogout: () => void }) {
   )
 }
 
-export default function AppShell({ children }: { children: ReactNode }) {
+export default function AppShell({
+  children,
+  hideMobileChrome = false,
+}: {
+  children: ReactNode
+  /** En celular esconde la barra de arriba y la de abajo (se usa dentro de un chat, como en Instagram) */
+  hideMobileChrome?: boolean
+}) {
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
   const [username, setUsername] = useState<string | null>(null)
@@ -128,6 +131,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const [maintenanceOn, setMaintenanceOn] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
   const [notificationsVersion, setNotificationsVersion] = useState(0)
+  const [unreadMessages, setUnreadMessages] = useState(0)
+  const [messageRequests, setMessageRequests] = useState(0)
+  const [dmVersion, setDmVersion] = useState(0)
+  const [showOnline, setShowOnline] = useState(true)
+  const [onlineIds, setOnlineIds] = useState<Set<string>>(new Set())
+  const presenceRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
   const pathname = usePathname()
   const router = useRouter()
 
@@ -173,6 +182,14 @@ export default function AppShell({ children }: { children: ReactNode }) {
     )
     setPermissions(merged)
     setHasAnyRole((roleRows ?? []).length > 0)
+
+    // Se pide aparte: si todavía no se corrió el SQL de la v0.12.0, esto no tumba el resto de la sesión
+    const { data: onlineRow } = await supabase
+      .from('profiles')
+      .select('show_online_status')
+      .eq('id', user.id)
+      .maybeSingle()
+    setShowOnline(onlineRow?.show_online_status !== false)
 
     setLoading(false)
   }
@@ -233,6 +250,84 @@ export default function AppShell({ children }: { children: ReactNode }) {
     }
   }, [userId])
 
+  const countDm = async () => {
+    const { data } = await supabase.rpc('dm_unread_summary')
+    const row = (Array.isArray(data) ? data[0] : data) as
+      | { unread_conversations?: number; pending_requests?: number }
+      | null
+      | undefined
+    setUnreadMessages(row?.unread_conversations ?? 0)
+    setMessageRequests(row?.pending_requests ?? 0)
+  }
+
+  const refreshDm = () => {
+    countDm()
+    setDmVersion((v) => v + 1)
+  }
+
+  // Mensajes y notas en vivo (Realtime) + respaldo por si se corta la conexión
+  useEffect(() => {
+    if (!userId) return
+    function recount() {
+      countDm()
+    }
+    function bump() {
+      countDm()
+      setDmVersion((v) => v + 1)
+    }
+    recount()
+    const channel = supabase
+      .channel(`dm-live-${userId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, bump)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, bump)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'message_reactions' }, bump)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notes' }, bump)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'note_likes' }, bump)
+      .subscribe()
+    const interval = window.setInterval(bump, 45000)
+    window.addEventListener('focus', bump)
+    return () => {
+      window.clearInterval(interval)
+      window.removeEventListener('focus', bump)
+      supabase.removeChannel(channel)
+    }
+  }, [userId])
+
+  // Estado "conectado": Realtime Presence. Entra al abrir la página y sale al cerrarla o perder la conexión.
+  useEffect(() => {
+    if (!userId || !showOnline) {
+      function clear() {
+        setOnlineIds(new Set())
+      }
+      clear()
+      return
+    }
+    const id = userId
+    const channel = supabase.channel('daiwa-presence', { config: { presence: { key: id } } })
+    presenceRef.current = channel
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        setOnlineIds(new Set(Object.keys(channel.presenceState())))
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') await channel.track({ online_at: new Date().toISOString() })
+      })
+    const leave = () => {
+      channel.untrack()
+    }
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') channel.track({ online_at: new Date().toISOString() })
+    }
+    window.addEventListener('pagehide', leave)
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      window.removeEventListener('pagehide', leave)
+      document.removeEventListener('visibilitychange', onVisible)
+      presenceRef.current = null
+      supabase.removeChannel(channel)
+    }
+  }, [userId, showOnline])
+
   const handleLogout = async () => {
     await supabase.auth.signOut()
     applyTheme('dark', null)
@@ -266,6 +361,13 @@ export default function AppShell({ children }: { children: ReactNode }) {
             icon: BellIcon,
             match: (p: string) => p === '/notificaciones',
             badge: unreadCount,
+          },
+          {
+            href: '/mensajes',
+            label: 'Mensajes',
+            icon: MessageIcon,
+            match: (p: string) => p.startsWith('/mensajes'),
+            badge: unreadMessages,
           },
           ...(canSeeAdmin
             ? [
@@ -301,6 +403,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
         unreadNotifications: userId ? unreadCount : 0,
         notificationsVersion,
         refreshNotifications,
+        unreadMessages: userId ? unreadMessages : 0,
+        messageRequests: userId ? messageRequests : 0,
+        dmVersion,
+        refreshDm,
+        onlineIds,
+        showOnline,
       }}
     >
       <div className="min-h-screen bg-ink-950 text-neutral-100 md:flex">
@@ -339,7 +447,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
               )
             })}
 
-            <DirectMessagesTeaser />
           </nav>
 
           {username && (
@@ -412,7 +519,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
         </aside>
 
         {/* Barra superior movil */}
-        <header className="md:hidden sticky top-0 z-30 flex items-center justify-center border-b border-ink-800 bg-ink-950/90 backdrop-blur px-4 py-3">
+        <header className={`${hideMobileChrome ? 'hidden' : 'md:hidden'} sticky top-0 z-30 flex items-center justify-center border-b border-ink-800 bg-ink-950/90 backdrop-blur px-4 py-3`}>
           <Logo size="sm" />
           <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
             {username && (
@@ -435,10 +542,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 min-w-0 pb-20 md:pb-0">{children}</main>
+        <main className={`flex-1 min-w-0 md:pb-0 ${hideMobileChrome ? 'pb-0' : 'pb-20'}`}>{children}</main>
 
         {/* Barra inferior movil */}
-        <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-ink-800 bg-ink-900/95 backdrop-blur px-2 pb-[env(safe-area-inset-bottom,0px)]">
+        <nav className={`${hideMobileChrome ? 'hidden' : 'md:hidden'} fixed bottom-0 inset-x-0 z-30 border-t border-ink-800 bg-ink-900/95 backdrop-blur px-2 pb-[env(safe-area-inset-bottom,0px)]`}>
           <div className="flex items-center justify-around py-2">
             {navItems.map((item) => {
               const active = item.match(pathname)
@@ -463,16 +570,6 @@ export default function AppShell({ children }: { children: ReactNode }) {
                 </Link>
               )
             })}
-            <button
-              type="button"
-              onClick={() =>
-                window.alert('Muy pronto vas a poder mandar mensajes directos a otros estudiantes 💬')
-              }
-              className="flex flex-col items-center gap-0.5 px-2.5 py-1 text-[10.5px] text-neutral-600"
-            >
-              <MessageIcon className="w-5 h-5" />
-              Mensajes
-            </button>
             {!loading && !userId && (
               <Link
                 href="/login"

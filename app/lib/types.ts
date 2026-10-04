@@ -50,7 +50,7 @@ export type ProfileSummary = {
   created_at?: string
 }
 
-export type NotificationType = 'like_post' | 'like_comment' | 'comment' | 'reply' | 'follow'
+export type NotificationType = 'like_post' | 'like_comment' | 'comment' | 'reply' | 'follow' | 'like_note'
 
 export type NotificationItem = {
   id: string
@@ -59,7 +59,9 @@ export type NotificationItem = {
   created_at: string
   post_id: string | null
   comment_id: string | null
+  note_id?: string | null
   actor: { username: string; id_student: string | null; avatar_url: string | null } | null
   post: { content: string; images: PostImage[] | null } | null
   comment: { content: string } | null
+  note?: { content: string } | null
 }

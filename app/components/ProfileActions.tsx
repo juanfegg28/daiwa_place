@@ -6,7 +6,8 @@ import { supabase } from '../lib/supabaseClient'
 import KebabMenu, { type MenuItem } from './KebabMenu'
 import ConfirmDialog from './ConfirmDialog'
 import ReportDialog from './ReportDialog'
-import { FlagIcon, BlockIcon } from './icons'
+import { FlagIcon, BlockIcon, MessageIcon } from './icons'
+import { startConversation } from '../lib/dm'
 
 type ProfileActionsProps = {
   currentUserId: string | null
@@ -32,7 +33,24 @@ export default function ProfileActions({
   const [showReport, setShowReport] = useState(false)
   const [showBlockConfirm, setShowBlockConfirm] = useState(false)
   const [blocking, setBlocking] = useState(false)
+  const [openingChat, setOpeningChat] = useState(false)
   const router = useRouter()
+
+  // Abre (o crea) el chat. Si esa persona no te sigue, queda como solicitud de mensaje.
+  const openChat = async () => {
+    if (!currentUserId) {
+      router.push('/login')
+      return
+    }
+    setOpeningChat(true)
+    const { id, error } = await startConversation(targetUserId)
+    setOpeningChat(false)
+    if (error || !id) {
+      window.alert(error ?? 'No se pudo abrir el chat.')
+      return
+    }
+    router.push(`/mensajes/${id}`)
+  }
 
   const toggleFollow = async () => {
     if (!currentUserId) {
@@ -115,6 +133,16 @@ export default function ProfileActions({
             }`}
           >
             {isFollowing ? 'Siguiendo' : 'Seguir'}
+          </button>
+          <button
+            type="button"
+            onClick={openChat}
+            disabled={openingChat}
+            aria-label={`Enviar mensaje a @${targetUsername}`}
+            title="Enviar mensaje"
+            className="w-9 h-9 flex items-center justify-center rounded-full border border-ink-600 text-neutral-300 hover:bg-ink-800 hover:border-garnet-600 hover:text-garnet-400 transition disabled:opacity-60"
+          >
+            <MessageIcon className="w-[18px] h-[18px]" />
           </button>
           <KebabMenu items={menuItems} label={`Más opciones sobre @${targetUsername}`} />
         </>

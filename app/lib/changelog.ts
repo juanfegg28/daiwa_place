@@ -14,6 +14,52 @@ export const RELEASE_STAGE = 'beta'
 
 export const CHANGELOG: Release[] = [
   {
+    version: '0.12.0',
+    date: '2026-10-04',
+    title: 'Mensajes directos y amigos',
+    sections: [
+      {
+        heading: 'Mensajes directos',
+        items: [
+          'Ya puedes escribirle a otras personas. En cada perfil hay un botón de mensaje (solo el ícono) al lado de Seguir, y en la barra lateral el ícono de Mensajes te muestra cuántos chats tienen mensajes sin leer.',
+          'Puedes reaccionar a un mensaje (❤️ 😂 😮 😢 😡 👍), responder a uno en específico, editar tus mensajes, eliminarlos y copiarlos. Con doble clic (o doble toque en el celular) le das ❤️ rápido.',
+          'Verás \"Enviado\" y \"Visto\" debajo de tu último mensaje, y los mensajes nuevos llegan solos, sin recargar la página.',
+          'Puedes ponerle un apodo a la otra persona (solo tú lo ves) y ese es el nombre que aparece en el chat. También puedes eliminar un chat solo para ti.',
+        ],
+      },
+      {
+        heading: 'Solicitudes de mensaje',
+        items: [
+          'Si alguien que no sigues te escribe, su mensaje llega a la sección Solicitudes y puedes aceptarlo, eliminarlo o bloquear a esa persona.',
+          'Las solicitudes no suman en el numerito del ícono de Mensajes de la barra lateral: solo se avisan dentro de la sección Solicitudes. Mientras no te acepten, quien escribe puede enviar hasta 3 mensajes.',
+          'Si empiezas a seguir a quien te escribió, la solicitud se acepta sola.',
+        ],
+      },
+      {
+        heading: 'Amigos y estado «conectado»',
+        items: [
+          'Dos personas son amigas cuando se siguen mutuamente. En el perfil verás la etiqueta \"Amigos\".',
+          'Tus amigos conectados aparecen con un puntico verde en las fotos (bandeja, chat y notas) y el chat dice \"Conectado\". Se actualiza en cuanto entran o salen de la página.',
+          'Puedes apagarlo en Configuración → Privacidad: si lo apagas, nadie te ve conectado y tú tampoco ves el puntico verde de los demás.',
+        ],
+      },
+      {
+        heading: 'Notas',
+        items: [
+          'Arriba de tus mensajes está la fila de notas, como en Instagram: comparte una frase de hasta 60 caracteres que ven tus amigos durante 24 horas.',
+          'Con doble clic (o doble toque) en la nota de un amigo le das like. Al abrir una nota ves quiénes le dieron like.',
+          'Te avisamos en Notificaciones cuando un amigo le da like a tu nota. Puedes apagar este aviso en Configuración → Notificaciones.',
+        ],
+      },
+      {
+        heading: 'Música (primeros pasos)',
+        items: [
+          'Dejamos preparada la base para conectar Deezer: más adelante podrás poner canciones en tus notas, publicaciones y perfil. Por ahora todavía no se puede elegir música.',
+        ],
+      },
+    ],
+  },
+  {
     version: '0.11.0',
     date: '2026-10-03',
     title: 'Notificaciones',

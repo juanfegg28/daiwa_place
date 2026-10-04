@@ -23,7 +23,7 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]['id']
 
-const DEFAULT_NOTIF_PREFS = { comments: true, mentions: true, likes: true, follows: true }
+const DEFAULT_NOTIF_PREFS = { comments: true, mentions: true, likes: true, follows: true, note_likes: true }
 
 export default function ConfiguracionPage() {
   return (
@@ -46,6 +46,8 @@ function ConfiguracionContent() {
       .select('id, username, is_frozen, posts_visibility, ghost_mode, theme, accent_color, badge_color, notif_prefs')
       .eq('id', id)
       .maybeSingle()
+    // Se pide aparte para no romper Configuración si todavía no se corrió el SQL de la v0.12.0
+    const { data: onlineRow } = await supabase.from('profiles').select('show_online_status').eq('id', id).maybeSingle()
     if (data) {
       setProfile({
         id: data.id,
@@ -56,6 +58,7 @@ function ConfiguracionContent() {
         theme: (data.theme as 'dark' | 'light') ?? 'dark',
         accent_color: data.accent_color ?? null,
         badge_color: data.badge_color ?? null,
+        show_online_status: onlineRow?.show_online_status !== false,
         notif_prefs: { ...DEFAULT_NOTIF_PREFS, ...(data.notif_prefs ?? {}) },
       })
     }

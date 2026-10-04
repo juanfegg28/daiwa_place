@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 const SUPREME_ADMIN_USERNAMES = ['renshsh', 'are_you_rena']
 
 // Elimina una cuenta para siempre: perfil, publicaciones, comentarios, likes,
-// follows, bloqueos, reportes, notificaciones, roles asignados y archivos guardados (avatar,
+// follows, bloqueos, reportes, notificaciones, mensajes directos, notas, roles asignados y archivos guardados (avatar,
 // banner, fotos de publicaciones), y por último el usuario de autenticación.
 //
 // Sin "targetUserId" en el body: la persona borra SU PROPIA cuenta (Configuración).
@@ -51,6 +51,11 @@ export async function POST(request: Request) {
   }
 
   await supabaseAdmin.from('notifications').delete().or(`recipient_id.eq.${userId},actor_id.eq.${userId}`)
+  // mensajes directos: al borrar la conversación se van sus mensajes, reacciones y apodos; también notas y sus likes
+  await supabaseAdmin.from('note_likes').delete().eq('user_id', userId)
+  await supabaseAdmin.from('notes').delete().eq('user_id', userId)
+  await supabaseAdmin.from('message_reactions').delete().eq('user_id', userId)
+  await supabaseAdmin.from('conversations').delete().or(`user_a.eq.${userId},user_b.eq.${userId}`)
   await supabaseAdmin.from('user_roles').delete().or(`user_id.eq.${userId}`)
   await supabaseAdmin.from('comment_likes').delete().eq('user_id', userId)
   await supabaseAdmin.from('likes').delete().eq('user_id', userId)

@@ -40,11 +40,12 @@ const ACTION_TEXT: Record<NotificationType, string> = {
   comment: 'comentó tu publicación',
   reply: 'respondió tu comentario',
   follow: 'empezó a seguirte',
+  like_note: 'le dio like a tu nota',
 }
 
 function TypeIcon({ type }: { type: NotificationType }) {
   const cls = 'w-3 h-3'
-  if (type === 'like_post' || type === 'like_comment') return <HeartIcon filled className={cls} />
+  if (type === 'like_post' || type === 'like_comment' || type === 'like_note') return <HeartIcon filled className={cls} />
   if (type === 'comment') return <CommentIcon className={cls} />
   if (type === 'reply') return <ReplyIcon className={cls} />
   return <UsersIcon className={cls} />
@@ -52,6 +53,7 @@ function TypeIcon({ type }: { type: NotificationType }) {
 
 function hrefFor(n: NotificationItem): string {
   if (n.type === 'follow') return n.actor ? `/perfil/${n.actor.username}` : '/'
+  if (n.type === 'like_note') return '/mensajes'
   if (!n.post_id) return '/'
   const focus = n.comment_id && n.type !== 'like_post' ? `?c=${n.comment_id}` : ''
   return `/post/${n.post_id}${focus}`
@@ -59,6 +61,7 @@ function hrefFor(n: NotificationItem): string {
 
 function snippetFor(n: NotificationItem): string | null {
   if (n.type === 'follow') return null
+  if (n.type === 'like_note') return n.note?.content ? shorten(n.note.content) : null
   if (n.type === 'like_post') {
     if (!n.post) return null
     if (n.post.content?.trim()) return shorten(n.post.content)

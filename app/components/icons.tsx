@@ -630,3 +630,57 @@ export function SealIcon({ className = base }: IconProps) {
     </svg>
   )
 }
+
+export function PlusIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+export function CheckIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="m5 12.5 4.2 4.2L19 7" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+export function SmileIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M8.6 14.2c.8 1.2 1.9 1.8 3.4 1.8s2.6-.6 3.4-1.8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <circle cx="9.3" cy="9.9" r="1" fill="currentColor" />
+      <circle cx="14.7" cy="9.9" r="1" fill="currentColor" />
+    </svg>
+  )
+}
+
+export function MusicIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M9 17.5V6.2l10-2v11.3" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" strokeLinecap="round" />
+      <circle cx="6.8" cy="17.6" r="2.4" stroke="currentColor" strokeWidth="1.7" />
+      <circle cx="16.8" cy="15.6" r="2.4" stroke="currentColor" strokeWidth="1.7" />
+    </svg>
+  )
+}
+
+export function ArrowLeftIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M19 12H5m6-6-6 6 6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+export function CopyIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <rect x="8.5" y="8.5" width="11" height="11" rx="2" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M15.5 8.5V6.5a2 2 0 0 0-2-2h-7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  )
+}

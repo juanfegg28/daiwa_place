@@ -9,6 +9,7 @@ const OPTIONS: { key: keyof ConfigProfile['notif_prefs']; label: string; descrip
   { key: 'mentions', label: 'Respuestas', description: 'Cuando alguien responde uno de tus comentarios.' },
   { key: 'likes', label: 'Likes', description: 'Cuando alguien le da like a tu publicación o a un comentario tuyo.' },
   { key: 'follows', label: 'Nuevos seguidores', description: 'Cuando alguien empieza a seguirte.' },
+  { key: 'note_likes', label: 'Likes en tus notas', description: 'Cuando un amigo le da like a tu nota de los mensajes directos.' },
 ]
 
 export default function NotificacionesTab({
