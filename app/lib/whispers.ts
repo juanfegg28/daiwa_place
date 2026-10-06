@@ -38,6 +38,17 @@ export function reasonLabel(id: string): string {
 
 export type WhisperStatus = 'visible' | 'hidden' | 'removed'
 
+/**
+ * Datos de "esto es mío". Ojo: como la columna de la llave (whisper_id / comment_id) es a la vez
+ * la llave primaria de esa tabla, Supabase la entrega como UN SOLO objeto o null (relación 1 a 1),
+ * no como una lista. Por eso se acepta cualquiera de las dos formas.
+ */
+export type OwnRow = { user_id: string } | { user_id: string }[] | null | undefined
+
+export function hasRow(row: unknown): boolean {
+  return Array.isArray(row) ? row.length > 0 : !!row
+}
+
 export type WhisperItem = {
   id: string
   content: string
@@ -49,8 +60,8 @@ export type WhisperItem = {
   removed_by_author: boolean
   /** Solo trae TU voto (la base de datos no deja ver los de nadie más) */
   whisper_votes: { value: number }[]
-  /** Solo trae una fila si la confesión es tuya */
-  whisper_authors: { user_id: string }[]
+  /** Solo trae algo si la confesión es tuya (objeto, lista o null según la relación) */
+  whisper_authors: OwnRow
 }
 
 export type WhisperComment = {
@@ -66,8 +77,8 @@ export type WhisperComment = {
   deleted_at: string | null
   created_at: string
   profiles: { username: string; id_student: string | null; avatar_url: string | null } | null
-  /** Solo trae una fila si el comentario es tuyo */
-  whisper_comment_authors: { user_id: string }[]
+  /** Solo trae algo si el comentario es tuyo (objeto, lista o null según la relación) */
+  whisper_comment_authors: OwnRow
 }
 
 export const WHISPER_SELECT =
@@ -81,11 +92,17 @@ export const COMMENT_SELECT =
   'id, whisper_id, parent_comment_id, content, is_anonymous, author_id, anon_n, is_op, status, deleted_at, created_at, profiles!whisper_comments_author_id_fkey(username, id_student, avatar_url), whisper_comment_authors(user_id)'
 
 export function isMineWhisper(w: WhisperItem) {
-  return w.whisper_authors.length > 0
+  return hasRow(w.whisper_authors)
+}
+
+export function isMineComment(c: WhisperComment) {
+  return hasRow(c.whisper_comment_authors)
 }
 
 export function myVoteOf(w: WhisperItem): number {
-  return w.whisper_votes[0]?.value ?? 0
+  const v = w.whisper_votes as unknown
+  if (Array.isArray(v)) return (v[0] as { value?: number } | undefined)?.value ?? 0
+  return (v as { value?: number } | null | undefined)?.value ?? 0
 }
 
 /** Nombre del comentario: "Chismoso Anónimo #2" (el autor de la confesión no lleva número, lleva insignia) */

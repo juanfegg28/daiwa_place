@@ -7,7 +7,7 @@ import ConfirmDialog from '../components/ConfirmDialog'
 import RoleBadges from '../components/RoleBadge'
 import UserAvatar from '../components/UserAvatar'
 import { inboxTime } from '../lib/dm'
-import { anonCommentName, friendlyWhisperError, type WhisperComment } from '../lib/whispers'
+import { anonCommentName, friendlyWhisperError, isMineComment, type WhisperComment } from '../lib/whispers'
 import AnonAvatar from './AnonAvatar'
 import CommentComposer from './CommentComposer'
 
@@ -77,7 +77,7 @@ function CommentNode({
   const [deleting, setDeleting] = useState(false)
 
   const replies = childrenMap.get(comment.id) ?? []
-  const mine = comment.whisper_comment_authors.length > 0
+  const mine = isMineComment(comment)
   const deleted = !!comment.deleted_at
   const removedByMod = comment.status === 'removed'
   const hidden = comment.status === 'hidden'
