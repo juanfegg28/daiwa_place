@@ -52,6 +52,15 @@ export async function POST(request: Request) {
 
   await supabaseAdmin.from('notifications').delete().or(`recipient_id.eq.${userId},actor_id.eq.${userId}`)
   // mensajes directos: al borrar la conversación se van sus mensajes, reacciones y apodos; también notas y sus likes
+  // Muro de los Susurros: se borran sus confesiones (con sus comentarios y votos) y sus comentarios
+  const { data: myWhispers } = await supabaseAdmin.from('whisper_authors').select('whisper_id').eq('user_id', userId)
+  const whisperIds = (myWhispers ?? []).map((r: { whisper_id: string }) => r.whisper_id)
+  if (whisperIds.length > 0) await supabaseAdmin.from('whispers').delete().in('id', whisperIds)
+  const { data: myComments } = await supabaseAdmin.from('whisper_comment_authors').select('comment_id').eq('user_id', userId)
+  const commentIds = (myComments ?? []).map((r: { comment_id: string }) => r.comment_id)
+  if (commentIds.length > 0) await supabaseAdmin.from('whisper_comments').delete().in('id', commentIds)
+  await supabaseAdmin.from('whisper_votes').delete().eq('user_id', userId)
+  await supabaseAdmin.from('whisper_reports').delete().eq('reporter_id', userId)
   await supabaseAdmin.from('note_likes').delete().eq('user_id', userId)
   await supabaseAdmin.from('notes').delete().eq('user_id', userId)
   await supabaseAdmin.from('message_reactions').delete().eq('user_id', userId)

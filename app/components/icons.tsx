@@ -684,3 +684,36 @@ export function CopyIcon({ className = base }: IconProps) {
     </svg>
   )
 }
+
+export function ArrowUpIcon({ className = base, filled = false }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} className={className}>
+      <path d="M12 4.5 5 12.2h4.3V19h5.4v-6.8H19L12 4.5Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+export function ArrowDownIcon({ className = base, filled = false }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} className={className}>
+      <path d="M12 19.5 5 11.8h4.3V5h5.4v6.8H19L12 19.5Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+/** Burbuja de "susurro": un globo de diálogo con una línea cerrada, como una boca sellada. */
+export function WhisperIcon({ className = base, filled = false }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path
+        d="M5 5.5h14a2 2 0 0 1 2 2v7.2a2 2 0 0 1-2 2h-6.2L8.4 20.4a.6.6 0 0 1-1-.45V16.7H5a2 2 0 0 1-2-2V7.5a2 2 0 0 1 2-2Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+        fill={filled ? 'currentColor' : 'none'}
+        fillOpacity={filled ? 0.25 : 0}
+      />
+      <path d="M8.4 11.1h7.2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  )
+}

@@ -18,6 +18,8 @@ export const PERMISSION_KEYS = [
   'assign_badges',
   'override_identity',
   'global_announcements',
+  'moderate_whispers',
+  'reveal_whisper_authors',
 ] as const
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number]
@@ -59,6 +61,18 @@ export const PERMISSION_INFO: Record<PermissionKey, { label: string; level: Perm
     label: 'Lanzar Anuncios Globales',
     level: 3,
     description: 'Puede publicar un banner fijado arriba del Inicio de TODOS los estudiantes de la red.',
+  },
+  moderate_whispers: {
+    label: 'Moderar el Muro de los Susurros',
+    level: 2,
+    description:
+      'Ve los reportes del Muro, puede ocultar, restaurar o eliminar confesiones y comentarios, y silenciar a su autor por unos días sin saber quién es.',
+  },
+  reveal_whisper_authors: {
+    label: 'Ver quién escribió un susurro anónimo',
+    level: 3,
+    description:
+      'Puede revelar la identidad detrás de una confesión o comentario anónimo en casos graves. Debe escribir un motivo y queda registrado en un historial.',
   },
 }
 

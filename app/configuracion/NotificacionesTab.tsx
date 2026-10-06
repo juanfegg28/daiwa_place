@@ -10,6 +10,7 @@ const OPTIONS: { key: keyof ConfigProfile['notif_prefs']; label: string; descrip
   { key: 'likes', label: 'Likes', description: 'Cuando alguien le da like a tu publicación o a un comentario tuyo.' },
   { key: 'follows', label: 'Nuevos seguidores', description: 'Cuando alguien empieza a seguirte.' },
   { key: 'note_likes', label: 'Likes en tus notas', description: 'Cuando un amigo le da like a tu nota de los mensajes directos.' },
+  { key: 'whispers', label: 'Muro de los Susurros', description: 'Cuando alguien comenta tu confesión o responde un comentario tuyo en el Muro (incluso si lo hizo de forma anónima).' },
 ]
 
 export default function NotificacionesTab({

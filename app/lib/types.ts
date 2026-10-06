@@ -50,7 +50,15 @@ export type ProfileSummary = {
   created_at?: string
 }
 
-export type NotificationType = 'like_post' | 'like_comment' | 'comment' | 'reply' | 'follow' | 'like_note'
+export type NotificationType =
+  | 'like_post'
+  | 'like_comment'
+  | 'comment'
+  | 'reply'
+  | 'follow'
+  | 'like_note'
+  | 'whisper_comment'
+  | 'whisper_reply'
 
 export type NotificationItem = {
   id: string
@@ -60,8 +68,13 @@ export type NotificationItem = {
   post_id: string | null
   comment_id: string | null
   note_id?: string | null
+  whisper_id?: string | null
+  whisper_comment_id?: string | null
+  /** true = el comentario del Muro es anónimo: no se muestra a nadie */
+  anonymous?: boolean
   actor: { username: string; id_student: string | null; avatar_url: string | null } | null
   post: { content: string; images: PostImage[] | null } | null
   comment: { content: string } | null
   note?: { content: string } | null
+  wcomment?: { content: string } | null
 }

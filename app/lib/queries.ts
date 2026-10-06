@@ -18,4 +18,4 @@ export const MAX_POST_IMAGES = 4
 // Notificaciones: quién la generó, y un pedacito de la publicación / comentario
 // al que se refiere (para mostrar el fragmento en la lista)
 export const NOTIFICATION_SELECT =
-  'id, type, read, created_at, post_id, comment_id, actor:profiles!notifications_actor_id_fkey(username, id_student, avatar_url), post:posts!notifications_post_id_fkey(content, images), comment:comments!notifications_comment_id_fkey(content), note:notes!notifications_note_id_fkey(content)'
+  'id, type, read, created_at, post_id, comment_id, whisper_id, whisper_comment_id, anonymous, actor:profiles!notifications_actor_id_fkey(username, id_student, avatar_url), post:posts!notifications_post_id_fkey(content, images), comment:comments!notifications_comment_id_fkey(content), note:notes!notifications_note_id_fkey(content), wcomment:whisper_comments!notifications_whisper_comment_id_fkey(content)'

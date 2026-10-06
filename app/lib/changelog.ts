@@ -14,6 +14,40 @@ export const RELEASE_STAGE = 'beta'
 
 export const CHANGELOG: Release[] = [
   {
+    version: '0.13.0',
+    date: '2026-10-05',
+    title: 'Muro de los Susurros',
+    sections: [
+      {
+        heading: 'Confesiones anónimas',
+        items: [
+          'Nueva sección Susurros en la barra lateral: publica una confesión y todos te verán como \"Chismoso Anónimo\". Nadie, ni los demás estudiantes ni los moderadores, puede ver quién la escribió.',
+          'Cada susurro tiene un tipo (Confesión, Crush, Chisme, Pregunta u Otro) y se puede filtrar por tipo. Puedes verlos en Recientes o en Populares (hoy, esta semana o siempre), y en Mis susurros están los tuyos, marcados con (tú).',
+          'Se vota como en Reddit: flecha hacia arriba o hacia abajo. No puedes votar tu propia confesión y los votos son privados.',
+          'Para cuidar el Muro: máximo 5 susurros por día, sin enlaces, y no se puede publicar con la cuenta congelada.',
+        ],
+      },
+      {
+        heading: 'Comentarios',
+        items: [
+          'Al comentar eliges cómo salir: de forma anónima o con tu perfil. Los anónimos aparecen como \"Chismoso Anónimo #1\", \"#2\"… y cada persona conserva su mismo número dentro de la confesión.',
+          'Si el autor de la confesión comenta de forma anónima, su comentario lleva la insignia \"Autor\" sin revelar quién es.',
+          'Puedes responder comentarios y borrar los tuyos. Te avisamos en Notificaciones cuando comentan tu confesión o responden tu comentario, aunque lo hagan de forma anónima (sin mostrar quién). Puedes apagar estos avisos en Configuración → Notificaciones.',
+        ],
+      },
+      {
+        heading: 'Reportes y moderación',
+        items: [
+          'Puedes reportar una confesión o un comentario por ser muy duro, acoso, datos personales, odio o spam. Tu reporte es privado.',
+          'Si 3 personas distintas reportan algo, se oculta solo mientras se revisa.',
+          'En el Centro de Mando hay una pestaña nueva, Susurros, para moderar: descartar, eliminar y silenciar al autor por unos días sin saber quién es.',
+          'En casos graves, solo quien tenga el permiso especial \"Ver quién escribió un susurro anónimo\" (y el Admin Supremo) puede revelar al autor. Debe escribir un motivo y cada revelación queda registrada en un historial que no se puede borrar.',
+          'El Admin Supremo puede pausar todo el Muro con un interruptor si hace falta.',
+        ],
+      },
+    ],
+  },
+  {
     version: '0.12.0',
     date: '2026-10-04',
     title: 'Mensajes directos y amigos',

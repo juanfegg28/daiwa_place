@@ -4,12 +4,13 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AppShell, { useAppSession } from '../components/AppShell'
 import { hasAny, type Permissions } from '../lib/permissions'
-import { FlagIcon, ShieldAdminIcon, UserCogIcon, MegaphoneIcon, WrenchIcon } from '../components/icons'
+import { FlagIcon, ShieldAdminIcon, UserCogIcon, MegaphoneIcon, WrenchIcon, WhisperIcon } from '../components/icons'
 import ReportesTab from './ReportesTab'
 import RolesTab from './RolesTab'
 import IdentidadesTab from './IdentidadesTab'
 import AnunciosTab from './AnunciosTab'
 import SistemaTab from './SistemaTab'
+import SusurrosTab from './SusurrosTab'
 
 const TAB_DEFS = [
   {
@@ -18,6 +19,12 @@ const TAB_DEFS = [
     icon: FlagIcon,
     check: (p: Permissions, sup: boolean) =>
       sup || hasAny(p, ['view_reports', 'view_evidence', 'delete_content', 'freeze_accounts']),
+  },
+  {
+    id: 'susurros' as const,
+    label: 'Susurros',
+    icon: WhisperIcon,
+    check: (p: Permissions, sup: boolean) => sup || hasAny(p, ['moderate_whispers', 'reveal_whisper_authors']),
   },
   {
     id: 'roles' as const,
@@ -119,6 +126,7 @@ function AdminContent() {
           </div>
 
           {tab === 'reportes' && <ReportesTab />}
+          {tab === 'susurros' && <SusurrosTab />}
           {tab === 'roles' && <RolesTab />}
           {tab === 'identidades' && <IdentidadesTab />}
           {tab === 'anuncios' && <AnunciosTab />}

@@ -8,5 +8,5 @@ export type ConfigProfile = {
   accent_color: string | null
   badge_color: string | null
   show_online_status: boolean
-  notif_prefs: { comments: boolean; mentions: boolean; likes: boolean; follows: boolean; note_likes: boolean }
+  notif_prefs: { comments: boolean; mentions: boolean; likes: boolean; follows: boolean; note_likes: boolean; whispers: boolean }
 }

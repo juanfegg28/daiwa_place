@@ -12,6 +12,7 @@ import {
   HomeIcon,
   UserIcon,
   MessageIcon,
+  WhisperIcon,
   BellIcon,
   SearchIcon,
   SettingsIcon,
@@ -369,6 +370,12 @@ export default function AppShell({
             match: (p: string) => p.startsWith('/mensajes'),
             badge: unreadMessages,
           },
+          {
+            href: '/susurros',
+            label: 'Susurros',
+            icon: WhisperIcon,
+            match: (p: string) => p.startsWith('/susurros'),
+          },
           ...(canSeeAdmin
             ? [
                 {
@@ -554,9 +561,9 @@ export default function AppShell({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex flex-col items-center gap-0.5 px-2.5 py-1 rounded-lg text-[10.5px] ${
-                    active ? 'text-garnet-400' : 'text-neutral-500'
-                  }`}
+                  className={`flex flex-col items-center gap-0.5 ${
+                    navItems.length > 6 ? 'px-1.5' : 'px-2.5'
+                  } py-1 rounded-lg text-[10.5px] ${active ? 'text-garnet-400' : 'text-neutral-500'}`}
                 >
                   <span className="relative">
                     <Icon filled={active} className="w-5 h-5" />

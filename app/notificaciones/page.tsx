@@ -7,7 +7,9 @@ import { supabase } from '../lib/supabaseClient'
 import AppShell, { useAppSession } from '../components/AppShell'
 import { NOTIFICATION_SELECT } from '../lib/queries'
 import type { NotificationItem, NotificationType } from '../lib/types'
-import { BellIcon, CloseIcon, CommentIcon, HeartIcon, ReplyIcon, UsersIcon } from '../components/icons'
+import { BellIcon, CloseIcon, CommentIcon, HeartIcon, ReplyIcon, UsersIcon, WhisperIcon } from '../components/icons'
+import AnonAvatar from '../susurros/AnonAvatar'
+import { ANON_NAME } from '../lib/whispers'
 
 const PAGE_SIZE = 30
 
@@ -41,11 +43,14 @@ const ACTION_TEXT: Record<NotificationType, string> = {
   reply: 'respondió tu comentario',
   follow: 'empezó a seguirte',
   like_note: 'le dio like a tu nota',
+  whisper_comment: 'comentó tu confesión en el Muro',
+  whisper_reply: 'respondió tu comentario en el Muro',
 }
 
 function TypeIcon({ type }: { type: NotificationType }) {
   const cls = 'w-3 h-3'
   if (type === 'like_post' || type === 'like_comment' || type === 'like_note') return <HeartIcon filled className={cls} />
+  if (type === 'whisper_comment' || type === 'whisper_reply') return <WhisperIcon className={cls} />
   if (type === 'comment') return <CommentIcon className={cls} />
   if (type === 'reply') return <ReplyIcon className={cls} />
   return <UsersIcon className={cls} />
@@ -54,6 +59,9 @@ function TypeIcon({ type }: { type: NotificationType }) {
 function hrefFor(n: NotificationItem): string {
   if (n.type === 'follow') return n.actor ? `/perfil/${n.actor.username}` : '/'
   if (n.type === 'like_note') return '/mensajes'
+  if (n.type === 'whisper_comment' || n.type === 'whisper_reply') {
+    return n.whisper_id ? `/susurros/${n.whisper_id}${n.whisper_comment_id ? `?c=${n.whisper_comment_id}` : ''}` : '/susurros'
+  }
   if (!n.post_id) return '/'
   const focus = n.comment_id && n.type !== 'like_post' ? `?c=${n.comment_id}` : ''
   return `/post/${n.post_id}${focus}`
@@ -62,6 +70,7 @@ function hrefFor(n: NotificationItem): string {
 function snippetFor(n: NotificationItem): string | null {
   if (n.type === 'follow') return null
   if (n.type === 'like_note') return n.note?.content ? shorten(n.note.content) : null
+  if (n.type === 'whisper_comment' || n.type === 'whisper_reply') return n.wcomment?.content ? shorten(n.wcomment.content) : null
   if (n.type === 'like_post') {
     if (!n.post) return null
     if (n.post.content?.trim()) return shorten(n.post.content)
@@ -243,7 +252,9 @@ function NotificacionesContent() {
       ) : (
         <ul className="space-y-2">
           {visible.map((n) => {
-            const actorName = n.actor?.id_student || n.actor?.username || 'Alguien'
+            // En el Muro, si el comentario es anónimo no se muestra a nadie (ni foto ni @usuario)
+            const anon = !!n.anonymous
+            const actorName = anon ? ANON_NAME : n.actor?.id_student || n.actor?.username || 'Alguien'
             const snippet = snippetFor(n)
             return (
               <li key={n.id} className="relative group">
@@ -257,16 +268,20 @@ function NotificacionesContent() {
                   }`}
                 >
                   <div className="relative shrink-0">
-                    <div className="w-10 h-10 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center">
-                      {n.actor?.avatar_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={n.actor.avatar_url} alt={n.actor.username} className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-sm font-semibold text-garnet-400">
-                          {(n.actor?.username ?? '?').charAt(0).toUpperCase()}
-                        </span>
-                      )}
-                    </div>
+                    {anon ? (
+                      <AnonAvatar size="w-10 h-10" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center">
+                        {n.actor?.avatar_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={n.actor.avatar_url} alt={n.actor.username} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-sm font-semibold text-garnet-400">
+                            {(n.actor?.username ?? '?').charAt(0).toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+                    )}
                     <span className="absolute -bottom-1 -right-1 w-[22px] h-[22px] rounded-full bg-garnet-600 text-white border-2 border-ink-800 flex items-center justify-center">
                       <TypeIcon type={n.type} />
                     </span>
@@ -275,7 +290,7 @@ function NotificacionesContent() {
                   <div className="min-w-0 flex-1 leading-snug">
                     <p className="text-sm text-neutral-200">
                       <span className="font-bold text-neutral-50">{actorName}</span>{' '}
-                      {n.actor && <span className="text-neutral-600 text-xs">@{n.actor.username} </span>}
+                      {!anon && n.actor && <span className="text-neutral-600 text-xs">@{n.actor.username} </span>}
                       {ACTION_TEXT[n.type]}
                     </p>
                     {snippet && (
