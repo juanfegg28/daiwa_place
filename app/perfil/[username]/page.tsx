@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '../../lib/supabaseClient'
@@ -63,13 +63,31 @@ function ProfileContent() {
   const [iBlockedThem, setIBlockedThem] = useState(false)
   const [theyBlockedMe, setTheyBlockedMe] = useState(false)
 
+  // Se cargan de 15 en 15 ("Ver más"); el total sale aparte para que el contador del perfil sea el real
+  const postsLimit = useRef(15)
+  const [postsTotal, setPostsTotal] = useState(0)
+  const [loadingMorePosts, setLoadingMorePosts] = useState(false)
+
   const loadPosts = async (profileId: string) => {
-    const { data } = await supabase
-      .from('posts')
-      .select(PROFILE_POST_SELECT)
-      .eq('user_id', profileId)
-      .order('created_at', { ascending: false })
+    const [{ data }, { count }] = await Promise.all([
+      supabase
+        .from('posts')
+        .select(PROFILE_POST_SELECT)
+        .eq('user_id', profileId)
+        .order('created_at', { ascending: false })
+        .limit(postsLimit.current),
+      supabase.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', profileId),
+    ])
     setPosts((data as unknown as Post[]) ?? [])
+    setPostsTotal(count ?? 0)
+  }
+
+  const loadMorePosts = async () => {
+    if (!profile) return
+    setLoadingMorePosts(true)
+    postsLimit.current += 15
+    await loadPosts(profile.id)
+    setLoadingMorePosts(false)
   }
 
   const loadFollowState = async (profileId: string) => {
@@ -81,28 +99,18 @@ function ProfileContent() {
     setFollowingCount(following ?? 0)
 
     if (userId && userId !== profileId) {
-      const { data: followRow } = await supabase
-        .from('follows')
-        .select('follower_id')
-        .eq('follower_id', userId)
-        .eq('following_id', profileId)
-        .maybeSingle()
+      const [{ data: followRow }, { data: followsMeRow }, { data: blockRows }] = await Promise.all([
+        supabase.from('follows').select('follower_id').eq('follower_id', userId).eq('following_id', profileId).maybeSingle(),
+        supabase.from('follows').select('follower_id').eq('follower_id', profileId).eq('following_id', userId).maybeSingle(),
+        supabase
+          .from('blocks')
+          .select('blocker_id, blocked_id')
+          .or(
+            `and(blocker_id.eq.${userId},blocked_id.eq.${profileId}),and(blocker_id.eq.${profileId},blocked_id.eq.${userId})`
+          ),
+      ])
       setIsFollowing(!!followRow)
-
-      const { data: followsMeRow } = await supabase
-        .from('follows')
-        .select('follower_id')
-        .eq('follower_id', profileId)
-        .eq('following_id', userId)
-        .maybeSingle()
       setFollowsMe(!!followsMeRow)
-
-      const { data: blockRows } = await supabase
-        .from('blocks')
-        .select('blocker_id, blocked_id')
-        .or(
-          `and(blocker_id.eq.${userId},blocked_id.eq.${profileId}),and(blocker_id.eq.${profileId},blocked_id.eq.${userId})`
-        )
       setIBlockedThem(!!blockRows?.some((b) => b.blocker_id === userId))
       setTheyBlockedMe(!!blockRows?.some((b) => b.blocker_id === profileId))
     } else {
@@ -139,6 +147,7 @@ function ProfileContent() {
         .eq('user_id', profileData.id)
       setRoles((data as unknown as RoleBadgeInfo[]) ?? [])
     }
+    postsLimit.current = 15
     await Promise.all([loadPosts(profileData.id), loadFollowState(profileData.id), loadRoles()])
     setLoading(false)
   }
@@ -253,7 +262,7 @@ function ProfileContent() {
       >
         {profile.banner_url && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={profile.banner_url} alt="Banner" className="absolute inset-0 w-full h-full object-cover" />
+          <img loading="lazy" decoding="async" src={profile.banner_url} alt="Banner" className="absolute inset-0 w-full h-full object-cover" />
         )}
       </div>
 
@@ -262,7 +271,7 @@ function ProfileContent() {
           <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full border-4 border-ink-950 bg-ink-700 overflow-hidden flex items-center justify-center shadow-[0_0_0_2px] shadow-garnet-500/45">
             {profile.avatar_url ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={profile.avatar_url} alt={profile.username} className="w-full h-full object-cover" />
+              <img loading="lazy" decoding="async" src={profile.avatar_url} alt={profile.username} className="w-full h-full object-cover" />
             ) : (
               <span className="text-3xl font-semibold text-garnet-400">
                 {profile.username.charAt(0).toUpperCase()}
@@ -375,17 +384,17 @@ function ProfileContent() {
 
             <div className="flex gap-4 text-sm mb-6 pb-4 border-b border-ink-800">
               <span>
-                <b className="text-neutral-100">{posts.length}</b>{' '}
+                <b className="text-neutral-100">{postsTotal}</b>{' '}
                 <span className="text-neutral-500">publicaciones</span>
               </span>
-              <span>
+              <Link href={`/perfil/${profile.username}/seguidores`} className="hover:text-garnet-400 transition">
                 <b className="text-neutral-100">{followersCount}</b>{' '}
                 <span className="text-neutral-500">seguidores</span>
-              </span>
-              <span>
+              </Link>
+              <Link href={`/perfil/${profile.username}/seguidores?tab=siguiendo`} className="hover:text-garnet-400 transition">
                 <b className="text-neutral-100">{followingCount}</b>{' '}
                 <span className="text-neutral-500">seguidos</span>
-              </span>
+              </Link>
             </div>
 
             <div className="space-y-4">
@@ -414,6 +423,19 @@ function ProfileContent() {
                 ))
               )}
             </div>
+
+            {posts.length < postsTotal && (
+              <div className="flex justify-center mt-5">
+                <button
+                  type="button"
+                  onClick={loadMorePosts}
+                  disabled={loadingMorePosts}
+                  className="text-sm border border-ink-600 text-neutral-300 rounded-full px-5 py-2 hover:bg-ink-800 transition disabled:opacity-60"
+                >
+                  {loadingMorePosts ? 'Cargando...' : 'Ver más publicaciones'}
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>

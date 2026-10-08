@@ -80,6 +80,44 @@ function snippetFor(n: NotificationItem): string | null {
   return n.comment?.content ? shorten(n.comment.content) : null
 }
 
+// Los "me gusta" sobre lo mismo se juntan: "Ana, Luis y 3 más le dieron like a tu publicación"
+type NotifGroup = { key: string; head: NotificationItem; items: NotificationItem[] }
+
+const PLURAL_ACTION: Partial<Record<NotificationType, string>> = {
+  like_post: 'le dieron like a tu publicación',
+  like_comment: 'le dieron like a tu comentario',
+  like_note: 'le dieron like a tu nota',
+}
+
+function groupKey(n: NotificationItem): string {
+  if (n.type === 'like_post' && n.post_id) return `lp:${n.post_id}`
+  if (n.type === 'like_comment' && n.comment_id) return `lc:${n.comment_id}`
+  if (n.type === 'like_note' && n.note_id) return `ln:${n.note_id}`
+  return `one:${n.id}`
+}
+
+function groupNotifications(list: NotificationItem[]): NotifGroup[] {
+  const map = new Map<string, NotifGroup>()
+  for (const n of list) {
+    const key = groupKey(n)
+    const g = map.get(key)
+    if (g) g.items.push(n)
+    else map.set(key, { key, head: n, items: [n] })
+  }
+  return [...map.values()]
+}
+
+function actorLabel(g: NotifGroup): string {
+  const names: string[] = []
+  for (const x of g.items) {
+    const name = x.actor?.id_student || x.actor?.username || 'Alguien'
+    if (!names.includes(name)) names.push(name)
+  }
+  if (names.length <= 1) return names[0] ?? 'Alguien'
+  if (names.length === 2) return `${names[0]} y ${names[1]}`
+  return `${names[0]}, ${names[1]} y ${names.length - 2} más`
+}
+
 export default function NotificacionesPage() {
   return (
     <AppShell>
@@ -159,10 +197,11 @@ function NotificacionesContent() {
     setLoadingMore(false)
   }
 
-  const markRead = async (n: NotificationItem) => {
-    if (n.read) return
-    setItems((prev) => prev.map((x) => (x.id === n.id ? { ...x, read: true } : x)))
-    await supabase.from('notifications').update({ read: true }).eq('id', n.id)
+  const markGroupRead = async (g: NotifGroup) => {
+    const ids = g.items.filter((x) => !x.read).map((x) => x.id)
+    if (ids.length === 0) return
+    setItems((prev) => prev.map((x) => (ids.includes(x.id) ? { ...x, read: true } : x)))
+    await supabase.from('notifications').update({ read: true }).in('id', ids)
     refreshNotifications()
   }
 
@@ -175,9 +214,10 @@ function NotificacionesContent() {
     refreshNotifications()
   }
 
-  const remove = async (n: NotificationItem) => {
-    setItems((prev) => prev.filter((x) => x.id !== n.id))
-    await supabase.from('notifications').delete().eq('id', n.id)
+  const removeGroup = async (g: NotifGroup) => {
+    const ids = g.items.map((x) => x.id)
+    setItems((prev) => prev.filter((x) => !ids.includes(x.id)))
+    await supabase.from('notifications').delete().in('id', ids)
     refreshNotifications()
   }
 
@@ -251,18 +291,21 @@ function NotificacionesContent() {
         </div>
       ) : (
         <ul className="space-y-2">
-          {visible.map((n) => {
+          {groupNotifications(visible).map((g) => {
+            const n = g.head
+            const many = g.items.length > 1
+            const unread = g.items.some((x) => !x.read)
             // En el Muro, si el comentario es anónimo no se muestra a nadie (ni foto ni @usuario)
             const anon = !!n.anonymous
-            const actorName = anon ? ANON_NAME : n.actor?.id_student || n.actor?.username || 'Alguien'
+            const actorName = anon ? ANON_NAME : many ? actorLabel(g) : n.actor?.id_student || n.actor?.username || 'Alguien'
             const snippet = snippetFor(n)
             return (
-              <li key={n.id} className="relative group">
+              <li key={g.key} className="relative group">
                 <Link
                   href={hrefFor(n)}
-                  onClick={() => markRead(n)}
+                  onClick={() => markGroupRead(g)}
                   className={`flex items-start gap-3 rounded-2xl p-3.5 pr-10 transition border ${
-                    n.read
+                    !unread
                       ? 'surface-card border-transparent hover:bg-ink-700'
                       : 'bg-garnet-700/10 border-garnet-700/40 hover:bg-garnet-700/20'
                   }`}
@@ -274,7 +317,7 @@ function NotificacionesContent() {
                       <div className="w-10 h-10 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center">
                         {n.actor?.avatar_url ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={n.actor.avatar_url} alt={n.actor.username} className="w-full h-full object-cover" />
+                          <img loading="lazy" decoding="async" src={n.actor.avatar_url} alt={n.actor.username} className="w-full h-full object-cover" />
                         ) : (
                           <span className="text-sm font-semibold text-garnet-400">
                             {(n.actor?.username ?? '?').charAt(0).toUpperCase()}
@@ -290,8 +333,8 @@ function NotificacionesContent() {
                   <div className="min-w-0 flex-1 leading-snug">
                     <p className="text-sm text-neutral-200">
                       <span className="font-bold text-neutral-50">{actorName}</span>{' '}
-                      {!anon && n.actor && <span className="text-neutral-600 text-xs">@{n.actor.username} </span>}
-                      {ACTION_TEXT[n.type]}
+                      {!anon && !many && n.actor && <span className="text-neutral-600 text-xs">@{n.actor.username} </span>}
+                      {many ? (PLURAL_ACTION[n.type] ?? ACTION_TEXT[n.type]) : ACTION_TEXT[n.type]}
                     </p>
                     {snippet && (
                       <p className="mt-1 text-xs text-neutral-500 border-l-2 border-ink-600 pl-2 break-words">
@@ -303,12 +346,12 @@ function NotificacionesContent() {
                     </p>
                   </div>
 
-                  {!n.read && <span className="mt-1.5 w-2.5 h-2.5 rounded-full bg-garnet-500 shrink-0" aria-label="Sin leer" />}
+                  {unread && <span className="mt-1.5 w-2.5 h-2.5 rounded-full bg-garnet-500 shrink-0" aria-label="Sin leer" />}
                 </Link>
 
                 <button
                   type="button"
-                  onClick={() => remove(n)}
+                  onClick={() => removeGroup(g)}
                   aria-label="Eliminar notificación"
                   title="Eliminar notificación"
                   className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full flex items-center justify-center text-neutral-600 hover:text-garnet-400 hover:bg-ink-700 transition opacity-60 group-hover:opacity-100"

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { GhostIcon, UsersIcon } from '../components/icons'
+import { EyeIcon, GhostIcon, UsersIcon } from '../components/icons'
 import { useAppSession } from '../components/AppShell'
 import type { ConfigProfile } from './types'
 
@@ -24,6 +24,17 @@ export default function PrivacidadTab({
     if (!error) {
       onUpdate({ ...profile, show_online_status: next })
       refresh() // el puntico verde se apaga/enciende al instante
+    }
+  }
+
+  const toggleReceipts = async () => {
+    setSaving(true)
+    const next = !profile.show_read_receipts
+    const { error } = await supabase.from('profiles').update({ show_read_receipts: next }).eq('id', profile.id)
+    setSaving(false)
+    if (!error) {
+      onUpdate({ ...profile, show_read_receipts: next })
+      refresh()
     }
   }
 
@@ -109,6 +120,38 @@ export default function PrivacidadTab({
             <span
               className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-transform ${
                 profile.show_online_status ? 'translate-x-5' : ''
+              }`}
+            />
+          </button>
+        </div>
+      </section>
+
+      <section className="surface-card rounded-2xl p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="flex items-center gap-2 text-base font-semibold text-neutral-50 mb-1">
+              <EyeIcon className="w-4 h-4 text-garnet-400" />
+              Confirmación de lectura («Visto»)
+            </h2>
+            <p className="text-sm text-neutral-500 leading-relaxed max-w-md">
+              Muestra «Visto» en tus mensajes cuando los lees. Si lo apagas, nadie ve cuándo leíste, pero tampoco ves tú
+              cuándo leen los demás tus mensajes.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={toggleReceipts}
+            disabled={saving}
+            role="switch"
+            aria-checked={profile.show_read_receipts}
+            aria-label="Mostrar o esconder el Visto"
+            className={`shrink-0 w-12 h-7 rounded-full transition relative disabled:opacity-60 ${
+              profile.show_read_receipts ? 'bg-garnet-600' : 'bg-ink-600'
+            }`}
+          >
+            <span
+              className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-transform ${
+                profile.show_read_receipts ? 'translate-x-5' : ''
               }`}
             />
           </button>

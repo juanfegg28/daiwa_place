@@ -92,7 +92,7 @@ function MiniAvatar({
     <div className={`${size} rounded-full overflow-hidden bg-ink-700 flex items-center justify-center shrink-0`}>
       {avatarUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={avatarUrl} alt={username} className="w-full h-full object-cover" />
+        <img loading="lazy" decoding="async" src={avatarUrl} alt={username} className="w-full h-full object-cover" />
       ) : (
         <span className="text-xs font-semibold text-garnet-400">{username.charAt(0).toUpperCase()}</span>
       )}

@@ -23,7 +23,7 @@ export default function UserAvatar({
       >
         {avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={avatarUrl} alt={username} className="w-full h-full object-cover" />
+          <img loading="lazy" decoding="async" src={avatarUrl} alt={username} className="w-full h-full object-cover" />
         ) : (
           <span className={`${textSize} font-semibold text-garnet-400`}>{username.charAt(0).toUpperCase()}</span>
         )}

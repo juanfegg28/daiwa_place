@@ -43,6 +43,46 @@ const REPORT_SELECT =
 const REVEAL_SELECT =
   'id, target_kind, target_id, author_id, reason, created_at, admin:profiles!whisper_reveals_admin_id_fkey(username)'
 
+type ReportGroup = {
+  key: string
+  /** El reporte que representa al grupo (el pendiente más reciente, o el más reciente) */
+  rep: ReportRow
+  all: ReportRow[]
+  pendingCount: number
+  reasons: [string, number][]
+}
+
+/** Junta los reportes del mismo contenido: 3 personas reportan lo mismo = 1 tarjeta con "3 reportes". */
+function groupReports(rows: ReportRow[]): ReportGroup[] {
+  const map = new Map<string, ReportRow[]>()
+  for (const r of rows) {
+    const key = r.comment_id ? `c:${r.comment_id}` : `w:${r.whisper_id}`
+    const list = map.get(key) ?? []
+    list.push(r)
+    map.set(key, list)
+  }
+  const groups: ReportGroup[] = []
+  for (const [key, all] of map) {
+    const pending = all.filter((r) => r.status === 'pending')
+    const reasonCount = new Map<string, number>()
+    for (const r of all) reasonCount.set(r.reason, (reasonCount.get(r.reason) ?? 0) + 1)
+    groups.push({
+      key,
+      rep: pending[0] ?? all[0],
+      all,
+      pendingCount: pending.length,
+      reasons: [...reasonCount.entries()].sort((a, b) => b[1] - a[1]),
+    })
+  }
+  // lo más reportado y pendiente primero
+  return groups.sort(
+    (a, b) =>
+      Number(b.pendingCount > 0) - Number(a.pendingCount > 0) ||
+      b.all.length - a.all.length ||
+      new Date(b.rep.created_at).getTime() - new Date(a.rep.created_at).getTime()
+  )
+}
+
 const STATUS_LABEL: Record<string, string> = {
   pending: 'Pendiente',
   resolved: 'Eliminado',
@@ -295,25 +335,34 @@ export default function SusurrosTab() {
             </div>
           ) : (
             <ul className="space-y-3">
-              {reports.map((r) => {
+              {groupReports(reports).map((g) => {
+                const r = g.rep
                 const isComment = !!r.comment_id
                 const content = isComment ? r.comment : r.whisper
                 const text = content?.content || r.snapshot || '(sin texto)'
                 const threadId = isComment ? r.comment?.whisper_id : r.whisper_id
-                const pending = r.status === 'pending'
+                const pending = g.pendingCount > 0
                 return (
-                  <li key={r.id} className="surface-card rounded-2xl p-4">
+                  <li key={g.key} className="surface-card rounded-2xl p-4">
                     <div className="flex items-center gap-2 flex-wrap mb-2">
                       <span className="text-[11px] uppercase tracking-wide rounded-full bg-ink-700 text-neutral-300 px-2 py-0.5">
                         {isComment ? 'Comentario' : 'Confesión'}
                       </span>
-                      <span className="text-xs font-semibold text-garnet-300">{reasonLabel(r.reason)}</span>
+                      <span className="text-xs font-semibold text-garnet-300">
+                        {g.all.length} {g.all.length === 1 ? 'reporte' : 'reportes'}
+                      </span>
+                      {g.reasons.map(([reason, n]) => (
+                        <span key={reason} className="text-[11px] rounded-full bg-garnet-600/15 text-garnet-300 px-2 py-0.5">
+                          {reasonLabel(reason)}
+                          {n > 1 ? ` ×${n}` : ''}
+                        </span>
+                      ))}
                       <span
                         className={`text-[11px] rounded-full px-2 py-0.5 ${
                           pending ? 'bg-amber-500/15 text-amber-300' : 'bg-ink-700 text-neutral-400'
                         }`}
                       >
-                        {STATUS_LABEL[r.status]}
+                        {pending ? `${g.pendingCount} pendiente${g.pendingCount > 1 ? 's' : ''}` : STATUS_LABEL[r.status]}
                       </span>
                       <span className="ml-auto text-[11px] text-neutral-600">{inboxTime(r.created_at)}</span>
                     </div>
@@ -323,10 +372,22 @@ export default function SusurrosTab() {
                     </p>
                     <p className="mt-1.5 text-[11px] text-neutral-600">
                       Autor: {ANON_NAME} · Estado actual: {content ? CONTENT_STATUS_LABEL[content.status] ?? content.status : 'ya no existe'}
-                      {r.reporter ? ` · Reportó @${r.reporter.username}` : ''}
                     </p>
-                    {r.details && <p className="mt-1 text-xs text-neutral-400">Detalle del reporte: “{r.details}”</p>}
-                    {r.resolution && <p className="mt-1 text-xs text-neutral-500">Nota: {r.resolution}</p>}
+                    <details className="mt-2 group">
+                      <summary className="text-xs text-neutral-400 hover:text-neutral-200 cursor-pointer select-none">
+                        Ver quién reportó y por qué ({g.all.length})
+                      </summary>
+                      <ul className="mt-2 space-y-1.5">
+                        {g.all.map((x) => (
+                          <li key={x.id} className="text-xs text-neutral-400 rounded-lg bg-ink-900 border border-ink-700 px-3 py-2">
+                            <span className="text-neutral-200 font-semibold">{x.reporter ? `@${x.reporter.username}` : 'Alguien'}</span>{' '}
+                            · {reasonLabel(x.reason)} · {inboxTime(x.created_at)}
+                            {x.details && <span className="block text-neutral-500 mt-0.5">“{x.details}”</span>}
+                            {x.resolution && <span className="block text-neutral-500 mt-0.5">Nota: {x.resolution}</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
 
                     <div className="mt-3 flex flex-wrap gap-2">
                       {threadId && (
@@ -342,7 +403,7 @@ export default function SusurrosTab() {
                           <button
                             type="button"
                             onClick={() => act(r, 'dismiss')}
-                            disabled={busyId === r.id}
+                            disabled={busyId === g.rep.id}
                             className="text-xs border border-ink-600 text-neutral-300 rounded-full px-3 py-1.5 hover:bg-ink-800 transition disabled:opacity-60"
                           >
                             Descartar (restaurar)
@@ -350,7 +411,7 @@ export default function SusurrosTab() {
                           <button
                             type="button"
                             onClick={() => setRemoveTarget(r)}
-                            disabled={busyId === r.id}
+                            disabled={busyId === g.rep.id}
                             className="flex items-center gap-1 text-xs bg-garnet-600 hover:bg-garnet-500 text-white rounded-full px-3 py-1.5 transition disabled:opacity-60"
                           >
                             <TrashIcon className="w-3.5 h-3.5" />
@@ -361,7 +422,7 @@ export default function SusurrosTab() {
                       <button
                         type="button"
                         onClick={() => setSilenceTarget(r)}
-                        disabled={busyId === r.id}
+                        disabled={busyId === g.rep.id}
                         className="text-xs border border-ink-600 text-neutral-300 rounded-full px-3 py-1.5 hover:bg-ink-800 transition disabled:opacity-60"
                       >
                         Silenciar al autor
@@ -374,7 +435,7 @@ export default function SusurrosTab() {
                             setRevealReason('')
                             setRevealTarget(r)
                           }}
-                          disabled={busyId === r.id}
+                          disabled={busyId === g.rep.id}
                           className="flex items-center gap-1 text-xs border border-amber-500/50 text-amber-300 rounded-full px-3 py-1.5 hover:bg-amber-500/10 transition disabled:opacity-60"
                         >
                           <EyeIcon className="w-3.5 h-3.5" />
@@ -522,7 +583,7 @@ export default function SusurrosTab() {
             <div className="w-16 h-16 mx-auto rounded-full overflow-hidden bg-ink-700 flex items-center justify-center mb-2">
               {revealed.who.avatar_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={revealed.who.avatar_url} alt={revealed.who.username} className="w-full h-full object-cover" />
+                <img loading="lazy" decoding="async" src={revealed.who.avatar_url} alt={revealed.who.username} className="w-full h-full object-cover" />
               ) : (
                 <span className="text-xl font-semibold text-garnet-400">{revealed.who.username.charAt(0).toUpperCase()}</span>
               )}

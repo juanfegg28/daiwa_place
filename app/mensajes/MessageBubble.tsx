@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { CheckIcon, CloseIcon, CopyIcon, EditIcon, MoreIcon, ReplyIcon, SmileIcon, TrashIcon } from '../components/icons'
+import { CheckIcon, CloseIcon, CopyIcon, EditIcon, FlagIcon, MoreIcon, ReplyIcon, SmileIcon, TrashIcon } from '../components/icons'
 import { MAX_MESSAGE_LENGTH, REACTIONS, formatClock, previewText, type DmMessage } from '../lib/dm'
 
 type MenuProps = {
@@ -15,10 +15,11 @@ type MenuProps = {
   onCopy: () => void
   onEdit: () => void
   onDelete: () => void
+  onReport?: () => void
 }
 
 /** Menú flotante de un mensaje: reacciones arriba y acciones abajo. Se posiciona con la pantalla, no con el scroll del chat. */
-function MessageMenu({ anchor, mine, canEdit, myReaction, onClose, onReact, onReply, onCopy, onEdit, onDelete }: MenuProps) {
+function MessageMenu({ anchor, mine, canEdit, myReaction, onClose, onReact, onReply, onCopy, onEdit, onDelete, onReport }: MenuProps) {
   const ref = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -43,7 +44,7 @@ function MessageMenu({ anchor, mine, canEdit, myReaction, onClose, onReact, onRe
   }, [onClose])
 
   const width = 236
-  const itemCount = 2 + (mine && canEdit ? 2 : 0)
+  const itemCount = 2 + (mine && canEdit ? 2 : 0) + (!mine && onReport ? 1 : 0)
   const height = 58 + itemCount * 38
   const left = Math.max(8, Math.min(mine ? anchor.right - width : anchor.left, window.innerWidth - width - 8))
   const above = anchor.top - height - 6
@@ -76,6 +77,9 @@ function MessageMenu({ anchor, mine, canEdit, myReaction, onClose, onReact, onRe
       </div>
       <MenuItem icon={<ReplyIcon className="w-4 h-4" />} label="Responder" onClick={() => { onClose(); onReply() }} />
       <MenuItem icon={<CopyIcon className="w-4 h-4" />} label="Copiar" onClick={() => { onClose(); onCopy() }} />
+      {!mine && onReport && (
+        <MenuItem icon={<FlagIcon className="w-4 h-4" />} label="Reportar" danger onClick={() => { onClose(); onReport() }} />
+      )}
       {mine && canEdit && (
         <>
           <MenuItem icon={<EditIcon className="w-4 h-4" />} label="Editar" onClick={() => { onClose(); onEdit() }} />
@@ -119,6 +123,7 @@ export default function MessageBubble({
   onJumpTo,
   onRetry,
   onDiscard,
+  onReport,
 }: {
   message: DmMessage
   me: string
@@ -136,6 +141,7 @@ export default function MessageBubble({
   onJumpTo: (id: string) => void
   onRetry: (m: DmMessage) => void
   onDiscard: (m: DmMessage) => void
+  onReport?: (m: DmMessage) => void
 }) {
   const mine = message.sender_id === me
   const deleted = !!message.deleted_at
@@ -346,6 +352,7 @@ export default function MessageBubble({
             onStartEdit(message)
           }}
           onDelete={() => onDelete(message)}
+          onReport={onReport ? () => onReport(message) : undefined}
         />
       )}
     </div>

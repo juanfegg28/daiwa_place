@@ -85,7 +85,7 @@ export default function ImageLightbox({
       )}
 
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+      <img loading="lazy" decoding="async"
         src={current.url}
         alt={`Foto ${index + 1} de ${total}`}
         onClick={(e) => e.stopPropagation()}

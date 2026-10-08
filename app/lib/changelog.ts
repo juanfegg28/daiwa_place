@@ -14,6 +14,53 @@ export const RELEASE_STAGE = 'beta'
 
 export const CHANGELOG: Release[] = [
   {
+    version: '0.13.5',
+    date: '2026-10-07',
+    title: 'Parche de detalles',
+    sections: [
+      {
+        heading: 'Seguidores y seguidos',
+        items: [
+          'Los números de seguidores y seguidos de cada perfil ahora se pueden tocar y abren la lista completa, con pestañas Seguidores y Siguiendo.',
+          'En todos los perfiles aparecen primero las personas que tú sigues y después el resto. Cada fila tiene su botón de Seguir, la etiqueta Amigos o Te sigue, y el puntico verde si un amigo está conectado.',
+        ],
+      },
+      {
+        heading: 'Registro y recuperación de cuenta',
+        items: [
+          'El campo de nombre ahora trae un ejemplo (Ren Shiraishi) y una ayuda: va tu nombre de estudiante, no un usuario como Kai_panzer. Si tiene guion bajo o números te avisamos qué corregir.',
+          'Recuperar la cuenta con la palabra secreta ahora tiene límite de intentos y un solo mensaje de error, para que nadie pueda adivinarla ni averiguar qué usuarios existen.',
+          'Si un registro se quedaba a medias, ahora puedes terminarlo con la misma contraseña en vez de quedar bloqueado.',
+        ],
+      },
+      {
+        heading: 'Mensajes',
+        items: [
+          'Puedes reportar una conversación completa o un mensaje en particular. El equipo solo ve una copia de los últimos mensajes, nunca el resto del chat.',
+          'Nuevo interruptor en Configuración → Privacidad para esconder el «Visto». Si lo apagas, tampoco ves cuándo leen tus mensajes.',
+          'El título de la pestaña del navegador muestra cuántas notificaciones y chats tienes sin leer, por ejemplo (3) DaiwaPlace.',
+        ],
+      },
+      {
+        heading: 'Rendimiento',
+        items: [
+          'El inicio y los perfiles cargan las publicaciones de 15 en 15, con botón Ver más, y ya no se traban cuando hay muchas.',
+          'En el inicio aparece un aviso cuando hay publicaciones nuevas, sin recargar y sin moverte de donde estás leyendo.',
+          'Las fotos cargan solo cuando se acercan a la pantalla y el perfil pide sus datos todos a la vez.',
+        ],
+      },
+      {
+        heading: 'Notificaciones y pulido',
+        items: [
+          'Los me gusta sobre lo mismo se juntan: «Ana, Luis y 3 más le dieron like a tu publicación».',
+          'Los reportes del Muro se agrupan por contenido, con el conteo de reportes y los motivos más repetidos, en vez de una tarjeta por cada reporte.',
+          'Explorar ya no muestra a las personas que bloqueaste ni a quienes te bloquearon.',
+          'Se reemplazaron las ventanas del navegador (alertas y confirmaciones) por avisos de la propia app, y las pantallas de error ahora están en español.',
+        ],
+      },
+    ],
+  },
+  {
     version: '0.13.0',
     date: '2026-10-05',
     title: 'Muro de los Susurros',

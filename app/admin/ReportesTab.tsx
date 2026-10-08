@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabaseClient'
 import { useAppSession } from '../components/AppShell'
 import { hasAny } from '../lib/permissions'
 import { TrashIcon, SnowflakeIcon } from '../components/icons'
+import ConfirmDialog from '../components/ConfirmDialog'
 import type { ReportRow } from './types'
 
 const REPORT_SELECT =
@@ -53,9 +54,11 @@ export default function ReportesTab() {
     load()
   }
 
+  const [deleteTarget, setDeleteTarget] = useState<ReportRow | null>(null)
+
   const deleteContent = async (r: ReportRow) => {
     if (!r.post_id) return
-    if (!window.confirm('¿Eliminar esta publicación? No se puede deshacer.')) return
+    setDeleteTarget(null)
     setBusyId(r.id)
     await supabase.from('posts').delete().eq('id', r.post_id)
     setBusyId(null)
@@ -76,6 +79,15 @@ export default function ReportesTab() {
 
   return (
     <div className="space-y-4">
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="¿Eliminar esta publicación?"
+        message="Se borra para todos y no se puede deshacer."
+        confirmLabel="Eliminar"
+        busy={busyId !== null}
+        onConfirm={() => deleteTarget && deleteContent(deleteTarget)}
+        onCancel={() => setDeleteTarget(null)}
+      />
       <div className="flex gap-1.5">
         {(['pending', 'resolved', 'all'] as const).map((f) => (
           <button
@@ -139,7 +151,7 @@ export default function ReportesTab() {
                 {canDelete && r.post_id && (
                   <button
                     type="button"
-                    onClick={() => deleteContent(r)}
+                    onClick={() => setDeleteTarget(r)}
                     disabled={busyId === r.id}
                     className="flex items-center gap-1 text-xs border border-garnet-700 text-garnet-400 rounded-full px-3 py-1.5 hover:bg-garnet-600 hover:text-white transition disabled:opacity-60"
                   >

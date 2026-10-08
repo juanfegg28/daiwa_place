@@ -9,7 +9,7 @@ import ProfilePreviewCard from '../components/ProfilePreviewCard'
 import { useAvatarCropper, BANNER_CROP } from '../components/AvatarCropper'
 import { CameraIcon } from '../components/icons'
 import { ESTADOS_SENTIMENTALES } from '../lib/constants'
-import { hasFancyCharacters, FANCY_NAME_ERROR } from '../lib/nameFilter'
+import { checkStudentName, NAME_HELP, NAME_PLACEHOLDER } from '../lib/nameFilter'
 import PasswordInput from '../components/PasswordInput'
 
 const usernameRegex = /^[a-z0-9_.]+$/
@@ -28,6 +28,7 @@ export default function RegisterPage() {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [bannerPreview, setBannerPreview] = useState<string | null>(null)
   const [error, setError] = useState('')
+  const [postWarnings, setPostWarnings] = useState<string[] | null>(null)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
@@ -69,8 +70,9 @@ export default function RegisterPage() {
       return
     }
 
-    if (hasFancyCharacters(idStudent.trim())) {
-      setError(FANCY_NAME_ERROR)
+    const nameCheck = checkStudentName(idStudent, cleanUsername)
+    if (nameCheck.error) {
+      setError(nameCheck.error)
       setLoading(false)
       return
     }
@@ -89,10 +91,26 @@ export default function RegisterPage() {
 
     const fakeEmail = `${cleanUsername}@gmail.com`
 
-    const { data, error: signUpError } = await supabase.auth.signUp({
+    let { data, error: signUpError } = await supabase.auth.signUp({
       email: fakeEmail,
       password,
     })
+
+    // Si un registro anterior se quedó a medias (se creó el acceso pero no el perfil), el usuario
+    // queda "ocupado" sin dueño. Como arriba ya comprobamos que NO hay perfil con ese @, se retoma
+    // entrando con la misma contraseña en vez de dejarlo bloqueado para siempre.
+    if (signUpError && /already registered|already been registered/i.test(signUpError.message)) {
+      const retry = await supabase.auth.signInWithPassword({ email: fakeEmail, password })
+      if (retry.error || !retry.data.user) {
+        setError(
+          'Ese usuario quedó a medias en un registro anterior. Usa la misma contraseña que pusiste esa vez para terminarlo, o elige otro usuario.'
+        )
+        setLoading(false)
+        return
+      }
+      data = { user: retry.data.user, session: retry.data.session }
+      signUpError = null
+    }
 
     if (signUpError) {
       setError(signUpError.message)
@@ -157,16 +175,39 @@ export default function RegisterPage() {
       return
     }
 
-    if (uploadWarnings.length > 0) {
-      window.alert(
-        'Tu cuenta se creó, pero no se pudo guardar:\n\n' +
-          uploadWarnings.join('\n') +
-          '\n\nRevisa el bucket "avatars" en Supabase (que exista y tenga permisos de subida).'
-      )
-    }
-
     setLoading(false)
+    if (uploadWarnings.length > 0) {
+      setPostWarnings(uploadWarnings)
+      return
+    }
     router.push('/')
+  }
+
+  const nameHint = checkStudentName(idStudent, username)
+
+  // Aviso (en vez de una ventana del navegador) cuando la cuenta se creó pero algo no se pudo guardar
+  if (postWarnings) {
+    return (
+      <div className="max-w-md mx-auto py-16 px-6 text-center">
+        <h1 className="text-xl font-display font-semibold text-neutral-50 mb-2">¡Tu cuenta está lista!</h1>
+        <p className="text-sm text-neutral-400 mb-4">Pero hubo un detalle: no se pudo guardar lo siguiente.</p>
+        <ul className="text-sm text-amber-300 space-y-1 mb-4">
+          {postWarnings.map((w) => (
+            <li key={w}>{w}</li>
+          ))}
+        </ul>
+        <p className="text-xs text-neutral-500 mb-6">
+          Puedes volver a subirlo desde Editar perfil. Si sigue fallando, avisa a la administración.
+        </p>
+        <button
+          type="button"
+          onClick={() => router.push('/')}
+          className="bg-garnet-600 hover:bg-garnet-500 text-white rounded-full px-6 py-2.5 text-sm font-medium transition"
+        >
+          Entrar a DaiwaPlace
+        </button>
+      </div>
+    )
   }
 
   return (
@@ -196,9 +237,19 @@ export default function RegisterPage() {
             type="text"
             value={idStudent}
             onChange={(e) => setIdStudent(e.target.value)}
+            placeholder={NAME_PLACEHOLDER}
+            maxLength={40}
+            autoComplete="off"
             required
             className="w-full bg-ink-900 border border-ink-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-garnet-600"
           />
+          {nameHint.error ? (
+            <p className="mt-1.5 text-xs text-garnet-400">{nameHint.error}</p>
+          ) : nameHint.warning ? (
+            <p className="mt-1.5 text-xs text-amber-300">{nameHint.warning}</p>
+          ) : (
+            <p className="mt-1.5 text-xs text-neutral-500">{NAME_HELP}</p>
+          )}
         </div>
 
         <div>

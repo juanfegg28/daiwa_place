@@ -9,7 +9,7 @@ export default function Logo({ size = 'md' }: { size?: keyof typeof sizes }) {
   return (
     <div className={`flex items-center ${s.gap} text-garnet-400`}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+      <img loading="lazy" decoding="async"
         src="/brand-moon.png"
         alt="DaiwaPlace"
         className={`${s.seal} shrink-0 rounded-full object-cover drop-shadow-[0_0_10px_color-mix(in_srgb,var(--color-garnet-500)_35%,transparent)]`}

@@ -34,6 +34,7 @@ export default function ProfileActions({
   const [showBlockConfirm, setShowBlockConfirm] = useState(false)
   const [blocking, setBlocking] = useState(false)
   const [openingChat, setOpeningChat] = useState(false)
+  const [chatError, setChatError] = useState('')
   const router = useRouter()
 
   // Abre (o crea) el chat. Si esa persona no te sigue, queda como solicitud de mensaje.
@@ -46,9 +47,10 @@ export default function ProfileActions({
     const { id, error } = await startConversation(targetUserId)
     setOpeningChat(false)
     if (error || !id) {
-      window.alert(error ?? 'No se pudo abrir el chat.')
+      setChatError(error ?? 'No se pudo abrir el chat.')
       return
     }
+    setChatError('')
     router.push(`/mensajes/${id}`)
   }
 
@@ -110,7 +112,12 @@ export default function ProfileActions({
   ]
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-1.5 flex-wrap justify-end">
+      {chatError && (
+        <p role="alert" className="basis-full text-right text-xs text-garnet-400 mb-1 max-w-xs ml-auto">
+          {chatError}
+        </p>
+      )}
       {isBlockedByMe ? (
         <button
           type="button"

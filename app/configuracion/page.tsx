@@ -48,6 +48,7 @@ function ConfiguracionContent() {
       .maybeSingle()
     // Se pide aparte para no romper Configuración si todavía no se corrió el SQL de la v0.12.0
     const { data: onlineRow } = await supabase.from('profiles').select('show_online_status').eq('id', id).maybeSingle()
+    const { data: receiptsRow } = await supabase.from('profiles').select('show_read_receipts').eq('id', id).maybeSingle()
     if (data) {
       setProfile({
         id: data.id,
@@ -59,6 +60,7 @@ function ConfiguracionContent() {
         accent_color: data.accent_color ?? null,
         badge_color: data.badge_color ?? null,
         show_online_status: onlineRow?.show_online_status !== false,
+        show_read_receipts: receiptsRow?.show_read_receipts !== false,
         notif_prefs: { ...DEFAULT_NOTIF_PREFS, ...(data.notif_prefs ?? {}) },
       })
     }

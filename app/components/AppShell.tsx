@@ -49,6 +49,8 @@ type SessionState = {
   onlineIds: Set<string>
   /** Si tú muestras (y ves) el estado "conectado" */
   showOnline: boolean
+  /** Si tú muestras (y ves) el "Visto" de los mensajes */
+  showReadReceipts: boolean
 }
 
 const AppSessionContext = createContext<SessionState>({
@@ -69,6 +71,7 @@ const AppSessionContext = createContext<SessionState>({
   refreshDm: () => {},
   onlineIds: new Set<string>(),
   showOnline: true,
+  showReadReceipts: true,
 })
 
 export function useAppSession() {
@@ -136,6 +139,7 @@ export default function AppShell({
   const [messageRequests, setMessageRequests] = useState(0)
   const [dmVersion, setDmVersion] = useState(0)
   const [showOnline, setShowOnline] = useState(true)
+  const [showReadReceipts, setShowReadReceipts] = useState(true)
   const [onlineIds, setOnlineIds] = useState<Set<string>>(new Set())
   const presenceRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
   const pathname = usePathname()
@@ -191,6 +195,14 @@ export default function AppShell({
       .eq('id', user.id)
       .maybeSingle()
     setShowOnline(onlineRow?.show_online_status !== false)
+
+    // Igual: aparte, para que falte o no el SQL de la v0.13.5 no se rompa nada
+    const { data: receiptsRow } = await supabase
+      .from('profiles')
+      .select('show_read_receipts')
+      .eq('id', user.id)
+      .maybeSingle()
+    setShowReadReceipts(receiptsRow?.show_read_receipts !== false)
 
     setLoading(false)
   }
@@ -329,6 +341,16 @@ export default function AppShell({
     }
   }, [userId, showOnline])
 
+  // Contador en la pestaña del navegador: "(3) DaiwaPlace" (avisos + chats sin leer)
+  useEffect(() => {
+    const total = (userId ? unreadCount : 0) + (userId ? unreadMessages : 0)
+    const base = document.title.replace(/^\(\d+\+?\)\s*/, '')
+    document.title = total > 0 ? `(${total > 99 ? '99+' : total}) ${base}` : base
+    return () => {
+      document.title = document.title.replace(/^\(\d+\+?\)\s*/, '')
+    }
+  }, [unreadCount, unreadMessages, userId, pathname])
+
   const handleLogout = async () => {
     await supabase.auth.signOut()
     applyTheme('dark', null)
@@ -416,6 +438,7 @@ export default function AppShell({
         refreshDm,
         onlineIds,
         showOnline,
+        showReadReceipts,
       }}
     >
       <div className="min-h-screen bg-ink-950 text-neutral-100 md:flex">
@@ -491,7 +514,7 @@ export default function AppShell({
                   <div className="w-9 h-9 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center shrink-0">
                     {avatarUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={avatarUrl} alt={username ?? ''} className="w-full h-full object-cover" />
+                      <img loading="lazy" decoding="async" src={avatarUrl} alt={username ?? ''} className="w-full h-full object-cover" />
                     ) : (
                       <span className="text-sm font-semibold text-garnet-400">
                         {(username ?? '?').charAt(0).toUpperCase()}

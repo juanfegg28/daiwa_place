@@ -12,6 +12,8 @@ import { prepareImage } from './lib/images'
 import { POST_SELECT, POST_IMAGES_BUCKET, MAX_POST_IMAGES } from './lib/queries'
 import type { Post, PostImage } from './lib/types'
 
+const FEED_PAGE = 15
+
 type DraftImage = {
   id: string
   blob: Blob
@@ -40,14 +42,35 @@ function Feed() {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const router = useRouter()
 
+  // El inicio carga de 15 en 15 ("Ver más") en vez de traer TODAS las publicaciones de una vez.
+  // Se pide una de más para saber si todavía quedan por mostrar.
+  const feedLimit = useRef(FEED_PAGE)
+  const newestSeen = useRef<string | null>(null)
+  const [hasMoreFeed, setHasMoreFeed] = useState(false)
+  const [loadingMoreFeed, setLoadingMoreFeed] = useState(false)
+  const [newPostsAvailable, setNewPostsAvailable] = useState(false)
+
   const loadPosts = async () => {
     const { data, error } = await supabase
       .from('posts')
       .select(POST_SELECT)
       .order('created_at', { ascending: false })
+      .limit(feedLimit.current + 1)
     if (error) console.error('Error cargando posts:', error.message)
-    setPosts((data as unknown as Post[]) ?? [])
+    const rows = (data as unknown as Post[]) ?? []
+    const page = rows.slice(0, feedLimit.current)
+    setHasMoreFeed(rows.length > feedLimit.current)
+    setPosts(page)
+    newestSeen.current = page[0]?.created_at ?? null
+    setNewPostsAvailable(false)
     setLoadingPosts(false)
+  }
+
+  const loadMoreFeed = async () => {
+    setLoadingMoreFeed(true)
+    feedLimit.current += FEED_PAGE
+    await loadPosts()
+    setLoadingMoreFeed(false)
   }
 
   useEffect(() => {
@@ -55,6 +78,23 @@ function Feed() {
       loadPosts()
     }
     run()
+  }, [])
+
+  // Aviso de "hay publicaciones nuevas": se revisa cada 45 s y al volver a la pestaña (sin mover lo que estás leyendo)
+  useEffect(() => {
+    async function check() {
+      const { data } = await supabase.from('posts').select('created_at').order('created_at', { ascending: false }).limit(1)
+      const latest = data?.[0]?.created_at as string | undefined
+      if (latest && newestSeen.current && new Date(latest).getTime() > new Date(newestSeen.current).getTime()) {
+        setNewPostsAvailable(true)
+      }
+    }
+    const interval = window.setInterval(check, 45000)
+    window.addEventListener('focus', check)
+    return () => {
+      window.clearInterval(interval)
+      window.removeEventListener('focus', check)
+    }
   }, [])
 
   const handlePickImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -227,7 +267,7 @@ function Feed() {
             <div className="w-10 h-10 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center shrink-0">
               {avatarUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={avatarUrl} alt={username} className="w-full h-full object-cover" />
+                <img loading="lazy" decoding="async" src={avatarUrl} alt={username} className="w-full h-full object-cover" />
               ) : (
                 <span className="text-sm font-semibold text-garnet-400">
                   {username.charAt(0).toUpperCase()}
@@ -290,6 +330,18 @@ function Feed() {
       )}
 
       <div className="space-y-4">
+        {newPostsAvailable && (
+          <button
+            type="button"
+            onClick={() => {
+              window.scrollTo({ top: 0, behavior: 'smooth' })
+              loadPosts()
+            }}
+            className="w-full bg-garnet-600/15 border border-garnet-600/40 text-garnet-300 hover:bg-garnet-600/25 rounded-full py-2 text-sm font-medium transition"
+          >
+            Hay publicaciones nuevas · Ver
+          </button>
+        )}
         {loadingPosts ? (
           <p className="text-neutral-500 text-sm text-center py-10">Cargando publicaciones...</p>
         ) : posts.length === 0 ? (
@@ -308,6 +360,18 @@ function Feed() {
               onRefresh={loadPosts}
             />
           ))
+        )}
+        {hasMoreFeed && !loadingPosts && (
+          <div className="flex justify-center pt-2">
+            <button
+              type="button"
+              onClick={loadMoreFeed}
+              disabled={loadingMoreFeed}
+              className="text-sm border border-ink-600 text-neutral-300 rounded-full px-5 py-2 hover:bg-ink-800 transition disabled:opacity-60"
+            >
+              {loadingMoreFeed ? 'Cargando...' : 'Ver más publicaciones'}
+            </button>
+          </div>
         )}
       </div>
     </div>

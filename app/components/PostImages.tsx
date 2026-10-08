@@ -96,7 +96,7 @@ export default function PostImages({
         aria-label={`Ver foto ${safeIndex + 1} de ${total}`}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <img loading="lazy" decoding="async"
           src={current.url}
           alt={`Foto ${safeIndex + 1} de ${total}`}
           draggable={false}

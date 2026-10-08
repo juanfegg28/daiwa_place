@@ -8,8 +8,9 @@ import { useAppSession } from '../components/AppShell'
 import KebabMenu, { type MenuItem } from '../components/KebabMenu'
 import ConfirmDialog from '../components/ConfirmDialog'
 import UserAvatar from '../components/UserAvatar'
-import { ArrowLeftIcon, BlockIcon, CloseIcon, EditIcon, SendIcon, TrashIcon, UserIcon } from '../components/icons'
+import { ArrowLeftIcon, BlockIcon, CloseIcon, EditIcon, FlagIcon, SendIcon, TrashIcon, UserIcon } from '../components/icons'
 import MessageBubble from './MessageBubble'
+import DmReportDialog from './DmReportDialog'
 import {
   MAX_MESSAGE_LENGTH,
   MAX_NICKNAME_LENGTH,
@@ -36,7 +37,7 @@ type Props = {
 
 export default function ChatPane({ convId, me, friendIds }: Props) {
   const router = useRouter()
-  const { onlineIds, refreshDm } = useAppSession()
+  const { onlineIds, refreshDm, showReadReceipts } = useAppSession()
 
   const [info, setInfo] = useState<ChatInfo | null>(null)
   const [state, setState] = useState<'loading' | 'ready' | 'missing' | 'error'>('loading')
@@ -58,6 +59,7 @@ export default function ChatPane({ convId, me, friendIds }: Props) {
   const [savingNickname, setSavingNickname] = useState(false)
   const [showHideChat, setShowHideChat] = useState(false)
   const [showBlock, setShowBlock] = useState(false)
+  const [reportTarget, setReportTarget] = useState<{ messageId: string | null } | null>(null)
   const [busyAction, setBusyAction] = useState(false)
 
   const scrollRef = useRef<HTMLDivElement | null>(null)
@@ -93,10 +95,10 @@ export default function ChatPane({ convId, me, friendIds }: Props) {
     const { data } = await supabase.rpc('dm_mark_read', { p_conv: convId })
     refreshDm()
     const ch = channelRef.current
-    if (data && ch && ch.state === 'joined') {
+    if (data && ch && ch.state === 'joined' && showReadReceipts) {
       ch.send({ type: 'broadcast', event: 'read', payload: { at: data as string } })
     }
-  }, [convId, refreshDm])
+  }, [convId, refreshDm, showReadReceipts])
 
   // el "visto" no se manda en cada mensaje: se junta en una sola marca
   const scheduleMarkRead = useCallback(() => {
@@ -510,7 +512,8 @@ export default function ChatPane({ convId, me, friendIds }: Props) {
     }
     return -1
   })()
-  const seen = (m: DmMessage) => !!otherReadAt && new Date(otherReadAt).getTime() >= new Date(m.created_at).getTime()
+  const seen = (m: DmMessage) =>
+    showReadReceipts && !!otherReadAt && new Date(otherReadAt).getTime() >= new Date(m.created_at).getTime()
 
   const menuItems: MenuItem[] = [
     {
@@ -522,6 +525,7 @@ export default function ChatPane({ convId, me, friendIds }: Props) {
       },
     },
     { label: 'Ver perfil', icon: <UserIcon className="w-4 h-4" />, onClick: () => router.push(`/perfil/${info.other_username}`) },
+    { label: 'Reportar conversación', icon: <FlagIcon className="w-4 h-4" />, onClick: () => setReportTarget({ messageId: null }) },
     { label: 'Eliminar chat', icon: <TrashIcon className="w-4 h-4" />, onClick: () => setShowHideChat(true) },
     { label: 'Bloquear', icon: <BlockIcon className="w-4 h-4" />, danger: true, onClick: () => setShowBlock(true) },
   ]
@@ -603,6 +607,7 @@ export default function ChatPane({ convId, me, friendIds }: Props) {
                   onJumpTo={jumpTo}
                   onRetry={retry}
                   onDiscard={(x) => setMessages((prev2) => prev2.filter((y) => y.id !== x.id))}
+                  onReport={(x) => setReportTarget({ messageId: x.id })}
                 />
               </div>
             )
@@ -757,6 +762,16 @@ export default function ChatPane({ convId, me, friendIds }: Props) {
         </div>
       )}
 
+      <DmReportDialog
+        open={!!reportTarget}
+        convId={convId}
+        messageId={reportTarget?.messageId ?? null}
+        onClose={() => setReportTarget(null)}
+        onDone={() => {
+          setReportTarget(null)
+          setNotice('Gracias. Recibimos tu reporte; el equipo revisará los últimos mensajes de la conversación.')
+        }}
+      />
       <ConfirmDialog
         open={!!deleteTarget}
         title="¿Eliminar este mensaje?"

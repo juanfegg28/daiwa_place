@@ -48,14 +48,14 @@ export default function ProfilePreviewCard({
       >
         {bannerPreview && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={bannerPreview} alt="Banner" className="absolute inset-0 w-full h-full object-cover" />
+          <img loading="lazy" decoding="async" src={bannerPreview} alt="Banner" className="absolute inset-0 w-full h-full object-cover" />
         )}
       </div>
       <div className="px-4 pb-4">
         <div className="relative z-10 -mt-10 mb-2 w-20 h-20 rounded-full border-4 border-ink-800 bg-ink-700 overflow-hidden flex items-center justify-center">
           {avatarPreview ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
+            <img loading="lazy" decoding="async" src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
           ) : (
             <span className="text-xl font-semibold text-garnet-400">
               {(username || '?').charAt(0).toUpperCase()}

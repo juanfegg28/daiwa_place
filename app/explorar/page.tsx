@@ -40,7 +40,7 @@ function MiniProfileRow({
       <div className="w-10 h-10 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center shrink-0">
         {profile.avatar_url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={profile.avatar_url} alt={profile.username} className="w-full h-full object-cover" />
+          <img loading="lazy" decoding="async" src={profile.avatar_url} alt={profile.username} className="w-full h-full object-cover" />
         ) : (
           <span className="text-sm font-semibold text-garnet-400">{profile.username.charAt(0).toUpperCase()}</span>
         )}
@@ -101,13 +101,34 @@ function ExplorarContent() {
     }
     startSearching()
     const timer = window.setTimeout(async () => {
+      // Se quitan %, comas y paréntesis: en el filtro de Supabase rompían la búsqueda
+      const safe = q.replace(/[%,()]/g, '')
+      if (!safe) {
+        setResults([])
+        setSearching(false)
+        return
+      }
       const { data } = await supabase
         .from('profiles')
         .select('id, username, id_student, avatar_url, grado')
         .eq('ghost_mode', false)
-        .or(`id_student.ilike.%${q}%,username.ilike.%${q}%,grado.ilike.%${q}%`)
+        .or(`id_student.ilike.%${safe}%,username.ilike.%${safe}%,grado.ilike.%${safe}%`)
         .limit(20)
-      setResults((data as SearchResult[]) ?? [])
+
+      // No se muestran personas bloqueadas (ni quienes te bloquearon)
+      const { data: auth } = await supabase.auth.getUser()
+      const me = auth.user?.id
+      const blockedIds = new Set<string>()
+      if (me) {
+        const { data: bl } = await supabase
+          .from('blocks')
+          .select('blocker_id, blocked_id')
+          .or(`blocker_id.eq.${me},blocked_id.eq.${me}`)
+        for (const b of (bl ?? []) as { blocker_id: string; blocked_id: string }[]) {
+          blockedIds.add(b.blocker_id === me ? b.blocked_id : b.blocker_id)
+        }
+      }
+      setResults(((data as SearchResult[]) ?? []).filter((r) => !blockedIds.has(r.id)))
       setSearching(false)
     }, 350)
     return () => window.clearTimeout(timer)

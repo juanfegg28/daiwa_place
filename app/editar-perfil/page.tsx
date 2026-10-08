@@ -9,7 +9,7 @@ import ProfilePreviewCard from '../components/ProfilePreviewCard'
 import { useAvatarCropper, BANNER_CROP } from '../components/AvatarCropper'
 import { CameraIcon } from '../components/icons'
 import { ESTADOS_SENTIMENTALES } from '../lib/constants'
-import { hasFancyCharacters, FANCY_NAME_ERROR } from '../lib/nameFilter'
+import { checkStudentName, NAME_HELP, NAME_PLACEHOLDER } from '../lib/nameFilter'
 
 export default function EditProfilePage() {
   return (
@@ -22,6 +22,8 @@ export default function EditProfilePage() {
 function EditProfileForm() {
   const { userId, username, loading: sessionLoading, refresh } = useAppSession()
   const [idStudent, setIdStudent] = useState('')
+  const [originalName, setOriginalName] = useState('')
+  const [uploadNotice, setUploadNotice] = useState<string[] | null>(null)
   const [bio, setBio] = useState('')
   const [grado, setGrado] = useState('')
   const [birthday, setBirthday] = useState('')
@@ -58,6 +60,7 @@ function EditProfileForm() {
 
     if (data) {
       setIdStudent(data.id_student ?? '')
+      setOriginalName((data.id_student ?? '').trim())
       setBio(data.bio ?? '')
       setGrado(data.grado ?? '')
       setBirthday(data.birthday ?? '')
@@ -101,10 +104,14 @@ function EditProfileForm() {
     setError('')
     setSuccess(false)
 
-    if (hasFancyCharacters(idStudent.trim())) {
-      setError(FANCY_NAME_ERROR)
-      setSaving(false)
-      return
+    // Solo se valida si cambió el nombre: así quien tiene un nombre antiguo puede guardar lo demás sin problema
+    if (idStudent.trim() !== originalName) {
+      const nameCheck = checkStudentName(idStudent, username ?? '')
+      if (nameCheck.error) {
+        setError(nameCheck.error)
+        setSaving(false)
+        return
+      }
     }
 
     let avatarUrl: string | null = avatarPreview && !avatarFile ? avatarPreview : null
@@ -157,20 +164,16 @@ function EditProfileForm() {
       return
     }
 
-    if (uploadWarnings.length > 0) {
-      window.alert(
-        'Se guardaron tus datos, pero no se pudo subir:\n\n' +
-          uploadWarnings.join('\n') +
-          '\n\nRevisa el bucket "avatars" en Supabase.'
-      )
-    }
-
+    setUploadNotice(uploadWarnings.length > 0 ? uploadWarnings : null)
+    setOriginalName(idStudent.trim())
     setAvatarFile(null)
     setBannerFile(null)
     refresh()
     setSaving(false)
     setSuccess(true)
   }
+
+  const nameHint = checkStudentName(idStudent, username ?? '')
 
   if (sessionLoading || loadingProfile) {
     return (
@@ -216,8 +219,18 @@ function EditProfileForm() {
             type="text"
             value={idStudent}
             onChange={(e) => setIdStudent(e.target.value)}
+            placeholder={NAME_PLACEHOLDER}
+            maxLength={40}
+            autoComplete="off"
             className="w-full bg-ink-900 border border-ink-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-garnet-600"
           />
+          {nameHint.error && idStudent.trim() !== originalName ? (
+            <p className="mt-1.5 text-xs text-garnet-400">{nameHint.error}</p>
+          ) : nameHint.warning && idStudent.trim() !== originalName ? (
+            <p className="mt-1.5 text-xs text-amber-300">{nameHint.warning}</p>
+          ) : (
+            <p className="mt-1.5 text-xs text-neutral-500">{NAME_HELP}</p>
+          )}
         </div>
 
         <div>
@@ -272,6 +285,15 @@ function EditProfileForm() {
 
         {error && <p className="text-garnet-400 text-sm">{error}</p>}
         {success && <p className="text-emerald-500 text-sm">Perfil actualizado</p>}
+        {uploadNotice && (
+          <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 px-3.5 py-2.5 text-xs text-amber-300 space-y-0.5">
+            <p className="font-semibold">Se guardaron tus datos, pero no se pudo subir:</p>
+            {uploadNotice.map((w) => (
+              <p key={w}>{w}</p>
+            ))}
+            <p className="text-amber-300/80">Inténtalo de nuevo; si sigue fallando, avisa a la administración.</p>
+          </div>
+        )}
 
         <div className="flex gap-3 pt-2">
           <button

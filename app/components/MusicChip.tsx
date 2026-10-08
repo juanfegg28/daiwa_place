@@ -17,7 +17,7 @@ export default function MusicChip({ track, compact = false }: { track: unknown; 
     >
       {t.cover ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={t.cover} alt="" className={`${compact ? 'w-5 h-5' : 'w-6 h-6'} rounded-full object-cover shrink-0`} />
+        <img loading="lazy" decoding="async" src={t.cover} alt="" className={`${compact ? 'w-5 h-5' : 'w-6 h-6'} rounded-full object-cover shrink-0`} />
       ) : (
         <span className={`${compact ? 'w-5 h-5' : 'w-6 h-6'} rounded-full bg-ink-700 flex items-center justify-center text-garnet-400 shrink-0`}>
           <MusicIcon className="w-3 h-3" />

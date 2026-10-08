@@ -201,7 +201,7 @@ export function useAvatarCropper(
             onPointerLeave={handlePointerUp}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <img loading="lazy" decoding="async"
               ref={cropImgRef}
               src={cropSrc}
               onLoad={handleImageLoad}
