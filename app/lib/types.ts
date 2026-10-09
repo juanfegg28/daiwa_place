@@ -36,6 +36,8 @@ export type Post = {
   created_at: string
   edited_at: string | null
   images: PostImage[] | null
+  /** Canción adjunta (solo número, título, artista, carátula y enlace; sin audio) */
+  music?: unknown
   profiles: AuthorProfile
   likes: { user_id: string }[]
   comments: Comment[]

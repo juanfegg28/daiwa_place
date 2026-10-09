@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { CloseIcon, HeartIcon, MusicIcon } from '../components/icons'
+import { CloseIcon, HeartIcon } from '../components/icons'
 import UserAvatar from '../components/UserAvatar'
 import MusicChip from '../components/MusicChip'
+import MusicField from '../components/MusicField'
+import { normalizeTrack, type MusicTrack } from '../lib/music'
 import { MAX_NOTE_LENGTH, friendlyDmError, type NoteItem } from '../lib/dm'
 
 type Liker = {
@@ -43,12 +45,14 @@ export default function NoteModal({
   const [error, setError] = useState('')
   const [likers, setLikers] = useState<Liker[]>([])
   const [composing, setComposing] = useState(false)
+  const [music, setMusic] = useState<Pick<MusicTrack, 'provider' | 'id' | 'title' | 'artist' | 'cover' | 'link'> | null>(null)
 
   useEffect(() => {
     if (!open) return
     function reset() {
       setText('')
       setError('')
+      setMusic(null)
       setComposing(false)
     }
     reset()
@@ -88,11 +92,13 @@ export default function NoteModal({
   const likedByMe = !!note && note.note_likes.some((l) => l.user_id === me)
 
   const publish = async () => {
-    const clean = text.trim()
+    const picked = music && normalizeTrack(music) ? music : null
+    // Una nota puede ser solo una canción: si no escribes nada, se usa el título
+    const clean = text.trim() || (picked ? `🎵 ${picked.title}`.slice(0, MAX_NOTE_LENGTH) : '')
     if (!clean || saving) return
     setSaving(true)
     setError('')
-    const { error: err } = await supabase.rpc('set_note', { p_content: clean })
+    const { error: err } = await supabase.rpc('set_note', { p_content: clean, p_music: picked })
     setSaving(false)
     if (err) {
       setError(friendlyDmError(err.message))
@@ -158,9 +164,9 @@ export default function NoteModal({
             />
             <div className="flex items-center justify-between mt-1.5 mb-3">
               <span className="text-[11px] text-neutral-600">{text.length}/{MAX_NOTE_LENGTH}</span>
-              <span className="inline-flex items-center gap-1 text-[11px] text-neutral-600" title="Llega en una próxima actualización">
-                <MusicIcon className="w-3 h-3" /> Música: próximamente
-              </span>
+            </div>
+            <div className="mb-3">
+              <MusicField value={music} onChange={setMusic} label="Añadir canción" pickerTitle="Añade una canción a tu nota" />
             </div>
             <p className="text-xs text-neutral-500 leading-relaxed mb-4">
               La ven tus amigos (las personas que se siguen mutuamente contigo) y dura 24 horas. Si publicas otra,
@@ -179,7 +185,7 @@ export default function NoteModal({
               <button
                 type="button"
                 onClick={publish}
-                disabled={saving || !text.trim()}
+                disabled={saving || (!text.trim() && !music)}
                 className="flex-1 bg-garnet-600 hover:bg-garnet-500 text-white rounded-full py-2 text-sm font-medium transition disabled:opacity-50"
               >
                 {saving ? 'Compartiendo...' : 'Compartir'}

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Cinzel } from "next/font/google";
 import "./globals.css";
 import { THEME_INIT_SCRIPT } from "./lib/theme";
+import MusicProvider from './components/MusicProvider'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,7 +37,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body className="min-h-full flex flex-col bg-ink-950 text-neutral-100" suppressHydrationWarning>
-        {children}
+        <MusicProvider>{children}</MusicProvider>
       </body>
     </html>
   );

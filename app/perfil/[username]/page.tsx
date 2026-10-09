@@ -17,6 +17,8 @@ import {
   UsersIcon,
 } from '../../components/icons'
 import RoleBadges from '../../components/RoleBadge'
+import MusicChip from '../../components/MusicChip'
+import { normalizeTrack } from '../../lib/music'
 import { PROFILE_POST_SELECT } from '../../lib/queries'
 import type { AuthorProfile, Post, RoleBadgeInfo } from '../../lib/types'
 
@@ -25,6 +27,7 @@ type Profile = {
   username: string
   id_student: string | null
   bio: string | null
+  music?: unknown
   avatar_url: string | null
   banner_url: string | null
   birthday: string | null
@@ -128,7 +131,7 @@ function ProfileContent() {
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select(
-        'id, username, id_student, bio, avatar_url, banner_url, birthday, grado, estado_personal, badge_color, is_frozen, posts_visibility, created_at'
+        'id, username, id_student, bio, music, avatar_url, banner_url, birthday, grado, estado_personal, badge_color, is_frozen, posts_visibility, created_at'
       )
       .eq('username', usernameParam.toLowerCase())
       .maybeSingle()
@@ -355,6 +358,11 @@ function ProfileContent() {
           <>
             {profile.bio && (
               <p className="text-sm text-neutral-200 mb-3 leading-relaxed whitespace-pre-wrap">{profile.bio}</p>
+            )}
+            {!!normalizeTrack(profile.music) && (
+              <div className="mb-4 max-w-sm">
+                <MusicChip track={profile.music} variant="card" />
+              </div>
             )}
 
             {(profile.grado || profile.birthday || profile.estado_personal) && (

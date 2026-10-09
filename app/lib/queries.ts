@@ -7,13 +7,15 @@ const COMMENTS_SELECT =
 // (id_student e is_frozen se usan para la jerarquía de nombres y para
 // desactivar los botones si la cuenta del autor está congelada; user_roles
 // trae sus insignias para mostrarlas junto al nombre)
-export const POST_SELECT = `id, user_id, content, created_at, edited_at, images, profiles!posts_user_id_fkey(username, avatar_url, id_student, is_frozen, badge_color, user_roles!user_id(roles(name, badge_color))), likes(user_id), ${COMMENTS_SELECT}`
+export const POST_SELECT = `id, user_id, content, created_at, edited_at, images, music, profiles!posts_user_id_fkey(username, avatar_url, id_student, is_frozen, badge_color, user_roles!user_id(roles(name, badge_color))), likes(user_id), ${COMMENTS_SELECT}`
 
 // Perfil: ya sabemos quién es el autor, no hace falta traerlo
-export const PROFILE_POST_SELECT = `id, user_id, content, created_at, edited_at, images, likes(user_id), ${COMMENTS_SELECT}`
+export const PROFILE_POST_SELECT = `id, user_id, content, created_at, edited_at, images, music, likes(user_id), ${COMMENTS_SELECT}`
 
 export const POST_IMAGES_BUCKET = 'post-images'
 export const MAX_POST_IMAGES = 4
+/** Máximo de caracteres en el texto de una publicación (también lo exige la base de datos) */
+export const MAX_POST_LENGTH = 1000
 
 // Notificaciones: quién la generó, y un pedacito de la publicación / comentario
 // al que se refiere (para mostrar el fragmento en la lista)

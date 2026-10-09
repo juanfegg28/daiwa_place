@@ -14,6 +14,44 @@ export const RELEASE_STAGE = 'beta'
 
 export const CHANGELOG: Release[] = [
   {
+    version: '0.14.0',
+    date: '2026-10-08',
+    title: 'Música con Deezer',
+    sections: [
+      {
+        heading: 'Música en notas, publicaciones y perfiles',
+        items: [
+          'Ahora puedes poner una canción en tu perfil (Editar perfil → Canción del perfil), en tus publicaciones (botón Canción) y en tus notas. Se ve como una tarjeta con la carátula, el título, el artista y un botón de play.',
+          'Al darle play suena un fragmento de 30 segundos (así lo permite Deezer), con una barra de progreso, un ecualizador y la carátula girando como un disco. Debajo hay un enlace para escuchar la canción completa en Deezer.',
+          'El volumen está fijo al 70 %. La música nunca suena sola: solo cuando alguien le da play, y si empiezas otra canción, la anterior se pausa.',
+          'Una nota puede ser solo una canción: si no escribes nada, se usa el título.',
+        ],
+      },
+      {
+        heading: 'Buscador de canciones',
+        items: [
+          'Un buscador nuevo con todo el catálogo de Deezer: escribes el nombre de la canción o del artista, escuchas un fragmento antes de elegir y tocas Elegir. Hay botón Ver más canciones para seguir viendo resultados.',
+          'Por defecto se ocultan las canciones marcadas como explícitas. El Admin Supremo puede permitirlas en Centro de Mando → Sistema.',
+          'En Configuración → Apariencia hay un interruptor para apagar la música en tu dispositivo.',
+        ],
+      },
+      {
+        heading: 'Me gusta y publicaciones',
+        items: [
+          'Al tocar el número de me gusta de una publicación se abre la lista de quién le dio like: primero las personas que sigues y después el resto, con botón de Seguir, igual que en seguidores y seguidos.',
+          'Las publicaciones ahora tienen un máximo de 1000 caracteres (con contador mientras escribes) y hasta 4 fotos. Los textos muy largos se recortan en el inicio con un botón Ver más.',
+        ],
+      },
+      {
+        heading: 'Detalles',
+        items: [
+          'Si Supabase rechaza la sesión por un instante (error de relojes desfasados), el inicio ahora reintenta solo en vez de quedarse vacío.',
+          'El buscador de música ahora verifica de verdad que tu sesión sea válida y limita las búsquedas por persona.',
+        ],
+      },
+    ],
+  },
+  {
     version: '0.13.5',
     date: '2026-10-07',
     title: 'Parche de detalles',

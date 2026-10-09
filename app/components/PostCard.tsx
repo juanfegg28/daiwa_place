@@ -4,7 +4,8 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabaseClient'
-import { POST_IMAGES_BUCKET } from '../lib/queries'
+import { MAX_POST_LENGTH, POST_IMAGES_BUCKET } from '../lib/queries'
+import { normalizeTrack } from '../lib/music'
 import { renderContentWithHashtags } from '../lib/hashtags'
 import type { Post, Comment } from '../lib/types'
 import {
@@ -22,6 +23,9 @@ import KebabMenu, { type MenuItem } from './KebabMenu'
 import ConfirmDialog from './ConfirmDialog'
 import ReportDialog from './ReportDialog'
 import PostImages from './PostImages'
+import LikesModal from './LikesModal'
+import MusicChip from './MusicChip'
+import MusicField from './MusicField'
 import ImageLightbox from './ImageLightbox'
 import RoleBadges from './RoleBadge'
 
@@ -62,6 +66,11 @@ const MAX_INDENT_LEVEL = 4 // después de este nivel las respuestas ya no se cor
 
 const EDIT_ERROR_HINT =
   'No se pudo completar la acción. Revisa que hayas corrido el SQL de permisos (RLS) en Supabase.'
+
+/** Un texto largo se recorta en el inicio (con "Ver más") para que una publicación enorme no ocupe toda la pantalla */
+function isLongText(text: string): boolean {
+  return text.length > 420 || text.split('\n').length > 9
+}
 
 function timeAgo(iso: string) {
   const diffMs = Date.now() - new Date(iso).getTime()
@@ -390,6 +399,9 @@ export default function PostCard({
 
   const [editingPost, setEditingPost] = useState(false)
   const [editText, setEditText] = useState(post.content)
+  const [editMusic, setEditMusic] = useState<unknown>(post.music ?? null)
+  const [showLikes, setShowLikes] = useState(false)
+  const [showFullText, setShowFullText] = useState(false)
   const [savingPost, setSavingPost] = useState(false)
   const [confirmDeletePost, setConfirmDeletePost] = useState(false)
   const [deletingPost, setDeletingPost] = useState(false)
@@ -506,11 +518,16 @@ export default function PostCard({
 
   const savePost = async () => {
     const text = editText.trim()
-    if (!text && images.length === 0) {
+    if (!text && images.length === 0 && !normalizeTrack(editMusic)) {
       setActionError('La publicación no puede quedar vacía')
       return
     }
-    if (text === post.content) {
+    if (text.length > MAX_POST_LENGTH) {
+      setActionError(`El texto puede tener máximo ${MAX_POST_LENGTH} caracteres`)
+      return
+    }
+    const musicChanged = (normalizeTrack(editMusic)?.id ?? null) !== (normalizeTrack(post.music)?.id ?? null)
+    if (text === post.content && !musicChanged) {
       setEditingPost(false)
       return
     }
@@ -518,7 +535,7 @@ export default function PostCard({
     setActionError('')
     const { data, error } = await supabase
       .from('posts')
-      .update({ content: text, edited_at: new Date().toISOString() })
+      .update({ content: text, music: normalizeTrack(editMusic) ? editMusic : null, edited_at: new Date().toISOString() })
       .eq('id', post.id)
       .select('id')
     setSavingPost(false)
@@ -678,10 +695,17 @@ export default function PostCard({
           <textarea
             autoFocus
             value={editText}
-            onChange={(e) => setEditText(e.target.value)}
+            onChange={(e) => setEditText(e.target.value.slice(0, MAX_POST_LENGTH))}
+            maxLength={MAX_POST_LENGTH}
             rows={3}
             className="w-full bg-ink-900 border border-ink-700 rounded-xl px-3 py-2 text-[15px] resize-y focus:outline-none focus:border-garnet-600"
           />
+          <p className={`text-[11px] text-right mt-1 ${editText.length > MAX_POST_LENGTH - 100 ? 'text-amber-300' : 'text-neutral-600'}`}>
+            {editText.length}/{MAX_POST_LENGTH}
+          </p>
+          <div className="mt-2">
+            <MusicField value={editMusic} onChange={setEditMusic} label="Añadir canción" />
+          </div>
           <div className="flex justify-end gap-2 mt-2">
             <button
               type="button"
@@ -705,20 +729,37 @@ export default function PostCard({
         </div>
       ) : (
         post.content && (
-          <p
-            onClick={canGoToProfile ? goToProfile : undefined}
-            className={`text-[15px] text-neutral-100 leading-relaxed whitespace-pre-wrap break-words mb-3 ${
-              canGoToProfile ? 'cursor-pointer' : ''
-            }`}
-          >
-            {renderContentWithHashtags(post.content)}
-          </p>
+          <div className="mb-3">
+            <p
+              onClick={canGoToProfile ? goToProfile : undefined}
+              className={`text-[15px] text-neutral-100 leading-relaxed whitespace-pre-wrap break-words ${
+                canGoToProfile ? 'cursor-pointer' : ''
+              } ${!detail && !showFullText && isLongText(post.content) ? 'line-clamp-[9]' : ''}`}
+            >
+              {renderContentWithHashtags(post.content)}
+            </p>
+            {!detail && isLongText(post.content) && (
+              <button
+                type="button"
+                onClick={() => setShowFullText((v) => !v)}
+                className="mt-1 text-xs text-garnet-400 hover:text-garnet-300 transition"
+              >
+                {showFullText ? 'Ver menos' : 'Ver más'}
+              </button>
+            )}
+          </div>
         )
       )}
 
       {images.length > 0 && (
         <div className="mb-3">
           <PostImages images={images} onOpen={setLightbox} />
+        </div>
+      )}
+
+      {!editingPost && !!normalizeTrack(post.music) && (
+        <div className="mb-3">
+          <MusicChip track={post.music} variant="compact" />
         </div>
       )}
 
@@ -740,8 +781,21 @@ export default function PostCard({
           }`}
         >
           <HeartIcon filled={likedByMe} className="w-[18px] h-[18px]" />
-          {post.likes.length}
         </button>
+        {post.likes.length > 0 ? (
+          <button
+            type="button"
+            onClick={() => setShowLikes(true)}
+            aria-label={`Ver las ${post.likes.length} personas a las que les gustó`}
+            className={`-ml-3.5 text-sm tabular-nums rounded-full px-1.5 py-0.5 hover:bg-ink-700 transition ${
+              likedByMe ? 'text-garnet-500' : 'hover:text-garnet-400'
+            }`}
+          >
+            {post.likes.length}
+          </button>
+        ) : (
+          <span className="-ml-3.5 text-sm tabular-nums px-1.5">0</span>
+        )}
         <button
           onClick={() => setExpanded((v) => !v)}
           className="flex items-center gap-1.5 text-sm hover:text-garnet-400 transition"
@@ -830,6 +884,8 @@ export default function PostCard({
       )}
 
       {lightbox !== null && <ImageLightbox images={images} startIndex={lightbox} onClose={closeLightbox} />}
+
+      {showLikes && <LikesModal postId={post.id} total={post.likes.length} onClose={() => setShowLikes(false)} />}
 
       {currentUserId && author && (
         <ReportDialog

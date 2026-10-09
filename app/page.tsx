@@ -9,7 +9,11 @@ import AnnouncementBanner from './components/AnnouncementBanner'
 import PostImages from './components/PostImages'
 import { ImageIcon } from './components/icons'
 import { prepareImage } from './lib/images'
-import { POST_SELECT, POST_IMAGES_BUCKET, MAX_POST_IMAGES } from './lib/queries'
+import { POST_SELECT, POST_IMAGES_BUCKET, MAX_POST_IMAGES, MAX_POST_LENGTH } from './lib/queries'
+import MusicChip from './components/MusicChip'
+import MusicPicker from './components/MusicPicker'
+import { MusicIcon } from './components/icons'
+import { normalizeTrack, toStoredTrack } from './lib/music'
 import type { Post, PostImage } from './lib/types'
 
 const FEED_PAGE = 15
@@ -49,13 +53,23 @@ function Feed() {
   const [hasMoreFeed, setHasMoreFeed] = useState(false)
   const [loadingMoreFeed, setLoadingMoreFeed] = useState(false)
   const [newPostsAvailable, setNewPostsAvailable] = useState(false)
+  const [postMusic, setPostMusic] = useState<ReturnType<typeof toStoredTrack> | null>(null)
+  const [musicPickerOpen, setMusicPickerOpen] = useState(false)
 
   const loadPosts = async () => {
-    const { data, error } = await supabase
-      .from('posts')
-      .select(POST_SELECT)
-      .order('created_at', { ascending: false })
-      .limit(feedLimit.current + 1)
+    const query = () =>
+      supabase
+        .from('posts')
+        .select(POST_SELECT)
+        .order('created_at', { ascending: false })
+        .limit(feedLimit.current + 1)
+    let { data, error } = await query()
+    // A veces Supabase rechaza la sesión por un instante ("JWT issued at future": relojes desfasados).
+    // Es pasajero: se reintenta una vez a los 1.5 s en vez de dejar el inicio vacío.
+    if (error && /JWT/i.test(error.message)) {
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+      ;({ data, error } = await query())
+    }
     if (error) console.error('Error cargando posts:', error.message)
     const rows = (data as unknown as Post[]) ?? []
     const page = rows.slice(0, feedLimit.current)
@@ -144,7 +158,11 @@ function Feed() {
   const handlePost = async (e: React.FormEvent) => {
     e.preventDefault()
     if (loading || processingImages) return
-    if (!content.trim() && drafts.length === 0) return
+    if (!content.trim() && drafts.length === 0 && !postMusic) return
+    if (content.length > MAX_POST_LENGTH) {
+      setPostError(`El texto puede tener máximo ${MAX_POST_LENGTH} caracteres.`)
+      return
+    }
     setLoading(true)
     setPostError('')
 
@@ -195,6 +213,7 @@ function Feed() {
       user_id: user.id,
       content: content.trim(),
       images: uploaded,
+      music: postMusic && normalizeTrack(postMusic) ? postMusic : null,
     })
 
     if (insertError) {
@@ -209,6 +228,7 @@ function Feed() {
     drafts.forEach((d) => URL.revokeObjectURL(d.previewUrl))
     setDrafts([])
     setContent('')
+    setPostMusic(null)
     setLoading(false)
     loadPosts()
   }
@@ -255,7 +275,11 @@ function Feed() {
   }
 
   const draftImages: PostImage[] = drafts.map((d) => ({ url: d.previewUrl, path: d.id, w: d.w, h: d.h }))
-  const canPublish = (content.trim().length > 0 || drafts.length > 0) && !loading && !processingImages
+  const canPublish =
+    (content.trim().length > 0 || drafts.length > 0 || !!postMusic) &&
+    content.length <= MAX_POST_LENGTH &&
+    !loading &&
+    !processingImages
 
   return (
     <div className="max-w-xl mx-auto py-6 px-4">
@@ -276,16 +300,32 @@ function Feed() {
             </div>
             <textarea
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={(e) => setContent(e.target.value.slice(0, MAX_POST_LENGTH))}
+              maxLength={MAX_POST_LENGTH}
               placeholder="¿Qué está pasando en Daiwa?"
               className="flex-1 bg-transparent text-sm resize-none focus:outline-none placeholder:text-neutral-500"
               rows={2}
             />
           </div>
+          {content.length > MAX_POST_LENGTH - 250 && (
+            <p
+              className={`text-[11px] text-right mt-1 tabular-nums ${
+                content.length >= MAX_POST_LENGTH ? 'text-garnet-400' : content.length > MAX_POST_LENGTH - 100 ? 'text-amber-300' : 'text-neutral-500'
+              }`}
+            >
+              {content.length}/{MAX_POST_LENGTH}
+            </p>
+          )}
 
           {drafts.length > 0 && (
             <div className="mt-3">
               <PostImages images={draftImages} onRemove={removeDraft} />
+            </div>
+          )}
+
+          {postMusic && (
+            <div className="mt-3">
+              <MusicChip track={postMusic} variant="compact" onRemove={() => setPostMusic(null)} />
             </div>
           )}
 
@@ -311,6 +351,16 @@ function Feed() {
                 <ImageIcon className="w-5 h-5" />
                 <span className="hidden sm:inline">Fotos</span>
               </button>
+              <button
+                type="button"
+                onClick={() => setMusicPickerOpen(true)}
+                disabled={loading}
+                className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-garnet-400 disabled:opacity-40 rounded-full px-2.5 py-1.5 hover:bg-ink-700 transition"
+                aria-label="Agregar canción"
+              >
+                <MusicIcon className="w-5 h-5" />
+                <span className="hidden sm:inline">Canción</span>
+              </button>
               {(drafts.length > 0 || processingImages) && (
                 <span className="text-xs text-neutral-500">
                   {processingImages ? 'Procesando...' : `${drafts.length}/${MAX_POST_IMAGES}`}
@@ -326,6 +376,15 @@ function Feed() {
               {loading ? (drafts.length > 0 ? 'Subiendo...' : 'Publicando...') : 'Publicar'}
             </button>
           </div>
+          <MusicPicker
+            open={musicPickerOpen}
+            title="Añade una canción a tu publicación"
+            onClose={() => setMusicPickerOpen(false)}
+            onPick={(t) => {
+              setPostMusic(toStoredTrack(t))
+              setMusicPickerOpen(false)
+            }}
+          />
         </form>
       )}
 

@@ -4,11 +4,43 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useAppSession } from '../components/AppShell'
 import ConfirmDialog from '../components/ConfirmDialog'
-import { SearchIcon, WrenchIcon, TrashIcon } from '../components/icons'
+import { SearchIcon, WrenchIcon, TrashIcon, MusicIcon } from '../components/icons'
 import type { UserSearchResult } from './types'
 
 export default function SistemaTab() {
-  const { refresh } = useAppSession()
+  const { refresh, isSupreme } = useAppSession()
+  const [allowExplicit, setAllowExplicit] = useState(false)
+  const [explicitLoaded, setExplicitLoaded] = useState(false)
+  const [savingExplicit, setSavingExplicit] = useState(false)
+  const [explicitError, setExplicitError] = useState('')
+
+  useEffect(() => {
+    if (!isSupreme) return
+    let cancelled = false
+    async function run() {
+      const { data } = await supabase.rpc('music_explicit_allowed')
+      if (cancelled) return
+      setAllowExplicit(data === true)
+      setExplicitLoaded(true)
+    }
+    run()
+    return () => {
+      cancelled = true
+    }
+  }, [isSupreme])
+
+  const toggleExplicit = async () => {
+    setSavingExplicit(true)
+    setExplicitError('')
+    const next = !allowExplicit
+    const { error } = await supabase.rpc('admin_set_music_explicit', { p_allow: next })
+    setSavingExplicit(false)
+    if (error) {
+      setExplicitError(/Could not find the function/.test(error.message) ? 'Falta correr el SQL de la v0.14.0 en Supabase.' : error.message)
+      return
+    }
+    setAllowExplicit(next)
+  }
   const [maintenance, setMaintenance] = useState(false)
   const [loadingSetting, setLoadingSetting] = useState(true)
   const [togglingMaintenance, setTogglingMaintenance] = useState(false)
@@ -119,6 +151,35 @@ export default function SistemaTab() {
           </button>
         </div>
       </section>
+
+      {isSupreme && (
+        <section className="surface-card rounded-2xl p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="flex items-center gap-2 text-base font-semibold text-neutral-50 mb-1">
+                <MusicIcon className="w-4 h-4 text-garnet-400" />
+                Canciones explícitas
+              </h2>
+              <p className="text-sm text-neutral-500 leading-relaxed max-w-md">
+                Por defecto el buscador de música oculta las canciones que Deezer marca como explícitas. Si lo enciendes,
+                aparecerán en los resultados.
+              </p>
+              {explicitError && <p className="text-xs text-garnet-400 mt-2">{explicitError}</p>}
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={allowExplicit}
+              aria-label="Permitir canciones explícitas"
+              disabled={savingExplicit || !explicitLoaded}
+              onClick={toggleExplicit}
+              className={`shrink-0 w-12 h-7 rounded-full transition relative disabled:opacity-60 ${allowExplicit ? 'bg-garnet-600' : 'bg-ink-600'}`}
+            >
+              <span className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-transform ${allowExplicit ? 'translate-x-5' : ''}`} />
+            </button>
+          </div>
+        </section>
+      )}
 
       <section className="surface-card rounded-2xl p-5 border border-garnet-700/40">
         <h2 className="flex items-center gap-2 text-base font-semibold text-garnet-400 mb-1">

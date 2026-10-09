@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { applyTheme, ACCENT_PRESETS, DEFAULT_ACCENT, isValidHex } from '../lib/theme'
-import { HeartIcon, CommentIcon } from '../components/icons'
+import { HeartIcon, CommentIcon, MusicIcon } from '../components/icons'
+import { readMusicDisabled, setMusicDisabled } from '../components/MusicProvider'
 import RoleBadges from '../components/RoleBadge'
 import type { ConfigProfile } from './types'
 
@@ -60,8 +61,47 @@ export default function AparienciaTab({
     setCustomHex(hex)
   }
 
+  const [musicOff, setMusicOff] = useState(false)
+  useEffect(() => {
+    function run() {
+      setMusicOff(readMusicDisabled())
+    }
+    run()
+  }, [])
+
   return (
     <div className="space-y-6">
+      <section className="surface-card rounded-2xl p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="flex items-center gap-2 text-base font-semibold text-neutral-50 mb-1">
+              <MusicIcon className="w-4 h-4 text-garnet-400" />
+              Música en la página
+            </h2>
+            <p className="text-sm text-neutral-500 leading-relaxed max-w-md">
+              Apágala si no quieres oír las canciones de las publicaciones, notas y perfiles (nunca suenan solas, solo al
+              darle play). Este ajuste se guarda en este dispositivo.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={!musicOff}
+            aria-label="Activar o desactivar la música"
+            onClick={() => {
+              const next = !musicOff
+              setMusicOff(next)
+              setMusicDisabled(next)
+            }}
+            className={`shrink-0 w-12 h-7 rounded-full transition relative ${musicOff ? 'bg-ink-600' : 'bg-garnet-600'}`}
+          >
+            <span
+              className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-transform ${musicOff ? '' : 'translate-x-5'}`}
+            />
+          </button>
+        </div>
+      </section>
+
       <section className="surface-card rounded-2xl p-5">
         <h2 className="text-base font-semibold text-neutral-50 mb-1">Modo visual</h2>
         <p className="text-sm text-neutral-500 mb-4">Elige si prefieres la página en oscuro o en claro.</p>

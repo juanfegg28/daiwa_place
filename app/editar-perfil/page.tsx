@@ -10,6 +10,8 @@ import { useAvatarCropper, BANNER_CROP } from '../components/AvatarCropper'
 import { CameraIcon } from '../components/icons'
 import { ESTADOS_SENTIMENTALES } from '../lib/constants'
 import { checkStudentName, NAME_HELP, NAME_PLACEHOLDER } from '../lib/nameFilter'
+import MusicField from '../components/MusicField'
+import { normalizeTrack } from '../lib/music'
 
 export default function EditProfilePage() {
   return (
@@ -25,6 +27,7 @@ function EditProfileForm() {
   const [originalName, setOriginalName] = useState('')
   const [uploadNotice, setUploadNotice] = useState<string[] | null>(null)
   const [bio, setBio] = useState('')
+  const [music, setMusic] = useState<unknown>(null)
   const [grado, setGrado] = useState('')
   const [birthday, setBirthday] = useState('')
   const [estadoPersonal, setEstadoPersonal] = useState('')
@@ -54,7 +57,7 @@ function EditProfileForm() {
   const loadProfile = async (id: string) => {
     const { data } = await supabase
       .from('profiles')
-      .select('id_student, bio, grado, birthday, estado_personal, avatar_url, banner_url')
+      .select('id_student, bio, grado, birthday, estado_personal, avatar_url, banner_url, music')
       .eq('id', id)
       .single()
 
@@ -62,6 +65,7 @@ function EditProfileForm() {
       setIdStudent(data.id_student ?? '')
       setOriginalName((data.id_student ?? '').trim())
       setBio(data.bio ?? '')
+      setMusic(data.music ?? null)
       setGrado(data.grado ?? '')
       setBirthday(data.birthday ?? '')
       setEstadoPersonal(data.estado_personal ?? '')
@@ -155,6 +159,7 @@ function EditProfileForm() {
         estado_personal: estadoPersonal || null,
         avatar_url: avatarUrl,
         banner_url: bannerUrl,
+        music: normalizeTrack(music) ? music : null,
       })
       .eq('id', userId)
 
@@ -243,6 +248,20 @@ function EditProfileForm() {
             className="w-full bg-ink-900 border border-ink-700 rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:border-garnet-600"
           />
           <p className="text-xs text-neutral-600 mt-1">{bio.length}/300</p>
+        </div>
+
+        <div>
+          <label className="block mb-1 text-sm text-neutral-400">Canción del perfil</label>
+          <p className="text-xs text-neutral-500 mb-2">
+            Se muestra en tu perfil con un botón de play (fragmento de 30 segundos). Puedes cambiarla o quitarla cuando quieras.
+          </p>
+          <MusicField
+            value={music}
+            onChange={setMusic}
+            variant="card"
+            label="Elegir canción del perfil"
+            pickerTitle="Elige la canción de tu perfil"
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-4">
