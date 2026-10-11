@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -233,7 +234,7 @@ function NotificacionesContent() {
   }
 
   return (
-    <div className="max-w-xl mx-auto py-8 px-4">
+    <div className="max-w-xl mx-auto py-4 sm:py-8 px-3 sm:px-4">
       <div className="flex items-start justify-between gap-3 mb-1">
         <h1 className="text-2xl font-display font-semibold text-neutral-50">Notificaciones</h1>
         {unreadInList > 0 && (
@@ -314,10 +315,9 @@ function NotificacionesContent() {
                     {anon ? (
                       <AnonAvatar size="w-10 h-10" />
                     ) : (
-                      <div className="w-10 h-10 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center">
+                      <div className="relative w-10 h-10 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center">
                         {n.actor?.avatar_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img loading="lazy" decoding="async" src={n.actor.avatar_url} alt={n.actor.username} className="w-full h-full object-cover" />
+                          <Image src={n.actor.avatar_url} alt={n.actor.username} fill sizes="48px" className="object-cover" />
                         ) : (
                           <span className="text-sm font-semibold text-garnet-400">
                             {(n.actor?.username ?? '?').charAt(0).toUpperCase()}

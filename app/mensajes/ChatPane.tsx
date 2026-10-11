@@ -533,7 +533,7 @@ export default function ChatPane({ convId, me, friendIds }: Props) {
   return (
     <div className="flex-1 min-h-0 flex flex-col bg-ink-950">
       {/* Cabecera */}
-      <div className="relative z-20 shrink-0 flex items-center gap-2 px-2 md:px-4 py-2.5 border-b border-ink-800 bg-ink-900/80 backdrop-blur">
+      <div className="relative z-20 shrink-0 flex items-center gap-2 px-2 md:px-4 pb-2.5 pt-[calc(0.625rem+env(safe-area-inset-top,0px))] md:pt-2.5 border-b border-ink-800 bg-ink-900/75 backdrop-blur-xl">
         <Link href="/mensajes" aria-label="Volver a mensajes" className="md:hidden w-9 h-9 rounded-full flex items-center justify-center text-neutral-300 hover:bg-ink-800 transition">
           <ArrowLeftIcon className="w-5 h-5" />
         </Link>
@@ -733,8 +733,8 @@ export default function ChatPane({ convId, me, friendIds }: Props) {
 
       {/* Apodo */}
       {showNickname && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center px-4" onClick={() => !savingNickname && setShowNickname(false)}>
-          <div className="surface-raised border border-ink-600 rounded-2xl p-5 w-full max-w-sm" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-end md:items-center justify-center md:px-4 sheet-backdrop" onClick={() => !savingNickname && setShowNickname(false)}>
+          <div className="surface-raised border border-ink-600 sheet-panel rounded-t-2xl md:rounded-2xl border-b-0 md:border-b p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] md:pb-5 w-full md:max-w-sm" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
             <h2 className="text-base font-semibold text-neutral-50 mb-1">Apodo para {info.other_id_student || info.other_username}</h2>
             <p className="text-sm text-neutral-400 mb-4">
               Solo tú lo ves, y es el nombre que aparecerá en este chat. Déjalo vacío para quitarlo.

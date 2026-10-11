@@ -57,9 +57,9 @@ export default function ReportDialog({
   const title = mode === 'post' ? 'Reportar esta publicación' : `Reportar a @${targetUsername}`
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center px-4" onClick={close}>
+    <div className="fixed inset-0 z-50 bg-black/70 flex items-end md:items-center justify-center md:px-4 sheet-backdrop" onClick={close}>
       <div
-        className="surface-raised border border-ink-600 rounded-2xl p-5 w-full max-w-sm"
+        className="surface-raised border border-ink-600 sheet-panel rounded-t-2xl md:rounded-2xl border-b-0 md:border-b p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] md:pb-5 w-full md:max-w-sm"
         onClick={(e) => e.stopPropagation()}
         role="alertdialog"
         aria-modal="true"

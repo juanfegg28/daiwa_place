@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Image from 'next/image'
 import type { PostImage } from '../lib/types'
 import { ChevronLeftIcon, ChevronRightIcon, CloseIcon } from './icons'
 
@@ -21,10 +22,13 @@ export default function PostImages({
   images,
   onOpen,
   onRemove,
+  priority = false,
 }: {
   images: PostImage[]
   onOpen?: (index: number) => void
   onRemove?: (index: number) => void
+  /** Solo para la primera publicación visible: carga la primera foto con prioridad (mejora el LCP) */
+  priority?: boolean
 }) {
   const list = images.slice(0, 4)
   const total = list.length
@@ -87,7 +91,8 @@ export default function PostImages({
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
       className="group relative rounded-xl overflow-hidden bg-ink-900 select-none transition-[height] duration-300 ease-out"
-      style={{ height: height ?? undefined }}
+      // Mientras se mide el ancho, se reserva el alto con la proporción real de la foto (evita saltos al cargar)
+      style={{ height: height ?? undefined, aspectRatio: height ? undefined : `${current.w || 4} / ${current.h || 3}` }}
     >
       <button
         type="button"
@@ -95,12 +100,17 @@ export default function PostImages({
         className="absolute inset-0 w-full h-full flex items-center justify-center cursor-zoom-in"
         aria-label={`Ver foto ${safeIndex + 1} de ${total}`}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img loading="lazy" decoding="async"
+        <Image
           src={current.url}
           alt={`Foto ${safeIndex + 1} de ${total}`}
+          fill
+          sizes="(max-width: 768px) 100vw, 640px"
+          // solo la primera foto de la primera publicación se carga con prioridad; el resto, perezosas
+          priority={priority && safeIndex === 0}
+          // vistas previas locales (al elegir fotos para publicar) no pasan por el optimizador
+          unoptimized={current.url.startsWith('blob:') || current.url.startsWith('data:')}
           draggable={false}
-          className="max-w-full max-h-full w-auto h-auto object-contain"
+          className="object-contain"
         />
       </button>
 

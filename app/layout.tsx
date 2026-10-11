@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Cinzel } from "next/font/google";
 import "./globals.css";
 import { THEME_INIT_SCRIPT } from "./lib/theme";
@@ -19,6 +19,13 @@ const cinzel = Cinzel({
   subsets: ["latin"],
   weight: ["500", "600", "700"],
 });
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#0c0c0f',
+}
 
 export const metadata: Metadata = {
   title: "DaiwaPlace",

@@ -501,8 +501,8 @@ export default function SusurrosTab() {
       />
 
       {silenceTarget && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center px-4" onClick={() => setSilenceTarget(null)}>
-          <div className="surface-raised border border-ink-600 rounded-2xl p-5 w-full max-w-sm" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-end md:items-center justify-center md:px-4 sheet-backdrop" onClick={() => setSilenceTarget(null)}>
+          <div className="surface-raised border border-ink-600 sheet-panel rounded-t-2xl md:rounded-2xl border-b-0 md:border-b p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] md:pb-5 w-full md:max-w-sm" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
             <h2 className="text-base font-semibold text-neutral-50 mb-1">Silenciar al autor</h2>
             <p className="text-sm text-neutral-400 mb-4">
               No podrá publicar ni comentar en el Muro durante ese tiempo. No necesitas saber quién es.
@@ -538,8 +538,8 @@ export default function SusurrosTab() {
       )}
 
       {revealTarget && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center px-4" onClick={() => busyId === null && setRevealTarget(null)}>
-          <div className="surface-raised border border-amber-500/40 rounded-2xl p-5 w-full max-w-sm" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-end md:items-center justify-center md:px-4 sheet-backdrop" onClick={() => busyId === null && setRevealTarget(null)}>
+          <div className="surface-raised border border-amber-500/40 sheet-panel rounded-t-2xl md:rounded-2xl border-b-0 md:border-b p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] md:pb-5 w-full md:max-w-sm" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
             <h2 className="flex items-center gap-2 text-base font-semibold text-amber-300 mb-1">
               <EyeIcon className="w-4 h-4" />
               Revelar al autor
@@ -575,8 +575,8 @@ export default function SusurrosTab() {
       )}
 
       {revealed && (
-        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center px-4" onClick={() => setRevealed(null)}>
-          <div className="surface-raised border border-amber-500/40 rounded-2xl p-5 w-full max-w-sm text-center" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-end md:items-center justify-center md:px-4 sheet-backdrop" onClick={() => setRevealed(null)}>
+          <div className="surface-raised border border-amber-500/40 sheet-panel rounded-t-2xl md:rounded-2xl border-b-0 md:border-b p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] md:pb-5 w-full md:max-w-sm text-center" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
             <p className="text-xs uppercase tracking-wide text-neutral-500 mb-3">
               Autor del {revealed.row.comment_id ? 'comentario' : 'susurro'}
             </p>

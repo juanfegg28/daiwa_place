@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -264,17 +265,15 @@ function ProfileContent() {
         style={{ aspectRatio: '3 / 1' }}
       >
         {profile.banner_url && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img loading="lazy" decoding="async" src={profile.banner_url} alt="Banner" className="absolute inset-0 w-full h-full object-cover" />
+          <Image src={profile.banner_url} alt="Banner" fill sizes="(max-width: 768px) 100vw, 1024px" priority className="object-cover" />
         )}
       </div>
 
       <div className="max-w-2xl mx-auto px-4 sm:px-6">
         <div className="relative z-10 -mt-14 sm:-mt-16 mb-4 flex justify-between items-end">
-          <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full border-4 border-ink-950 bg-ink-700 overflow-hidden flex items-center justify-center shadow-[0_0_0_2px] shadow-garnet-500/45">
+          <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full border-4 border-ink-950 bg-ink-700 overflow-hidden flex items-center justify-center shadow-[0_0_0_2px] shadow-garnet-500/45">
             {profile.avatar_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img loading="lazy" decoding="async" src={profile.avatar_url} alt={profile.username} className="w-full h-full object-cover" />
+              <Image src={profile.avatar_url} alt={profile.username} fill sizes="128px" priority className="object-cover" />
             ) : (
               <span className="text-3xl font-semibold text-garnet-400">
                 {profile.username.charAt(0).toUpperCase()}
@@ -360,7 +359,7 @@ function ProfileContent() {
               <p className="text-sm text-neutral-200 mb-3 leading-relaxed whitespace-pre-wrap">{profile.bio}</p>
             )}
             {!!normalizeTrack(profile.music) && (
-              <div className="mb-4 max-w-sm">
+              <div className="mb-3">
                 <MusicChip track={profile.music} variant="card" />
               </div>
             )}

@@ -67,9 +67,9 @@ export default function DmReportDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-end md:items-center justify-center md:px-4" onClick={() => !sending && onClose()}>
+    <div className="fixed inset-0 z-50 bg-black/70 flex items-end md:items-center justify-center md:px-4 sheet-backdrop" onClick={() => !sending && onClose()}>
       <div
-        className="surface-raised border border-ink-600 rounded-t-2xl md:rounded-2xl p-5 w-full md:max-w-md max-h-[90dvh] overflow-y-auto"
+        className="sheet-panel pb-[max(1.25rem,env(safe-area-inset-bottom))] md:pb-5 surface-raised border border-ink-600 border-b-0 md:border-b rounded-t-2xl md:rounded-2xl p-5 w-full md:max-w-md max-h-[90dvh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"

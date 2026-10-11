@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from './lib/supabaseClient'
@@ -286,12 +287,11 @@ function Feed() {
       <AnnouncementBanner />
 
       {username && (
-        <form onSubmit={handlePost} className="surface-card rounded-2xl p-4 mb-6">
+        <form onSubmit={handlePost} className="surface-card rounded-2xl p-3 sm:p-4 mb-4 sm:mb-6">
           <div className="flex gap-3">
-            <div className="w-10 h-10 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center shrink-0">
+            <div className="relative w-10 h-10 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center shrink-0">
               {avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img loading="lazy" decoding="async" src={avatarUrl} alt={username} className="w-full h-full object-cover" />
+                <Image src={avatarUrl} alt={username} fill sizes="48px" className="object-cover" />
               ) : (
                 <span className="text-sm font-semibold text-garnet-400">
                   {username.charAt(0).toUpperCase()}
@@ -408,8 +408,9 @@ function Feed() {
             Todavía no hay publicaciones. ¡Sé el primero!
           </p>
         ) : (
-          posts.map((post) => (
+          posts.map((post, postIndex) => (
             <PostCard
+              priorityImages={postIndex === 0}
               key={post.id}
               post={post}
               currentUserId={userId}

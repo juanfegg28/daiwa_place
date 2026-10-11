@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '../lib/supabaseClient'
@@ -37,10 +38,9 @@ function MiniProfileRow({
       href={`/perfil/${profile.username}`}
       className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-ink-700/60 transition"
     >
-      <div className="w-10 h-10 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center shrink-0">
+      <div className="relative w-10 h-10 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center shrink-0">
         {profile.avatar_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img loading="lazy" decoding="async" src={profile.avatar_url} alt={profile.username} className="w-full h-full object-cover" />
+          <Image src={profile.avatar_url} alt={profile.username} fill sizes="48px" className="object-cover" />
         ) : (
           <span className="text-sm font-semibold text-garnet-400">{profile.username.charAt(0).toUpperCase()}</span>
         )}

@@ -1,3 +1,4 @@
+import Image from 'next/image'
 /** Foto de perfil redonda, con el puntico verde de "conectado" (solo se pasa online=true para amigos). */
 export default function UserAvatar({
   username,
@@ -6,6 +7,7 @@ export default function UserAvatar({
   online = false,
   textSize = 'text-base',
   ring = false,
+  priority = false,
 }: {
   username: string
   avatarUrl: string | null
@@ -13,17 +15,17 @@ export default function UserAvatar({
   online?: boolean
   textSize?: string
   ring?: boolean
+  priority?: boolean
 }) {
   return (
     <span className={`relative inline-block shrink-0 ${size}`}>
       <span
-        className={`w-full h-full rounded-full overflow-hidden bg-ink-700 flex items-center justify-center ${
+        className={`relative w-full h-full rounded-full overflow-hidden bg-ink-700 flex items-center justify-center ${
           ring ? 'ring-2 ring-garnet-500/70' : ''
         }`}
       >
         {avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img loading="lazy" decoding="async" src={avatarUrl} alt={username} className="w-full h-full object-cover" />
+          <Image src={avatarUrl} alt={username} fill sizes="96px" priority={priority} className="object-cover" />
         ) : (
           <span className={`${textSize} font-semibold text-garnet-400`}>{username.charAt(0).toUpperCase()}</span>
         )}

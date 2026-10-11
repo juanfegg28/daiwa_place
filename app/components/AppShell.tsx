@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabaseClient'
 import { applyTheme, type ThemeMode } from '../lib/theme'
@@ -511,10 +512,9 @@ export default function AppShell({
                   href={`/perfil/${username}`}
                   className="flex items-center gap-3 px-2 py-1.5 rounded-xl hover:bg-ink-800 transition group"
                 >
-                  <div className="w-9 h-9 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center shrink-0">
+                  <div className="relative w-9 h-9 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center shrink-0">
                     {avatarUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img loading="lazy" decoding="async" src={avatarUrl} alt={username ?? ''} className="w-full h-full object-cover" />
+                      <Image src={avatarUrl} alt={username ?? ''} fill sizes="48px" className="object-cover" />
                     ) : (
                       <span className="text-sm font-semibold text-garnet-400">
                         {(username ?? '?').charAt(0).toUpperCase()}
@@ -549,7 +549,7 @@ export default function AppShell({
         </aside>
 
         {/* Barra superior movil */}
-        <header className={`${hideMobileChrome ? 'hidden' : 'md:hidden'} sticky top-0 z-30 flex items-center justify-center border-b border-ink-800 bg-ink-950/90 backdrop-blur px-4 py-3`}>
+        <header className={`${hideMobileChrome ? 'hidden' : 'md:hidden'} sticky top-0 z-30 flex items-center justify-center border-b border-ink-800 bg-ink-950/75 backdrop-blur-xl px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top,0px))]`}>
           <Logo size="sm" />
           <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
             {username && (
@@ -572,10 +572,10 @@ export default function AppShell({
           </div>
         </header>
 
-        <main className={`flex-1 min-w-0 md:pb-0 ${hideMobileChrome ? 'pb-0' : 'pb-20'}`}>{children}</main>
+        <main className={`flex-1 min-w-0 md:pb-0 ${hideMobileChrome ? 'pb-0' : 'pb-[calc(5rem+env(safe-area-inset-bottom,0px))]'}`}>{children}</main>
 
         {/* Barra inferior movil */}
-        <nav className={`${hideMobileChrome ? 'hidden' : 'md:hidden'} fixed bottom-0 inset-x-0 z-30 border-t border-ink-800 bg-ink-900/95 backdrop-blur px-2 pb-[env(safe-area-inset-bottom,0px)]`}>
+        <nav className={`${hideMobileChrome ? 'hidden' : 'md:hidden'} fixed bottom-0 inset-x-0 z-30 border-t border-ink-800/80 bg-ink-900/75 backdrop-blur-xl px-2 pb-[env(safe-area-inset-bottom,0px)]`}>
           <div className="flex items-center justify-around py-2">
             {navItems.map((item) => {
               const active = item.match(pathname)
@@ -584,14 +584,22 @@ export default function AppShell({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex flex-col items-center gap-0.5 ${
-                    navItems.length > 6 ? 'px-1.5' : 'px-2.5'
-                  } py-1 rounded-lg text-[10.5px] ${active ? 'text-garnet-400' : 'text-neutral-500'}`}
+                  className={`press flex flex-col items-center gap-0.5 ${
+                    navItems.length > 6 ? 'px-0.5' : 'px-1.5'
+                  } py-1 text-[10.5px] font-medium transition-colors duration-200 active:scale-95 active:opacity-80 ${
+                    active ? 'text-garnet-400' : 'text-neutral-500'
+                  }`}
                 >
-                  <span className="relative">
-                    <Icon filled={active} className="w-5 h-5" />
+                  <span
+                    className={`relative flex items-center justify-center h-7 ${
+                      navItems.length > 6 ? 'px-3' : 'px-4'
+                    } rounded-full transition-colors duration-200 ${active ? 'bg-garnet-600/15' : ''}`}
+                  >
+                    <span key={active ? 'on' : 'off'} className={active ? 'nav-pop' : 'inline-flex'}>
+                      <Icon filled={active} className="w-[22px] h-[22px]" />
+                    </span>
                     {!!item.badge && item.badge > 0 && (
-                      <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 px-1 rounded-full bg-garnet-600 text-white text-[9.5px] font-semibold flex items-center justify-center">
+                      <span className="absolute -top-0.5 right-1 min-w-[16px] h-4 px-1 rounded-full bg-garnet-600 text-white text-[9.5px] font-semibold flex items-center justify-center">
                         {formatBadge(item.badge)}
                       </span>
                     )}
@@ -603,7 +611,7 @@ export default function AppShell({
             {!loading && !userId && (
               <Link
                 href="/login"
-                className="flex flex-col items-center gap-0.5 px-2.5 py-1 text-[10.5px] text-garnet-400"
+                className="press flex flex-col items-center gap-0.5 px-2.5 py-1 text-[10.5px] text-garnet-400 active:scale-95 active:opacity-80"
               >
                 <LoginIcon className="w-5 h-5" />
                 Entrar

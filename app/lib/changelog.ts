@@ -14,6 +14,30 @@ export const RELEASE_STAGE = 'beta'
 
 export const CHANGELOG: Release[] = [
   {
+    version: '0.14.5',
+    date: '2026-10-10',
+    title: 'Optimización móvil',
+    sections: [
+      {
+        heading: 'Se siente como una app',
+        items: [
+          'La barra de abajo y la de arriba en el celular tienen un efecto de cristal más limpio y respetan el borde de los iPhone y Android modernos, para que los íconos no queden pegados al borde de la pantalla.',
+          'Los íconos de la barra de abajo rebotan suavemente al activarse y la pestaña activa se resalta con una píldora de color.',
+          'Los menús de tres puntitos y los cuadros de diálogo (reportar, confirmar, notas, apodo…) ahora suben desde abajo como una hoja nativa en el celular. En el computador siguen centrados.',
+          'Todos los botones se hunden un poquito al tocarlos, así sientes la respuesta al instante, incluso antes de que el servidor conteste.',
+        ],
+      },
+      {
+        heading: 'Más rápido y con menos datos',
+        items: [
+          'Las fotos de perfil, el banner y las fotos de las publicaciones ahora se optimizan: se descargan en el tamaño justo para tu pantalla y en un formato más liviano.',
+          'Solo se cargan con prioridad lo primero que ves (la primera publicación y tu perfil); el resto se carga cuando te acercas, y el espacio de cada foto se reserva para que nada salte mientras carga.',
+          'Márgenes y espacios más ajustados en pantallas pequeñas para aprovechar mejor el espacio sin amontonar el texto.',
+        ],
+      },
+    ],
+  },
+  {
     version: '0.14.0',
     date: '2026-10-08',
     title: 'Música con Deezer',

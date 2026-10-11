@@ -114,9 +114,9 @@ export default function MusicPicker({
   }
 
   return (
-    <div className="fixed inset-0 z-[70] bg-black/75 flex items-end md:items-center justify-center md:px-4" onClick={close}>
+    <div className="fixed inset-0 z-[70] bg-black/75 flex items-end md:items-center justify-center md:px-4 sheet-backdrop" onClick={close}>
       <div
-        className="surface-raised border border-ink-600 rounded-t-3xl md:rounded-3xl w-full md:max-w-lg h-[82dvh] md:h-[640px] md:max-h-[85dvh] flex flex-col overflow-hidden"
+        className="sheet-panel pb-[env(safe-area-inset-bottom)] md:pb-0 surface-raised border border-ink-600 rounded-t-3xl md:rounded-3xl w-full md:max-w-lg h-[82dvh] md:h-[640px] md:max-h-[85dvh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"

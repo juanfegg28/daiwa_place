@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '../lib/supabaseClient'
@@ -60,10 +61,9 @@ export default function BloqueadosTab({ currentUserId }: { currentUserId: string
                 href={`/perfil/${p.username}`}
                 className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition"
               >
-                <div className="w-9 h-9 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center shrink-0">
+                <div className="relative w-9 h-9 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center shrink-0">
                   {p.avatar_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img loading="lazy" decoding="async" src={p.avatar_url} alt={p.username} className="w-full h-full object-cover" />
+                    <Image src={p.avatar_url} alt={p.username} fill sizes="48px" className="object-cover" />
                   ) : (
                     <span className="text-xs font-semibold text-garnet-400">
                       {p.username.charAt(0).toUpperCase()}

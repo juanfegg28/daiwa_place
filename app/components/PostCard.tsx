@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -56,6 +57,8 @@ type PostCardProps = {
    * lado (ya estamos en ese perfil).
    */
   onProfilePage?: boolean
+  /** Es la primera publicación visible: sus imágenes se cargan con prioridad (mejora el LCP) */
+  priorityImages?: boolean
   /** Comentario al que se llegó desde una notificación: se abre su hilo, se desplaza hasta él y se resalta */
   focusCommentId?: string | null
 }
@@ -98,10 +101,9 @@ function MiniAvatar({
   size?: string
 }) {
   return (
-    <div className={`${size} rounded-full overflow-hidden bg-ink-700 flex items-center justify-center shrink-0`}>
+    <div className={`relative ${size} rounded-full overflow-hidden bg-ink-700 flex items-center justify-center shrink-0`}>
       {avatarUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img loading="lazy" decoding="async" src={avatarUrl} alt={username} className="w-full h-full object-cover" />
+        <Image src={avatarUrl} alt={username} fill sizes="48px" className="object-cover" />
       ) : (
         <span className="text-xs font-semibold text-garnet-400">{username.charAt(0).toUpperCase()}</span>
       )}
@@ -387,6 +389,7 @@ export default function PostCard({
   onRefresh,
   onPostDeleted,
   onProfilePage = false,
+  priorityImages = false,
   focusCommentId = null,
 }: PostCardProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
@@ -663,7 +666,7 @@ export default function PostCard({
   )
 
   return (
-    <article className="surface-card rounded-2xl p-4">
+    <article className="surface-card rounded-2xl p-3.5 sm:p-4">
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="flex items-center gap-2.5 min-w-0">
           {showAuthor ? (
@@ -753,7 +756,7 @@ export default function PostCard({
 
       {images.length > 0 && (
         <div className="mb-3">
-          <PostImages images={images} onOpen={setLightbox} />
+          <PostImages images={images} onOpen={setLightbox} priority={priorityImages} />
         </div>
       )}
 

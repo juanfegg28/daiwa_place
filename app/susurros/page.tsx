@@ -169,7 +169,7 @@ function SusurrosContent() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto py-8 px-4">
+    <div className="max-w-2xl mx-auto py-4 sm:py-8 px-3 sm:px-4">
       <div className="flex items-start justify-between gap-3 mb-1">
         <h1 className="text-2xl font-display font-semibold text-neutral-50">Muro de los Susurros</h1>
         <button

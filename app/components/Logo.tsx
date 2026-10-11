@@ -1,3 +1,4 @@
+import Image from 'next/image'
 const sizes = {
   sm: { seal: 'w-6 h-6', text: 'text-base', gap: 'gap-1.5' },
   md: { seal: 'w-8 h-8', text: 'text-xl', gap: 'gap-2' },
@@ -8,10 +9,12 @@ export default function Logo({ size = 'md' }: { size?: keyof typeof sizes }) {
   const s = sizes[size]
   return (
     <div className={`flex items-center ${s.gap} text-garnet-400`}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img loading="lazy" decoding="async"
+      <Image
         src="/brand-moon.png"
         alt="DaiwaPlace"
+        width={96}
+        height={96}
+        priority
         className={`${s.seal} shrink-0 rounded-full object-cover drop-shadow-[0_0_10px_color-mix(in_srgb,var(--color-garnet-500)_35%,transparent)]`}
       />
       <span

@@ -107,9 +107,9 @@ export default function LikesModal({ postId, total, onClose }: { postId: string;
   const anyOthers = rows.some((r) => !r.i_follow)
 
   return (
-    <div className="fixed inset-0 z-[65] bg-black/70 flex items-end md:items-center justify-center md:px-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[65] bg-black/70 flex items-end md:items-center justify-center md:px-4 sheet-backdrop" onClick={onClose}>
       <div
-        className="surface-raised border border-ink-600 rounded-t-3xl md:rounded-3xl w-full md:max-w-md h-[70dvh] md:h-[560px] md:max-h-[80dvh] flex flex-col overflow-hidden"
+        className="sheet-panel pb-[env(safe-area-inset-bottom)] md:pb-0 surface-raised border border-ink-600 rounded-t-3xl md:rounded-3xl w-full md:max-w-md h-[70dvh] md:h-[560px] md:max-h-[80dvh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
