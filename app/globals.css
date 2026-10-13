@@ -172,6 +172,21 @@ body {
 .sheet-backdrop {
   animation: daiwa-fade 0.18s ease-out both;
 }
+
+/* Lista de etiquetas (@): aparece con un deslizamiento suave desde el campo de texto */
+@keyframes daiwa-mention-pop {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.mention-pop {
+  animation: daiwa-mention-pop 0.16s ease-out both;
+}
 .nav-pop {
   display: inline-flex;
   animation: daiwa-nav-pop 0.34s cubic-bezier(0.34, 1.56, 0.64, 1) both;
@@ -224,6 +239,7 @@ a,
 @media (prefers-reduced-motion: reduce) {
   .sheet-backdrop,
   .sheet-panel,
+  .mention-pop,
   .nav-pop {
     animation: none !important;
   }

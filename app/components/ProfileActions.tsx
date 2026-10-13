@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabaseClient'
+import { clearMentionCache } from '../lib/mentions'
 import KebabMenu, { type MenuItem } from './KebabMenu'
 import ConfirmDialog from './ConfirmDialog'
 import ReportDialog from './ReportDialog'
@@ -60,6 +61,7 @@ export default function ProfileActions({
       return
     }
     setBusy(true)
+    clearMentionCache()
     if (isFollowing) {
       await supabase.from('follows').delete().eq('follower_id', currentUserId).eq('following_id', targetUserId)
       onFollowChange(false)
@@ -69,12 +71,14 @@ export default function ProfileActions({
         .insert({ follower_id: currentUserId, following_id: targetUserId })
       if (!error) onFollowChange(true)
     }
+    clearMentionCache()
     setBusy(false)
   }
 
   const doBlock = async () => {
     if (!currentUserId) return
     setBlocking(true)
+    clearMentionCache()
     const { error } = await supabase.from('blocks').insert({ blocker_id: currentUserId, blocked_id: targetUserId })
     if (!error) {
       // al bloquear se rompe el follow en ambos sentidos
@@ -95,6 +99,7 @@ export default function ProfileActions({
     if (!currentUserId) return
     setBlocking(true)
     await supabase.from('blocks').delete().eq('blocker_id', currentUserId).eq('blocked_id', targetUserId)
+    clearMentionCache()
     onBlockChange(false)
     setBlocking(false)
   }

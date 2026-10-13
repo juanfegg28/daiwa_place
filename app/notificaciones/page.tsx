@@ -8,7 +8,7 @@ import { supabase } from '../lib/supabaseClient'
 import AppShell, { useAppSession } from '../components/AppShell'
 import { NOTIFICATION_SELECT } from '../lib/queries'
 import type { NotificationItem, NotificationType } from '../lib/types'
-import { BellIcon, CloseIcon, CommentIcon, HeartIcon, ReplyIcon, UsersIcon, WhisperIcon } from '../components/icons'
+import { AtIcon, BellIcon, CloseIcon, CommentIcon, HeartIcon, ReplyIcon, UsersIcon, WhisperIcon } from '../components/icons'
 import AnonAvatar from '../susurros/AnonAvatar'
 import { ANON_NAME } from '../lib/whispers'
 
@@ -46,10 +46,16 @@ const ACTION_TEXT: Record<NotificationType, string> = {
   like_note: 'le dio like a tu nota',
   whisper_comment: 'comentó tu confesión en el Muro',
   whisper_reply: 'respondió tu comentario en el Muro',
+  mention_post: 'te etiquetó en su publicación',
+  mention_comment: 'te etiquetó en un comentario',
+  whisper_mention: 'te etiquetó en una confesión del Muro',
+  whisper_comment_mention: 'te etiquetó en un comentario del Muro',
 }
 
 function TypeIcon({ type }: { type: NotificationType }) {
   const cls = 'w-3 h-3'
+  if (type === 'mention_post' || type === 'mention_comment' || type === 'whisper_mention' || type === 'whisper_comment_mention')
+    return <AtIcon className={cls} />
   if (type === 'like_post' || type === 'like_comment' || type === 'like_note') return <HeartIcon filled className={cls} />
   if (type === 'whisper_comment' || type === 'whisper_reply') return <WhisperIcon className={cls} />
   if (type === 'comment') return <CommentIcon className={cls} />
@@ -60,19 +66,26 @@ function TypeIcon({ type }: { type: NotificationType }) {
 function hrefFor(n: NotificationItem): string {
   if (n.type === 'follow') return n.actor ? `/perfil/${n.actor.username}` : '/'
   if (n.type === 'like_note') return '/mensajes'
-  if (n.type === 'whisper_comment' || n.type === 'whisper_reply') {
+  if (
+    n.type === 'whisper_comment' ||
+    n.type === 'whisper_reply' ||
+    n.type === 'whisper_mention' ||
+    n.type === 'whisper_comment_mention'
+  ) {
     return n.whisper_id ? `/susurros/${n.whisper_id}${n.whisper_comment_id ? `?c=${n.whisper_comment_id}` : ''}` : '/susurros'
   }
   if (!n.post_id) return '/'
-  const focus = n.comment_id && n.type !== 'like_post' ? `?c=${n.comment_id}` : ''
+  const focus = n.comment_id && n.type !== 'like_post' && n.type !== 'mention_post' ? `?c=${n.comment_id}` : ''
   return `/post/${n.post_id}${focus}`
 }
 
 function snippetFor(n: NotificationItem): string | null {
   if (n.type === 'follow') return null
   if (n.type === 'like_note') return n.note?.content ? shorten(n.note.content) : null
-  if (n.type === 'whisper_comment' || n.type === 'whisper_reply') return n.wcomment?.content ? shorten(n.wcomment.content) : null
-  if (n.type === 'like_post') {
+  if (n.type === 'whisper_comment' || n.type === 'whisper_reply' || n.type === 'whisper_comment_mention')
+    return n.wcomment?.content ? shorten(n.wcomment.content) : null
+  if (n.type === 'whisper_mention') return n.whisper?.content ? shorten(n.whisper.content) : null
+  if (n.type === 'like_post' || n.type === 'mention_post') {
     if (!n.post) return null
     if (n.post.content?.trim()) return shorten(n.post.content)
     return (n.post.images?.length ?? 0) > 0 ? 'Publicación con foto' : null
@@ -249,7 +262,7 @@ function NotificacionesContent() {
         )}
       </div>
       <p className="text-neutral-500 text-sm mb-5">
-        Likes, comentarios, respuestas y nuevos seguidores. Puedes elegir qué avisos recibir en Configuración.
+        Likes, comentarios, respuestas, etiquetas y nuevos seguidores. Puedes elegir qué avisos recibir en Configuración.
       </p>
 
       <div className="flex gap-1.5 mb-4">
@@ -287,7 +300,7 @@ function NotificacionesContent() {
           <p className="text-neutral-500 text-xs max-w-xs">
             {filter === 'unread'
               ? 'Estás al día. Cuando pase algo nuevo, te va a aparecer aquí y en la campana.'
-              : 'Cuando alguien le dé like a lo que publicas, te comente, te responda o te siga, lo vas a ver aquí.'}
+              : 'Cuando alguien le dé like a lo que publicas, te comente, te responda, te etiquete o te siga, lo vas a ver aquí.'}
           </p>
         </div>
       ) : (

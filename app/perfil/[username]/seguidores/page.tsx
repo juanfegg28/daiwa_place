@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabaseClient'
+import { clearMentionCache } from '../../../lib/mentions'
 import AppShell, { useAppSession } from '../../../components/AppShell'
 import UserAvatar from '../../../components/UserAvatar'
 import { ArrowLeftIcon } from '../../../components/icons'
@@ -148,6 +149,7 @@ function SeguidoresContent() {
       ? await supabase.from('follows').insert({ follower_id: userId, following_id: row.profile_id })
       : await supabase.from('follows').delete().eq('follower_id', userId).eq('following_id', row.profile_id)
     setBusyId(null)
+    clearMentionCache()
     if (err) {
       setRows((prev) => prev.map((r) => (r.profile_id === row.profile_id ? { ...r, i_follow: row.i_follow } : r)))
       setError('No se pudo actualizar. Inténtalo de nuevo.')

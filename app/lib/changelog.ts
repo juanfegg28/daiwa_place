@@ -9,10 +9,42 @@ export type Release = {
   sections: { heading: string; items: string[] }[]
 }
 
-// DaiwaPlace todavía no se ha lanzado oficialmente: sigue en etapa beta.
-export const RELEASE_STAGE = 'beta'
+// 'beta' muestra el aviso y la etiqueta "Beta" en Novedades; 'stable' los oculta.
+// Desde la v1.0.0 DaiwaPlace ya está lanzado oficialmente.
+export const RELEASE_STAGE: 'beta' | 'stable' = 'stable'
 
 export const CHANGELOG: Release[] = [
+  {
+    version: '1.0.0',
+    date: '2026-10-13',
+    title: 'Inauguración de DaiwaPlace',
+    sections: [
+      {
+        heading: 'Ya es oficial',
+        items: [
+          '¡DaiwaPlace se inaugura! Termina la etapa beta y arranca la versión 1.0.0: perfiles, publicaciones, mensajes, notas, música, etiquetas y el Muro de los Susurros, todo listo para el servidor.',
+          'Gracias a todas las personas que probaron la página y reportaron detalles durante la beta: gracias a ustedes llegamos pulidos al lanzamiento.',
+        ],
+      },
+      {
+        heading: 'Etiquetas (@)',
+        items: [
+          'Ahora puedes etiquetar a alguien escribiendo @ en una publicación, un comentario, una respuesta o una confesión del Muro. Se abre una lista con tus amigos (las personas que se siguen mutuamente) y, mientras sigues escribiendo, se vuelve un buscador de cualquiera en DaiwaPlace. En el computador la manejas con ↑ ↓ y Enter; en el celular, con el dedo.',
+          'En la caja de publicar hay un nuevo botón «Etiquetar» (@) por si prefieres abrir la lista desde ahí.',
+          'Las etiquetas se ven como enlaces que llevan directo al perfil de la persona.',
+          'A quien etiquetas le llega una notificación: «te etiquetó en su publicación», «te etiquetó en un comentario» o, en el Muro, «Chismoso Anónimo te etiquetó en una confesión» (sin revelar quién fue). Si ya le avisamos por ese mismo comentario, no se duplica.',
+          'Puedes apagar estos avisos en Configuración → Notificaciones → Etiquetas. No se avisa a quien te bloqueó o a quien no puede ver tu publicación, y hay un límite de 5 etiquetas por publicación o comentario (3 en el Muro) para evitar el spam.',
+        ],
+      },
+      {
+        heading: 'Pequeños detalles',
+        items: [
+          'Susurros estrena un nuevo ícono en la barra lateral y en la barra de abajo del celular: un fantasmita.',
+          'La caja de «¿Qué está pasando en Daiwa?» ya no se ve chiquita ni recorta lo que escribes: crece a medida que redactas para que veas tu texto completo. Pasa lo mismo al editar una publicación.',
+        ],
+      },
+    ],
+  },
   {
     version: '0.15.0',
     date: '2026-10-11',

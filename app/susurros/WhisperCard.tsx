@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { renderRichText } from '../lib/hashtags'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabaseClient'
 import KebabMenu, { type MenuItem } from '../components/KebabMenu'
@@ -150,7 +151,7 @@ export default function WhisperCard({
               clamp ? 'line-clamp-6' : ''
             }`}
           >
-            {whisper.content}
+            {renderRichText(whisper.content, { hashtags: false })}
           </p>
         </div>
         {!detail && long && (

@@ -61,6 +61,10 @@ export type NotificationType =
   | 'like_note'
   | 'whisper_comment'
   | 'whisper_reply'
+  | 'mention_post'
+  | 'mention_comment'
+  | 'whisper_mention'
+  | 'whisper_comment_mention'
 
 export type NotificationItem = {
   id: string
@@ -79,4 +83,5 @@ export type NotificationItem = {
   comment: { content: string } | null
   note?: { content: string } | null
   wcomment?: { content: string } | null
+  whisper?: { content: string } | null
 }

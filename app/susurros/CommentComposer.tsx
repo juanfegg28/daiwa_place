@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import MentionField from '../components/MentionField'
 import { MAX_COMMENT_LENGTH, friendlyWhisperError } from '../lib/whispers'
 
 /** Caja para comentar (o responder). Cada quien elige: anónimo o con su perfil. */
@@ -50,13 +51,14 @@ export default function CommentComposer({
 
   return (
     <div className="rounded-2xl bg-ink-900 border border-ink-700 p-3">
-      <textarea
+      <MentionField
+        multiline
         autoFocus={autoFocus}
         value={text}
-        onChange={(e) => setText(e.target.value.slice(0, MAX_COMMENT_LENGTH))}
+        onValueChange={(v) => setText(v.slice(0, MAX_COMMENT_LENGTH))}
         rows={parentId ? 2 : 3}
         placeholder={placeholder}
-        className="w-full bg-transparent text-sm leading-relaxed resize-none focus:outline-none"
+        className="w-full bg-transparent text-sm leading-relaxed resize-none focus:outline-none max-h-[min(45vh,18rem)]"
       />
 
       <div className="flex flex-wrap items-center gap-2 mt-2">

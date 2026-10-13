@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { renderRichText } from '../lib/hashtags'
 import Link from 'next/link'
 import { supabase } from '../lib/supabaseClient'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -145,7 +146,7 @@ function CommentNode({
                     Oculto por reportes: solo lo ves tú y moderación mientras se revisa.
                   </p>
                 )}
-                <p className="text-sm text-neutral-100 leading-relaxed whitespace-pre-wrap break-words">{comment.content}</p>
+                <p className="text-sm text-neutral-100 leading-relaxed whitespace-pre-wrap break-words">{renderRichText(comment.content, { hashtags: false })}</p>
               </>
             )}
           </div>

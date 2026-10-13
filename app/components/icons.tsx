@@ -718,6 +718,48 @@ export function WhisperIcon({ className = base, filled = false }: IconProps) {
   )
 }
 
+/**
+ * Fantasmita de la sección Susurros (barra lateral y barra inferior móvil).
+ * Usa public/susurros-ghost.png como máscara y se pinta con currentColor, así cambia de color
+ * solo según esté activo/inactivo y respeta el tema claro/oscuro, igual que los demás íconos.
+ */
+export function GhostNavIcon({ className = base }: IconProps) {
+  const mask = 'url(/susurros-ghost.png)'
+  return (
+    <span
+      aria-hidden="true"
+      className={`inline-block shrink-0 ${className}`}
+      style={{
+        backgroundColor: 'currentColor',
+        WebkitMaskImage: mask,
+        maskImage: mask,
+        WebkitMaskRepeat: 'no-repeat',
+        maskRepeat: 'no-repeat',
+        WebkitMaskPosition: 'center',
+        maskPosition: 'center',
+        WebkitMaskSize: '88%',
+        maskSize: '88%',
+      }}
+    />
+  )
+}
+
+/** Arroba (@): etiquetar / mencionar a alguien. */
+export function AtIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <circle cx="12" cy="12" r="3.6" stroke="currentColor" strokeWidth="1.7" />
+      <path
+        d="M15.6 8.4v4.7a2.4 2.4 0 0 0 4.8 0V12a8.4 8.4 0 1 0-3.3 6.7"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
 export function LockIcon({ className = base }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className}>

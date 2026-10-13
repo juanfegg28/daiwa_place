@@ -8,7 +8,8 @@ import AppShell, { useAppSession } from './components/AppShell'
 import PostCard from './components/PostCard'
 import AnnouncementBanner from './components/AnnouncementBanner'
 import PostImages from './components/PostImages'
-import { ImageIcon } from './components/icons'
+import MentionField, { type MentionFieldHandle } from './components/MentionField'
+import { AtIcon, ImageIcon } from './components/icons'
 import { prepareImage } from './lib/images'
 import { POST_SELECT, POST_IMAGES_BUCKET, MAX_POST_IMAGES, MAX_POST_LENGTH } from './lib/queries'
 import MusicChip from './components/MusicChip'
@@ -45,6 +46,7 @@ function Feed() {
   const [loadingPosts, setLoadingPosts] = useState(true)
   const [postError, setPostError] = useState('')
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const mentionRef = useRef<MentionFieldHandle | null>(null)
   const router = useRouter()
 
   // El inicio carga de 15 en 15 ("Ver más") en vez de traer TODAS las publicaciones de una vez.
@@ -298,13 +300,16 @@ function Feed() {
                 </span>
               )}
             </div>
-            <textarea
+            <MentionField
+              ref={mentionRef}
+              multiline
               value={content}
-              onChange={(e) => setContent(e.target.value.slice(0, MAX_POST_LENGTH))}
+              onValueChange={(v) => setContent(v.slice(0, MAX_POST_LENGTH))}
               maxLength={MAX_POST_LENGTH}
-              placeholder="¿Qué está pasando en Daiwa?"
-              className="flex-1 bg-transparent text-sm resize-none focus:outline-none placeholder:text-neutral-500"
-              rows={2}
+              placeholder="¿Qué está pasando en Daiwa? Etiqueta a alguien con @"
+              wrapperClassName="flex-1 min-w-0"
+              className="w-full bg-transparent text-[15px] leading-relaxed py-1.5 resize-none focus:outline-none placeholder:text-neutral-500 max-h-[min(55vh,26rem)]"
+              rows={3}
             />
           </div>
           {content.length > MAX_POST_LENGTH - 250 && (
@@ -360,6 +365,16 @@ function Feed() {
               >
                 <MusicIcon className="w-5 h-5" />
                 <span className="hidden sm:inline">Canción</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => mentionRef.current?.openPicker()}
+                disabled={loading || content.length >= MAX_POST_LENGTH}
+                className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-garnet-400 disabled:opacity-40 rounded-full px-2.5 py-1.5 hover:bg-ink-700 transition"
+                aria-label="Etiquetar a alguien"
+              >
+                <AtIcon className="w-5 h-5" />
+                <span className="hidden sm:inline">Etiquetar</span>
               </button>
               {(drafts.length > 0 || processingImages) && (
                 <span className="text-xs text-neutral-500">

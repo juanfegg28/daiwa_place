@@ -13,7 +13,7 @@ import {
   HomeIcon,
   UserIcon,
   MessageIcon,
-  WhisperIcon,
+  GhostNavIcon,
   BellIcon,
   SearchIcon,
   SettingsIcon,
@@ -396,7 +396,7 @@ export default function AppShell({
           {
             href: '/susurros',
             label: 'Susurros',
-            icon: WhisperIcon,
+            icon: GhostNavIcon,
             match: (p: string) => p.startsWith('/susurros'),
           },
           ...(canSeeAdmin

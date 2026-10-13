@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabaseClient'
 import { MAX_POST_LENGTH, POST_IMAGES_BUCKET } from '../lib/queries'
 import { normalizeTrack } from '../lib/music'
-import { renderContentWithHashtags } from '../lib/hashtags'
+import { renderContentWithHashtags, renderRichText } from '../lib/hashtags'
 import type { Post, Comment } from '../lib/types'
 import {
   HeartIcon,
@@ -24,6 +24,7 @@ import KebabMenu, { type MenuItem } from './KebabMenu'
 import ConfirmDialog from './ConfirmDialog'
 import ReportDialog from './ReportDialog'
 import PostImages from './PostImages'
+import MentionField from './MentionField'
 import LikesModal from './LikesModal'
 import MusicChip from './MusicChip'
 import MusicField from './MusicField'
@@ -223,12 +224,13 @@ function CommentThread({ comment, depth }: { comment: Comment; depth: number }) 
         <div className="flex-1 min-w-0">
           {editing ? (
             <div>
-              <textarea
+              <MentionField
+                multiline
                 autoFocus
                 value={editText}
-                onChange={(e) => setEditText(e.target.value)}
+                onValueChange={setEditText}
                 rows={2}
-                className="w-full bg-ink-900 border border-ink-700 rounded-xl px-3 py-2 text-sm resize-y focus:outline-none focus:border-garnet-600"
+                className="w-full bg-ink-900 border border-ink-700 rounded-xl px-3 py-2 text-sm resize-none focus:outline-none focus:border-garnet-600 max-h-[min(50vh,20rem)]"
               />
               <div className="flex justify-end gap-2 mt-1.5">
                 <button
@@ -268,7 +270,7 @@ function CommentThread({ comment, depth }: { comment: Comment; depth: number }) 
                 ) : (
                   <span className="text-xs font-semibold text-garnet-400">@usuario</span>
                 )}
-                <p className="text-sm text-neutral-100 break-words whitespace-pre-wrap">{comment.content}</p>
+                <p className="text-sm text-neutral-100 break-words whitespace-pre-wrap">{renderRichText(comment.content, { hashtags: false })}</p>
               </div>
               <KebabMenu items={menuItems} label="Opciones del comentario" small />
             </div>
@@ -310,16 +312,16 @@ function CommentThread({ comment, depth }: { comment: Comment; depth: number }) 
 
           {isReplyingHere && (
             <div className="flex items-center gap-2 mt-2">
-              <input
+              <MentionField
                 autoFocus
-                type="text"
                 value={t.replyText}
-                onChange={(e) => t.setReplyText(e.target.value)}
+                onValueChange={t.setReplyText}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') t.submitReply(comment.id)
                 }}
                 placeholder={`Responder a @${commentAuthor?.username ?? 'usuario'}...`}
-                className="flex-1 min-w-0 bg-ink-900 border border-ink-700 rounded-full px-3.5 py-1.5 text-xs focus:outline-none focus:border-garnet-600"
+                wrapperClassName="flex-1 min-w-0"
+                className="w-full bg-ink-900 border border-ink-700 rounded-full px-3.5 py-1.5 text-xs focus:outline-none focus:border-garnet-600"
               />
               <button
                 onClick={() => t.submitReply(comment.id)}
@@ -695,13 +697,14 @@ export default function PostCard({
 
       {editingPost ? (
         <div className="mb-3">
-          <textarea
+          <MentionField
+            multiline
             autoFocus
             value={editText}
-            onChange={(e) => setEditText(e.target.value.slice(0, MAX_POST_LENGTH))}
+            onValueChange={(v) => setEditText(v.slice(0, MAX_POST_LENGTH))}
             maxLength={MAX_POST_LENGTH}
             rows={3}
-            className="w-full bg-ink-900 border border-ink-700 rounded-xl px-3 py-2 text-[15px] resize-y focus:outline-none focus:border-garnet-600"
+            className="w-full bg-ink-900 border border-ink-700 rounded-xl px-3 py-2 text-[15px] resize-none focus:outline-none focus:border-garnet-600 max-h-[min(55vh,26rem)]"
           />
           <p className={`text-[11px] text-right mt-1 ${editText.length > MAX_POST_LENGTH - 100 ? 'text-amber-300' : 'text-neutral-600'}`}>
             {editText.length}/{MAX_POST_LENGTH}
@@ -858,15 +861,15 @@ export default function PostCard({
 
             {interactionsDisabled ? null : currentUserId ? (
               <div className="flex items-center gap-2 pt-1">
-                <input
-                  type="text"
+                <MentionField
                   value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
+                  onValueChange={setCommentText}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') submitComment()
                   }}
-                  placeholder="Escribe un comentario..."
-                  className="flex-1 min-w-0 bg-ink-900 border border-ink-700 rounded-full px-3.5 py-2 text-sm focus:outline-none focus:border-garnet-600"
+                  placeholder="Escribe un comentario... usa @ para etiquetar"
+                  wrapperClassName="flex-1 min-w-0"
+                  className="w-full bg-ink-900 border border-ink-700 rounded-full px-3.5 py-2 text-sm focus:outline-none focus:border-garnet-600"
                 />
                 <button
                   onClick={submitComment}
