@@ -575,8 +575,8 @@ export default function AppShell({
         <main className={`flex-1 min-w-0 md:pb-0 ${hideMobileChrome ? 'pb-0' : 'pb-[calc(5rem+env(safe-area-inset-bottom,0px))]'}`}>{children}</main>
 
         {/* Barra inferior movil */}
-        <nav className={`${hideMobileChrome ? 'hidden' : 'md:hidden'} fixed bottom-0 inset-x-0 z-30 border-t border-ink-800/80 bg-ink-900/75 backdrop-blur-xl px-2 pb-[env(safe-area-inset-bottom,0px)]`}>
-          <div className="flex items-center justify-around py-2">
+        <nav className={`${hideMobileChrome ? 'hidden' : 'md:hidden'} fixed bottom-0 inset-x-0 z-30 border-t border-ink-800/80 bg-ink-900/75 backdrop-blur-xl px-1 pb-[env(safe-area-inset-bottom,0px)] overflow-hidden`}>
+          <div className="flex items-center py-2">
             {navItems.map((item) => {
               const active = item.match(pathname)
               const Icon = item.icon
@@ -584,34 +584,30 @@ export default function AppShell({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`press flex flex-col items-center gap-0.5 ${
-                    navItems.length > 6 ? 'px-0.5' : 'px-1.5'
-                  } py-1 text-[10.5px] font-medium transition-colors duration-200 active:scale-95 active:opacity-80 ${
+                  className={`press flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1 text-[10px] min-[360px]:text-[10.5px] font-medium transition-colors duration-200 active:scale-95 active:opacity-80 ${
                     active ? 'text-garnet-400' : 'text-neutral-500'
                   }`}
                 >
                   <span
-                    className={`relative flex items-center justify-center h-7 ${
-                      navItems.length > 6 ? 'px-3' : 'px-4'
-                    } rounded-full transition-colors duration-200 ${active ? 'bg-garnet-600/15' : ''}`}
+                    className={`relative flex items-center justify-center h-7 w-full max-w-[3.25rem] rounded-full transition-colors duration-200 ${active ? 'bg-garnet-600/15' : ''}`}
                   >
                     <span key={active ? 'on' : 'off'} className={active ? 'nav-pop' : 'inline-flex'}>
                       <Icon filled={active} className="w-[22px] h-[22px]" />
                     </span>
                     {!!item.badge && item.badge > 0 && (
-                      <span className="absolute -top-0.5 right-1 min-w-[16px] h-4 px-1 rounded-full bg-garnet-600 text-white text-[9.5px] font-semibold flex items-center justify-center">
+                      <span className="absolute -top-0.5 right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-garnet-600 text-white text-[9.5px] font-semibold flex items-center justify-center">
                         {formatBadge(item.badge)}
                       </span>
                     )}
                   </span>
-                  {item.shortLabel ?? item.label}
+                  <span className="block max-w-full truncate leading-tight">{item.shortLabel ?? item.label}</span>
                 </Link>
               )
             })}
             {!loading && !userId && (
               <Link
                 href="/login"
-                className="press flex flex-col items-center gap-0.5 px-2.5 py-1 text-[10.5px] text-garnet-400 active:scale-95 active:opacity-80"
+                className="press flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1 text-[10.5px] text-garnet-400 active:scale-95 active:opacity-80"
               >
                 <LoginIcon className="w-5 h-5" />
                 Entrar

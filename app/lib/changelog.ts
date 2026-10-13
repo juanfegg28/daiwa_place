@@ -1,6 +1,6 @@
 // Notas de versión de DaiwaPlace.
 // Para publicar una actualización nueva: agrega un objeto AL PRINCIPIO de la lista.
-// La versión que se ve en la barra lateral sale automáticamente del primer elemento.
+// La versión que se ve en la barra lateral es APP_VERSION (al final de este archivo).
 
 export type Release = {
   version: string
@@ -431,4 +431,5 @@ export const CHANGELOG: Release[] = [
 ]
 
 export const LATEST_RELEASE = CHANGELOG[0]
-export const APP_VERSION = LATEST_RELEASE.version
+// Versión que se muestra en la app. Los parches pequeños (1.0.x) suben este número sin agregar notas arriba.
+export const APP_VERSION = '1.0.1'

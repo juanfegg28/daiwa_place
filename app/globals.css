@@ -332,3 +332,11 @@ a,
     animation: none !important;
   }
 }
+
+/* ───────── v1.0.1: parche de la vista en celular ───────── */
+/* Evita que algo más ancho que la pantalla ensanche la página y deje la barra de abajo cortada */
+html,
+body {
+  max-width: 100%;
+  overflow-x: clip;
+}
