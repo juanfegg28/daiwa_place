@@ -14,6 +14,37 @@ export const RELEASE_STAGE = 'beta'
 
 export const CHANGELOG: Release[] = [
   {
+    version: '0.15.0',
+    date: '2026-10-11',
+    title: 'Acceso premium',
+    sections: [
+      {
+        heading: 'Un acceso más bonito',
+        items: [
+          'Iniciar sesión y Registrarse se rediseñaron por completo: fondo oscuro con destellos suaves de tu color, tarjeta de cristal esmerilado y campos amplios con íconos que se iluminan cuando escribes.',
+          'Dan la bienvenida con un mensaje cálido («Descubre tu lugar. Únete a DaiwaPlace»).',
+          'Al cambiar entre Iniciar sesión y Registrarse, el formulario se desliza suavemente en vez de recargar la página: el fondo y la tarjeta se quedan quietos.',
+        ],
+      },
+      {
+        heading: 'Registro ameno, en 2 pasos',
+        items: [
+          'El registro ahora es en dos pasos cortos: «Tu cuenta» y «Tu perfil» (este último es todo opcional).',
+          'Todo se valida mientras escribes, con avisos suaves y sin textos rojos gigantes.',
+          'Tu @usuario se corrige solo mientras tecleas: minúsculas, guion bajo en vez de espacios, sin tildes ni símbolos raros. Si está libre, aparece un ✓ verde con «¡Gran nombre!».',
+        ],
+      },
+      {
+        heading: 'Seguridad amable',
+        items: [
+          'Medidor de contraseña con textos cercanos: «Un poco débil», «Casi lista» y «¡Inquebrantable!». Para crear la cuenta se piden mínimo 8 caracteres y al menos un número, y se avisa si la contraseña es muy fácil de adivinar.',
+          'Si fallas la contraseña 4 veces, el botón se pone en gris con una cuenta regresiva: «Demasiados intentos. Tómate un respiro de 60s ☕». La pausa se mantiene aunque recargues la página.',
+          'La palabra secreta ahora debe tener al menos 4 caracteres.',
+        ],
+      },
+    ],
+  },
+  {
     version: '0.14.5',
     date: '2026-10-10',
     title: 'Optimización móvil',

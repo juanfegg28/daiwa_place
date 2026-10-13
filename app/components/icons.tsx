@@ -717,3 +717,22 @@ export function WhisperIcon({ className = base, filled = false }: IconProps) {
     </svg>
   )
 }
+
+export function LockIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <rect x="5" y="10.5" width="14" height="9.5" rx="2.5" stroke="currentColor" strokeWidth="1.7" />
+      <path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+      <circle cx="12" cy="15.2" r="1.2" fill="currentColor" />
+    </svg>
+  )
+}
+
+export function KeyIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <circle cx="8" cy="15" r="3.8" stroke="currentColor" strokeWidth="1.7" />
+      <path d="m10.8 12.2 8-8m-2.6 2.6 2.4 2.4m-5-0.2 1.8 1.8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
