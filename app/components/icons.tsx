@@ -760,6 +760,21 @@ export function AtIcon({ className = base }: IconProps) {
   )
 }
 
+/** Chincheta: publicación fijada en el perfil. */
+export function PinIcon({ className = base, filled = false }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} className={className}>
+      <path
+        d="M9 4h6l-.8 5.2 2.8 2.8v1.2H7V12l2.8-2.8L9 4Z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+      <path d="M12 13.2V20" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 export function LockIcon({ className = base }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className}>

@@ -21,7 +21,13 @@ export type MentionFieldHandle = {
   /** Escribe una @ en el cursor y abre la lista de personas (para el botón "Etiquetar") */
   openPicker: () => void
   focus: () => void
+  /** Pone el cursor al final del texto (por ejemplo, después de rellenar la pregunta del día) */
+  focusEnd: () => void
+  /** Envuelve lo seleccionado con ** (negrita), * (cursiva) o __ (subrayado); si ya estaba, lo quita */
+  wrap: (marker: FormatMarker) => void
 }
+
+export type FormatMarker = '**' | '*' | '__'
 
 type Props = {
   value: string
@@ -33,6 +39,8 @@ type Props = {
   placeholder?: string
   autoFocus?: boolean
   disabled?: boolean
+  /** Activa los atajos Ctrl/Cmd + B, I, U para negrita, cursiva y subrayado */
+  formatting?: boolean
   className?: string
   wrapperClassName?: string
   onKeyDown?: (e: KeyboardEvent<HTMLTextAreaElement | HTMLInputElement>) => void
@@ -56,6 +64,7 @@ export default function MentionField({
   placeholder,
   autoFocus,
   disabled,
+  formatting = false,
   className = '',
   wrapperClassName = '',
   onKeyDown,
@@ -63,7 +72,7 @@ export default function MentionField({
 }: Props) {
   const { userId } = useAppSession()
   const wrapRef = useRef<HTMLDivElement | null>(null)
-  const pendingCaret = useRef<number | null>(null)
+  const pendingSel = useRef<{ start: number; end: number } | null>(null)
   const dismissedStart = useRef<number | null>(null)
   const triggerRef = useRef<Trigger | null>(null)
 
@@ -140,13 +149,13 @@ export default function MentionField({
 
   // Después de elegir a alguien (o de pulsar el botón @) se acomoda el cursor
   useLayoutEffect(() => {
-    if (pendingCaret.current == null) return
+    if (pendingSel.current == null) return
     const el = getEl()
-    const pos = pendingCaret.current
-    pendingCaret.current = null
+    const sel = pendingSel.current
+    pendingSel.current = null
     if (!el) return
     el.focus()
-    el.setSelectionRange(pos, pos)
+    el.setSelectionRange(sel.start, sel.end)
     refreshTrigger(el)
   }, [value, getEl, refreshTrigger])
 
@@ -163,11 +172,44 @@ export default function MentionField({
     let after = value.slice(caret)
     if (after.startsWith(' ')) after = after.slice(1) // evita dejar dos espacios seguidos
     const inserted = `@${p.username} `
-    pendingCaret.current = before.length + inserted.length
+    const caretAfter = before.length + inserted.length
+    pendingSel.current = { start: caretAfter, end: caretAfter }
     dismissedStart.current = null
     applyTrigger(null)
     onValueChange(before + inserted + after)
   }
+
+  // Negrita / cursiva / subrayado: envuelve la selección con la marca; si ya la tenía, se la quita
+  const applyWrap = useCallback(
+    (marker: FormatMarker) => {
+      const el = getEl()
+      if (!el || disabled) return
+      const start = el.selectionStart ?? value.length
+      const end = el.selectionEnd ?? start
+      const sel = value.slice(start, end)
+      const m = marker.length
+
+      // en la cursiva (*) no se confunde con una negrita (**) que ya esté alrededor
+      const guardOk = marker !== '*' || (value[start - 2] !== '*' && value[end + 1] !== '*')
+      let next: string
+      let nextSel: { start: number; end: number }
+
+      if (start - m >= 0 && value.slice(start - m, start) === marker && value.slice(end, end + m) === marker && guardOk) {
+        next = value.slice(0, start - m) + sel + value.slice(end + m)
+        nextSel = { start: start - m, end: end - m }
+      } else if (sel.length >= m * 2 && sel.startsWith(marker) && sel.endsWith(marker) && marker !== '*') {
+        const inner = sel.slice(m, sel.length - m)
+        next = value.slice(0, start) + inner + value.slice(end)
+        nextSel = { start, end: start + inner.length }
+      } else {
+        next = value.slice(0, start) + marker + sel + marker + value.slice(end)
+        nextSel = { start: start + m, end: end + m }
+      }
+      pendingSel.current = nextSel
+      onValueChange(next)
+    },
+    [getEl, disabled, value, onValueChange]
+  )
 
   useImperativeHandle(
     ref,
@@ -179,15 +221,31 @@ export default function MentionField({
         const pos = el.selectionStart ?? value.length
         const needsSpace = pos > 0 && !/\s/.test(value[pos - 1])
         const inserted = `${needsSpace ? ' ' : ''}@`
-        pendingCaret.current = pos + inserted.length
+        pendingSel.current = { start: pos + inserted.length, end: pos + inserted.length }
         dismissedStart.current = null
         onValueChange(value.slice(0, pos) + inserted + value.slice(el.selectionEnd ?? pos))
       },
+      focusEnd: () => {
+        const el = getEl()
+        if (!el) return
+        el.focus()
+        el.setSelectionRange(el.value.length, el.value.length)
+      },
+      wrap: (marker) => applyWrap(marker),
     }),
-    [getEl, disabled, value, onValueChange]
+    [getEl, disabled, value, onValueChange, applyWrap]
   )
 
   const handleKeyDown = (e: KeyboardEvent<FieldEl>) => {
+    if (formatting && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
+      const k = e.key.toLowerCase()
+      const marker: FormatMarker | null = k === 'b' ? '**' : k === 'i' ? '*' : k === 'u' ? '__' : null
+      if (marker) {
+        e.preventDefault()
+        applyWrap(marker)
+        return
+      }
+    }
     if (open) {
       if (e.key === 'Escape') {
         e.preventDefault()

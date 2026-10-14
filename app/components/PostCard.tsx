@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabaseClient'
@@ -18,13 +18,15 @@ import {
   LinkIcon,
   SnowflakeIcon,
   FlagIcon,
+  PinIcon,
 } from './icons'
 import KebabMenu, { type MenuItem } from './KebabMenu'
 import ConfirmDialog from './ConfirmDialog'
 import ReportDialog from './ReportDialog'
 import PostImages from './PostImages'
 import AvatarPhoto from './AvatarPhoto'
-import MentionField from './MentionField'
+import MentionField, { type MentionFieldHandle } from './MentionField'
+import FormatToolbar from './FormatToolbar'
 import LikesModal from './LikesModal'
 import MusicChip from './MusicChip'
 import MusicField from './MusicField'
@@ -62,6 +64,13 @@ type PostCardProps = {
   priorityImages?: boolean
   /** Comentario al que se llegó desde una notificación: se abre su hilo, se desplaza hasta él y se resalta */
   focusCommentId?: string | null
+  /** Es la publicación fijada del perfil: muestra la etiqueta «Publicación fijada» */
+  pinned?: boolean
+  /**
+   * Solo en el perfil: fija o desfija esta publicación (solo la puede fijar su dueño). Devuelve un texto de error,
+   * o null si todo salió bien. Si no se pasa, el menú no muestra la opción de fijar.
+   */
+  onTogglePin?: (post: Post, pin: boolean) => Promise<string | null> | string | null
 }
 
 const ROOT_PREVIEW = 3 // comentarios principales visibles antes de "Ver más"
@@ -393,6 +402,8 @@ export default function PostCard({
   onProfilePage = false,
   priorityImages = false,
   focusCommentId = null,
+  pinned = false,
+  onTogglePin,
 }: PostCardProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
   const [commentText, setCommentText] = useState('')
@@ -411,6 +422,7 @@ export default function PostCard({
   const [confirmDeletePost, setConfirmDeletePost] = useState(false)
   const [deletingPost, setDeletingPost] = useState(false)
   const [actionError, setActionError] = useState('')
+  const editRef = useRef<MentionFieldHandle | null>(null)
   const [copied, setCopied] = useState(false)
   const [showReport, setShowReport] = useState(false)
   const [lightbox, setLightbox] = useState<number | null>(null)
@@ -602,6 +614,19 @@ export default function PostCard({
       : []),
     ...(isMine
       ? [
+          ...(onProfilePage && onTogglePin
+            ? [
+                {
+                  label: pinned ? 'Desfijar de mi perfil' : 'Fijar en mi perfil',
+                  icon: <PinIcon className="w-4 h-4" filled={pinned} />,
+                  onClick: async () => {
+                    setActionError('')
+                    const err = await onTogglePin(post, !pinned)
+                    if (err) setActionError(err)
+                  },
+                },
+              ]
+            : []),
           {
             label: 'Editar',
             icon: <EditIcon className="w-4 h-4" />,
@@ -669,6 +694,12 @@ export default function PostCard({
 
   return (
     <article className="surface-card rounded-2xl p-3.5 sm:p-4">
+      {pinned && (
+        <p className="flex items-center gap-1.5 text-[11px] font-medium text-garnet-300 mb-2.5">
+          <PinIcon className="w-3.5 h-3.5" filled />
+          Publicación fijada
+        </p>
+      )}
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="flex items-center gap-2.5 min-w-0">
           {showAuthor ? (
@@ -698,17 +729,22 @@ export default function PostCard({
       {editingPost ? (
         <div className="mb-3">
           <MentionField
+            ref={editRef}
             multiline
             autoFocus
+            formatting
             value={editText}
             onValueChange={(v) => setEditText(v.slice(0, MAX_POST_LENGTH))}
             maxLength={MAX_POST_LENGTH}
             rows={3}
             className="w-full bg-ink-900 border border-ink-700 rounded-xl px-3 py-2 text-[15px] resize-none focus:outline-none focus:border-garnet-600 max-h-[min(55vh,26rem)]"
           />
-          <p className={`text-[11px] text-right mt-1 ${editText.length > MAX_POST_LENGTH - 100 ? 'text-amber-300' : 'text-neutral-600'}`}>
-            {editText.length}/{MAX_POST_LENGTH}
-          </p>
+          <div className="flex items-center justify-between mt-1">
+            <FormatToolbar target={editRef} />
+            <p className={`text-[11px] ${editText.length > MAX_POST_LENGTH - 100 ? 'text-amber-300' : 'text-neutral-600'}`}>
+              {editText.length}/{MAX_POST_LENGTH}
+            </p>
+          </div>
           <div className="mt-2">
             <MusicField value={editMusic} onChange={setEditMusic} label="Añadir canción" />
           </div>

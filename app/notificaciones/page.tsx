@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabaseClient'
+import { stripFormatting } from '../lib/hashtags'
 import AppShell, { useAppSession } from '../components/AppShell'
 import { NOTIFICATION_SELECT } from '../lib/queries'
 import type { NotificationItem, NotificationType } from '../lib/types'
@@ -87,7 +88,7 @@ function snippetFor(n: NotificationItem): string | null {
   if (n.type === 'whisper_mention') return n.whisper?.content ? shorten(n.whisper.content) : null
   if (n.type === 'like_post' || n.type === 'mention_post') {
     if (!n.post) return null
-    if (n.post.content?.trim()) return shorten(n.post.content)
+    if (n.post.content?.trim()) return shorten(stripFormatting(n.post.content))
     return (n.post.images?.length ?? 0) > 0 ? 'Publicación con foto' : null
   }
   // like_comment, comment, reply → el comentario involucrado

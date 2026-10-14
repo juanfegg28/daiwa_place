@@ -35,6 +35,8 @@ type SessionState = {
   refresh: () => void
   /** Notificaciones sin leer de la persona (para el numerito de la campana) */
   unreadNotifications: number
+  /** Nombre del personaje (el que se ve en grande); si no tiene, null */
+  displayName: string | null
   /** Sube cada vez que llega o cambia una notificación; la página de Notificaciones lo usa para recargarse sola */
   notificationsVersion: number
   /** Vuelve a contar las no leídas (se llama después de leer o borrar notificaciones) */
@@ -59,6 +61,7 @@ const AppSessionContext = createContext<SessionState>({
   userId: null,
   username: null,
   avatarUrl: null,
+  displayName: null,
   permissions: {},
   isSupreme: false,
   hasAnyRole: false,
@@ -426,6 +429,7 @@ export default function AppShell({
         userId,
         username,
         avatarUrl,
+        displayName: idStudent,
         permissions,
         isSupreme,
         hasAnyRole,

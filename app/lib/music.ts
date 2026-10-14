@@ -7,7 +7,7 @@
 
 import { supabase } from './supabaseClient'
 
-/** Volumen del reproductor: 40 % (ni muy bajo ni muy alto) */
+/** Volumen del reproductor: 40 % (v1.0.6; antes era 70 %) */
 export const MUSIC_VOLUME = 0.4
 export const MUSIC_PAGE = 25
 

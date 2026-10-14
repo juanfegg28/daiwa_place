@@ -38,6 +38,7 @@ type Profile = {
   badge_color: string | null
   is_frozen: boolean
   posts_visibility: 'public' | 'followers'
+  pinned_post_id?: string | null
   created_at: string
 }
 
@@ -57,6 +58,7 @@ function ProfileContent() {
 
   const [profile, setProfile] = useState<Profile | null>(null)
   const [posts, setPosts] = useState<Post[]>([])
+  const [pinnedPost, setPinnedPost] = useState<Post | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
 
@@ -73,8 +75,9 @@ function ProfileContent() {
   const [postsTotal, setPostsTotal] = useState(0)
   const [loadingMorePosts, setLoadingMorePosts] = useState(false)
 
-  const loadPosts = async (profileId: string) => {
-    const [{ data }, { count }] = await Promise.all([
+  // `pinned` = id de la publicación fijada del perfil (por defecto, la que ya tiene cargada el perfil)
+  const loadPosts = async (profileId: string, pinned: string | null) => {
+    const [{ data }, { count }, { data: pinnedData }] = await Promise.all([
       supabase
         .from('posts')
         .select(PROFILE_POST_SELECT)
@@ -82,16 +85,33 @@ function ProfileContent() {
         .order('created_at', { ascending: false })
         .limit(postsLimit.current),
       supabase.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', profileId),
+      pinned
+        ? supabase.from('posts').select(PROFILE_POST_SELECT).eq('id', pinned).eq('user_id', profileId).maybeSingle()
+        : Promise.resolve({ data: null }),
     ])
-    setPosts((data as unknown as Post[]) ?? [])
+    const pinnedPostRow = (pinnedData as unknown as Post | null) ?? null
+    setPinnedPost(pinnedPostRow)
+    // la fijada va aparte, arriba de todo, así que no se repite en la lista
+    setPosts(((data as unknown as Post[]) ?? []).filter((p) => p.id !== pinnedPostRow?.id))
     setPostsTotal(count ?? 0)
+  }
+
+  // Fijar / desfijar una de mis publicaciones (solo en mi propio perfil)
+  const handleTogglePin = async (post: Post, pin: boolean): Promise<string | null> => {
+    if (!profile) return 'No se pudo cambiar la publicación fijada'
+    const { error } = pin ? await supabase.rpc('pin_post', { p_post: post.id }) : await supabase.rpc('unpin_post')
+    if (error) return 'No se pudo cambiar la publicación fijada: ' + error.message
+    const newPinned = pin ? post.id : null
+    setProfile((prev) => (prev ? { ...prev, pinned_post_id: newPinned } : prev))
+    await loadPosts(profile.id, newPinned)
+    return null
   }
 
   const loadMorePosts = async () => {
     if (!profile) return
     setLoadingMorePosts(true)
     postsLimit.current += 15
-    await loadPosts(profile.id)
+    await loadPosts(profile.id, profile.pinned_post_id ?? null)
     setLoadingMorePosts(false)
   }
 
@@ -133,7 +153,7 @@ function ProfileContent() {
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select(
-        'id, username, id_student, bio, music, avatar_url, banner_url, birthday, grado, estado_personal, badge_color, is_frozen, posts_visibility, created_at'
+        'id, username, id_student, bio, music, avatar_url, banner_url, birthday, grado, estado_personal, badge_color, is_frozen, posts_visibility, pinned_post_id, created_at'
       )
       .eq('username', usernameParam.toLowerCase())
       .maybeSingle()
@@ -153,7 +173,7 @@ function ProfileContent() {
       setRoles((data as unknown as RoleBadgeInfo[]) ?? [])
     }
     postsLimit.current = 15
-    await Promise.all([loadPosts(profileData.id), loadFollowState(profileData.id), loadRoles()])
+    await Promise.all([loadPosts(profileData.id, profileData.pinned_post_id ?? null), loadFollowState(profileData.id), loadRoles()])
     setLoading(false)
   }
 
@@ -185,7 +205,7 @@ function ProfileContent() {
     } else {
       await supabase.from('likes').insert({ post_id: post.id, user_id: userId })
     }
-    if (profile) loadPosts(profile.id)
+    if (profile) loadPosts(profile.id, profile.pinned_post_id ?? null)
   }
 
   const handleLikeComment = async (commentId: string, alreadyLiked: boolean) => {
@@ -198,7 +218,7 @@ function ProfileContent() {
     } else {
       await supabase.from('comment_likes').insert({ comment_id: commentId, user_id: userId })
     }
-    if (profile) loadPosts(profile.id)
+    if (profile) loadPosts(profile.id, profile.pinned_post_id ?? null)
   }
 
   const handleAddComment = async (postId: string, text: string, parentCommentId?: string | null) => {
@@ -212,7 +232,7 @@ function ProfileContent() {
       content: text,
       parent_comment_id: parentCommentId ?? null,
     })
-    if (profile) loadPosts(profile.id)
+    if (profile) loadPosts(profile.id, profile.pinned_post_id ?? null)
   }
 
   const formatJoinDate = (iso: string) =>
@@ -228,6 +248,9 @@ function ProfileContent() {
       </div>
     )
   }
+
+  // La publicación fijada va primero
+  const shownPosts = pinnedPost ? [pinnedPost, ...posts] : posts
 
   if (notFound || !profile) {
     return (
@@ -406,7 +429,7 @@ function ProfileContent() {
             </div>
 
             <div className="space-y-4">
-              {posts.length === 0 ? (
+              {posts.length === 0 && !pinnedPost ? (
                 <p className="text-neutral-500 text-sm text-center py-10">
                   {isMyProfile
                     ? 'Todavía no has publicado nada.'
@@ -415,7 +438,7 @@ function ProfileContent() {
                       : 'Todavía no hay publicaciones.'}
                 </p>
               ) : (
-                posts.map((post) => (
+                shownPosts.map((post) => (
                   <PostCard
                     key={post.id}
                     post={{ ...post, profiles: postAuthor }}
@@ -423,16 +446,24 @@ function ProfileContent() {
                     showAuthor
                     onProfilePage
                     authorIsFrozen={profile.is_frozen}
+                    pinned={post.id === pinnedPost?.id}
+                    onTogglePin={isMyProfile ? handleTogglePin : undefined}
                     onToggleLike={handleLike}
                     onToggleCommentLike={handleLikeComment}
                     onAddComment={handleAddComment}
-                    onRefresh={() => loadPosts(profile.id)}
+                    onRefresh={() => loadPosts(profile.id, pinnedPost?.id ?? null)}
+                    onPostDeleted={async () => {
+                      // si borra la fijada, el perfil queda sin fijada (la base de datos ya la suelta sola)
+                      const stillPinned = post.id === pinnedPost?.id ? null : (profile.pinned_post_id ?? null)
+                      if (post.id === pinnedPost?.id) setProfile((prev) => (prev ? { ...prev, pinned_post_id: null } : prev))
+                      await loadPosts(profile.id, stillPinned)
+                    }}
                   />
                 ))
               )}
             </div>
 
-            {posts.length < postsTotal && (
+            {posts.length + (pinnedPost ? 1 : 0) < postsTotal && (
               <div className="flex justify-center mt-5">
                 <button
                   type="button"

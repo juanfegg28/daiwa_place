@@ -1,7 +1,7 @@
 'use client'
 
-import { useRef, useState } from 'react'
-import { HeartIcon, MusicIcon } from '../components/icons'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { ChevronLeftIcon, ChevronRightIcon, HeartIcon, MusicIcon } from '../components/icons'
 import UserAvatar from '../components/UserAvatar'
 import type { NoteItem } from '../lib/dm'
 
@@ -30,8 +30,57 @@ export default function NotesRow({
   onOpen: (note: NoteItem | null) => void
   onLike: (note: NoteItem) => void
 }) {
+  const scrollRef = useRef<HTMLDivElement | null>(null)
+  const [canLeft, setCanLeft] = useState(false)
+  const [canRight, setCanRight] = useState(false)
+
+  // Las flechas solo aparecen si todavía hay notas escondidas hacia ese lado
+  const updateArrows = useCallback(() => {
+    const el = scrollRef.current
+    if (!el) return
+    setCanLeft(el.scrollLeft > 4)
+    setCanRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4)
+  }, [])
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const first = window.setTimeout(updateArrows, 0)
+    const ro = new ResizeObserver(updateArrows)
+    ro.observe(el)
+    if (el.firstElementChild) ro.observe(el.firstElementChild)
+    return () => {
+      window.clearTimeout(first)
+      ro.disconnect()
+    }
+  }, [updateArrows, friendNotes.length])
+
+  const scrollByPage = (dir: 1 | -1) => {
+    const el = scrollRef.current
+    if (!el) return
+    el.scrollBy({ left: dir * Math.max(180, el.clientWidth * 0.75), behavior: 'smooth' })
+  }
+
+  const arrowCls =
+    'hidden md:flex absolute top-[108px] -translate-y-1/2 z-20 w-8 h-8 items-center justify-center rounded-full bg-ink-800/95 border border-ink-600 text-neutral-200 shadow-lg hover:bg-ink-700 hover:text-white transition'
+
   return (
-    <div className="flex gap-3 overflow-x-auto px-4 pt-14 pb-3 -mt-10 scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <div className="relative -mt-10">
+      {canLeft && (
+        <button type="button" onClick={() => scrollByPage(-1)} className={`${arrowCls} left-1.5`} aria-label="Ver notas anteriores">
+          <ChevronLeftIcon className="w-4 h-4" />
+        </button>
+      )}
+      {canRight && (
+        <button type="button" onClick={() => scrollByPage(1)} className={`${arrowCls} right-1.5`} aria-label="Ver más notas">
+          <ChevronRightIcon className="w-4 h-4" />
+        </button>
+      )}
+    <div
+      ref={scrollRef}
+      onScroll={updateArrows}
+      className="flex gap-3 overflow-x-auto px-4 pt-14 pb-3 scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    >
       <NoteItemView
         note={myNote}
         isMine
@@ -57,6 +106,7 @@ export default function NotesRow({
           onLike={() => onLike(n)}
         />
       ))}
+    </div>
     </div>
   )
 }

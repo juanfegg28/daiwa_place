@@ -4,11 +4,12 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AppShell, { useAppSession } from '../components/AppShell'
 import { hasAny, type Permissions } from '../lib/permissions'
-import { FlagIcon, ShieldAdminIcon, UserCogIcon, MegaphoneIcon, WrenchIcon, WhisperIcon, MessageIcon } from '../components/icons'
+import { FlagIcon, ShieldAdminIcon, UserCogIcon, MegaphoneIcon, WrenchIcon, WhisperIcon, MessageIcon, SparklesIcon } from '../components/icons'
 import ReportesTab from './ReportesTab'
 import RolesTab from './RolesTab'
 import IdentidadesTab from './IdentidadesTab'
 import AnunciosTab from './AnunciosTab'
+import PreguntaTab from './PreguntaTab'
 import SistemaTab from './SistemaTab'
 import SusurrosTab from './SusurrosTab'
 import MensajesTab from './MensajesTab'
@@ -49,6 +50,12 @@ const TAB_DEFS = [
     id: 'anuncios' as const,
     label: 'Anuncios',
     icon: MegaphoneIcon,
+    check: (p: Permissions, sup: boolean) => sup || hasAny(p, ['global_announcements']),
+  },
+  {
+    id: 'pregunta' as const,
+    label: 'Pregunta del día',
+    icon: SparklesIcon,
     check: (p: Permissions, sup: boolean) => sup || hasAny(p, ['global_announcements']),
   },
   {
@@ -138,6 +145,7 @@ function AdminContent() {
           {tab === 'roles' && <RolesTab />}
           {tab === 'identidades' && <IdentidadesTab />}
           {tab === 'anuncios' && <AnunciosTab />}
+          {tab === 'pregunta' && <PreguntaTab />}
           {tab === 'sistema' && <SistemaTab />}
         </>
       )}

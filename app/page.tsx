@@ -10,6 +10,9 @@ import AnnouncementBanner from './components/AnnouncementBanner'
 import PostImages from './components/PostImages'
 import MentionField, { type MentionFieldHandle } from './components/MentionField'
 import { AtIcon, ImageIcon } from './components/icons'
+import FormatToolbar from './components/FormatToolbar'
+import DailyQuestionCard, { DAILY_TAG } from './components/DailyQuestionCard'
+import { dayPartFor, firstNameOf, pickGreeting, type DayPart } from './lib/greeting'
 import { prepareImage } from './lib/images'
 import { POST_SELECT, POST_IMAGES_BUCKET, MAX_POST_IMAGES, MAX_POST_LENGTH } from './lib/queries'
 import MusicChip from './components/MusicChip'
@@ -37,7 +40,7 @@ export default function HomePage() {
 }
 
 function Feed() {
-  const { userId, username, avatarUrl } = useAppSession()
+  const { userId, username, avatarUrl, displayName } = useAppSession()
   const [posts, setPosts] = useState<Post[]>([])
   const [content, setContent] = useState('')
   const [drafts, setDrafts] = useState<DraftImage[]>([])
@@ -47,6 +50,36 @@ function Feed() {
   const [postError, setPostError] = useState('')
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const mentionRef = useRef<MentionFieldHandle | null>(null)
+  const composerRef = useRef<HTMLFormElement | null>(null)
+
+  // Saludo de la caja de publicar según la hora LOCAL de quien abre la página.
+  // Se calcula ya en el navegador (no en el servidor) y se revisa cada rato por si cambia la parte del día.
+  const [greeting, setGreeting] = useState<{ part: DayPart; text: string } | null>(null)
+  const firstName = firstNameOf(displayName, username)
+  useEffect(() => {
+    if (!username) return
+    function refresh() {
+      const part = dayPartFor()
+      setGreeting((prev) => (prev && prev.part === part && prev.text.includes(firstName) ? prev : { part, text: pickGreeting(part, firstName) }))
+    }
+    const first = window.setTimeout(refresh, 0)
+    const interval = window.setInterval(refresh, 5 * 60 * 1000)
+    return () => {
+      window.clearTimeout(first)
+      window.clearInterval(interval)
+    }
+  }, [username, firstName])
+
+  // «Responder» en la pregunta del día: la caja queda con «#PreguntaDelDia + pregunta» y un renglón libre abajo
+  const answerDailyQuestion = (question: string) => {
+    const header = `#${DAILY_TAG} ${question}`
+    setContent((prev) => {
+      if (prev.includes(`#${DAILY_TAG}`)) return prev
+      return (prev.trim() ? `${header}\n${prev}` : `${header}\n`).slice(0, MAX_POST_LENGTH)
+    })
+    composerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    window.setTimeout(() => mentionRef.current?.focusEnd(), 60)
+  }
   const router = useRouter()
 
   // El inicio carga de 15 en 15 ("Ver más") en vez de traer TODAS las publicaciones de una vez.
@@ -289,7 +322,7 @@ function Feed() {
       <AnnouncementBanner />
 
       {username && (
-        <form onSubmit={handlePost} className="surface-card rounded-2xl p-3 sm:p-4 mb-4 sm:mb-6">
+        <form ref={composerRef} onSubmit={handlePost} className="surface-card rounded-2xl p-3 sm:p-4 mb-4 sm:mb-6">
           <div className="flex gap-3">
             <div className="relative w-10 h-10 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center shrink-0">
               {avatarUrl ? (
@@ -306,7 +339,8 @@ function Feed() {
               value={content}
               onValueChange={(v) => setContent(v.slice(0, MAX_POST_LENGTH))}
               maxLength={MAX_POST_LENGTH}
-              placeholder="¿Qué está pasando en Daiwa? Etiqueta a alguien con @"
+              formatting
+              placeholder={greeting?.text ?? '¿Qué está pasando en Daiwa?'}
               wrapperClassName="flex-1 min-w-0"
               className="w-full bg-transparent text-[15px] leading-relaxed py-1.5 resize-none focus:outline-none placeholder:text-neutral-500 max-h-[min(55vh,26rem)]"
               rows={3}
@@ -336,8 +370,8 @@ function Feed() {
 
           {postError && <p className="text-xs text-garnet-400 mt-3">{postError}</p>}
 
-          <div className="flex items-center justify-between mt-2 pt-2 border-t border-ink-700">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-y-2 mt-2 pt-2 border-t border-ink-700">
+            <div className="flex flex-wrap items-center gap-1">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -376,6 +410,8 @@ function Feed() {
                 <AtIcon className="w-5 h-5" />
                 <span className="hidden sm:inline">Etiquetar</span>
               </button>
+              <span className="w-px h-5 bg-ink-700 mx-0.5" aria-hidden="true" />
+              <FormatToolbar target={mentionRef} disabled={loading} />
               {(drafts.length > 0 || processingImages) && (
                 <span className="text-xs text-neutral-500">
                   {processingImages ? 'Procesando...' : `${drafts.length}/${MAX_POST_IMAGES}`}
@@ -402,6 +438,8 @@ function Feed() {
           />
         </form>
       )}
+
+      {username && <DailyQuestionCard onAnswer={answerDailyQuestion} />}
 
       <div className="space-y-4">
         {newPostsAvailable && (

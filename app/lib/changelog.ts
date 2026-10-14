@@ -15,6 +15,40 @@ export const RELEASE_STAGE: 'beta' | 'stable' = 'stable'
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.0.6',
+    date: '2026-10-14',
+    title: 'Pregunta del día, formato de texto y publicación fijada',
+    sections: [
+      {
+        heading: '#PreguntaDelDia',
+        items: [
+          'Nueva tarjeta en el Inicio con la pregunta del día. Al darle «Responder», la caja de publicar se llena sola con #PreguntaDelDia y la pregunta, y el cursor queda en el renglón de abajo para escribir tu respuesta.',
+          'Con «Ver respuestas» entras a la página de #PreguntaDelDia y ves lo que respondió todo el mundo.',
+        ],
+      },
+      {
+        heading: 'Escribe con estilo',
+        items: [
+          'Ahora puedes poner texto en negrita, cursiva y subrayado en tus publicaciones, con los botones B, I y U de la caja de publicar (también al editar) o con Ctrl + B, I y U en el computador. También funciona escribiéndolo: **negrita**, *cursiva* y __subrayado__.',
+          'La caja de publicar te saluda según la hora de tu dispositivo: buenos días, buen provecho a la hora del almuerzo, buenas noches o hasta un «¿trasnochando?» de madrugada, con tu primer nombre.',
+        ],
+      },
+      {
+        heading: 'Tu perfil',
+        items: [
+          'Puedes fijar una de tus publicaciones en tu perfil: aparece de primera con la etiqueta «Publicación fijada». Entra a tu perfil, abre el menú ⋯ de la publicación y elige «Fijar en mi perfil» (o «Desfijar»). Solo puede haber una fijada a la vez.',
+        ],
+      },
+      {
+        heading: 'Pequeños detalles',
+        items: [
+          'En el computador, la fila de notas de Mensajes ahora tiene flechas para desplazarte hacia los lados.',
+          'La música ahora suena al 40 % de volumen.',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.0.0',
     date: '2026-10-13',
     title: 'Inauguración de DaiwaPlace',
@@ -431,5 +465,5 @@ export const CHANGELOG: Release[] = [
 ]
 
 export const LATEST_RELEASE = CHANGELOG[0]
-// Versión que se muestra en la app. Los parches pequeños (1.0.x) suben este número sin agregar notas arriba.
-export const APP_VERSION = '1.0.2'
+// Versión que se muestra en la app. Si un parche pequeño (1.0.x) no lleva notas en el changelog, igual se sube este número a mano.
+export const APP_VERSION = '1.0.6'
