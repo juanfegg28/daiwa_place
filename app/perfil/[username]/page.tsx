@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import AvatarPhoto from '../../components/AvatarPhoto'
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -273,7 +274,7 @@ function ProfileContent() {
         <div className="relative z-10 -mt-14 sm:-mt-16 mb-4 flex justify-between items-end">
           <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full border-4 border-ink-950 bg-ink-700 overflow-hidden flex items-center justify-center shadow-[0_0_0_2px] shadow-garnet-500/45">
             {profile.avatar_url ? (
-              <Image src={profile.avatar_url} alt={profile.username} fill sizes="128px" priority className="object-cover" />
+              <AvatarPhoto src={profile.avatar_url} username={profile.username} sizes="128px" priority textClass="text-3xl" />
             ) : (
               <span className="text-3xl font-semibold text-garnet-400">
                 {profile.username.charAt(0).toUpperCase()}

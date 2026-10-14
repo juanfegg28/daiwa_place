@@ -432,4 +432,4 @@ export const CHANGELOG: Release[] = [
 
 export const LATEST_RELEASE = CHANGELOG[0]
 // Versión que se muestra en la app. Los parches pequeños (1.0.x) suben este número sin agregar notas arriba.
-export const APP_VERSION = '1.0.1'
+export const APP_VERSION = '1.0.2'

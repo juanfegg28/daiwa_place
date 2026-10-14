@@ -1,4 +1,4 @@
-import Image from 'next/image'
+import AvatarPhoto from './AvatarPhoto'
 /** Foto de perfil redonda, con el puntico verde de "conectado" (solo se pasa online=true para amigos). */
 export default function UserAvatar({
   username,
@@ -25,7 +25,7 @@ export default function UserAvatar({
         }`}
       >
         {avatarUrl ? (
-          <Image src={avatarUrl} alt={username} fill sizes="96px" priority={priority} className="object-cover" />
+          <AvatarPhoto src={avatarUrl} username={username} sizes="96px" priority={priority} textClass={textSize} />
         ) : (
           <span className={`${textSize} font-semibold text-garnet-400`}>{username.charAt(0).toUpperCase()}</span>
         )}

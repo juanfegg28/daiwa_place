@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import Image from 'next/image'
+import ResilientImage from './ResilientImage'
 import type { PostImage } from '../lib/types'
 import { ChevronLeftIcon, ChevronRightIcon, CloseIcon } from './icons'
 
@@ -100,7 +100,7 @@ export default function PostImages({
         className="absolute inset-0 w-full h-full flex items-center justify-center cursor-zoom-in"
         aria-label={`Ver foto ${safeIndex + 1} de ${total}`}
       >
-        <Image
+        <ResilientImage
           src={current.url}
           alt={`Foto ${safeIndex + 1} de ${total}`}
           fill

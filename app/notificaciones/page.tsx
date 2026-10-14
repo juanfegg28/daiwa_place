@@ -1,6 +1,6 @@
 'use client'
 
-import Image from 'next/image'
+import AvatarPhoto from '../components/AvatarPhoto'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -330,7 +330,7 @@ function NotificacionesContent() {
                     ) : (
                       <div className="relative w-10 h-10 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center">
                         {n.actor?.avatar_url ? (
-                          <Image src={n.actor.avatar_url} alt={n.actor.username} fill sizes="48px" className="object-cover" />
+                          <AvatarPhoto src={n.actor.avatar_url} username={n.actor.username} sizes="48px" />
                         ) : (
                           <span className="text-sm font-semibold text-garnet-400">
                             {(n.actor?.username ?? '?').charAt(0).toUpperCase()}

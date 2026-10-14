@@ -340,3 +340,17 @@ body {
   max-width: 100%;
   overflow-x: clip;
 }
+
+/* ───────── v1.0.2: listas desplegables (select) legibles ───────── */
+/* El navegador pintaba la lista con fondo blanco y la letra clara del campo: no se leía nada */
+select {
+  color-scheme: dark;
+}
+:root[data-theme='light'] select {
+  color-scheme: light;
+}
+select option,
+select optgroup {
+  background-color: var(--color-ink-900);
+  color: var(--foreground);
+}

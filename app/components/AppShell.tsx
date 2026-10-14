@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
+import AvatarPhoto from './AvatarPhoto'
 import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabaseClient'
 import { applyTheme, type ThemeMode } from '../lib/theme'
@@ -514,7 +514,7 @@ export default function AppShell({
                 >
                   <div className="relative w-9 h-9 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center shrink-0">
                     {avatarUrl ? (
-                      <Image src={avatarUrl} alt={username ?? ''} fill sizes="48px" className="object-cover" />
+                      <AvatarPhoto src={avatarUrl} username={username ?? '?'} sizes="48px" />
                     ) : (
                       <span className="text-sm font-semibold text-garnet-400">
                         {(username ?? '?').charAt(0).toUpperCase()}

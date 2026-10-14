@@ -7,8 +7,8 @@
 
 import { supabase } from './supabaseClient'
 
-/** Volumen del reproductor: 70 % (ni muy bajo ni muy alto) */
-export const MUSIC_VOLUME = 0.7
+/** Volumen del reproductor: 40 % (ni muy bajo ni muy alto) */
+export const MUSIC_VOLUME = 0.4
 export const MUSIC_PAGE = 25
 
 export type MusicTrack = {

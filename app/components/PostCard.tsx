@@ -1,6 +1,5 @@
 'use client'
 
-import Image from 'next/image'
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -24,6 +23,7 @@ import KebabMenu, { type MenuItem } from './KebabMenu'
 import ConfirmDialog from './ConfirmDialog'
 import ReportDialog from './ReportDialog'
 import PostImages from './PostImages'
+import AvatarPhoto from './AvatarPhoto'
 import MentionField from './MentionField'
 import LikesModal from './LikesModal'
 import MusicChip from './MusicChip'
@@ -104,7 +104,7 @@ function MiniAvatar({
   return (
     <div className={`relative ${size} rounded-full overflow-hidden bg-ink-700 flex items-center justify-center shrink-0`}>
       {avatarUrl ? (
-        <Image src={avatarUrl} alt={username} fill sizes="48px" className="object-cover" />
+        <AvatarPhoto src={avatarUrl} username={username} sizes="48px" textClass="text-xs" />
       ) : (
         <span className="text-xs font-semibold text-garnet-400">{username.charAt(0).toUpperCase()}</span>
       )}

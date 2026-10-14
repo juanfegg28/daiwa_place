@@ -1,6 +1,6 @@
 'use client'
 
-import Image from 'next/image'
+import AvatarPhoto from './components/AvatarPhoto'
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from './lib/supabaseClient'
@@ -293,7 +293,7 @@ function Feed() {
           <div className="flex gap-3">
             <div className="relative w-10 h-10 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center shrink-0">
               {avatarUrl ? (
-                <Image src={avatarUrl} alt={username} fill sizes="48px" className="object-cover" />
+                <AvatarPhoto src={avatarUrl} username={username} sizes="48px" />
               ) : (
                 <span className="text-sm font-semibold text-garnet-400">
                   {username.charAt(0).toUpperCase()}
