@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { CloseIcon, MusicIcon, SearchIcon } from './icons'
 import { PlayButton } from './MusicChip'
 import { useMusic } from './MusicProvider'
@@ -113,8 +114,16 @@ export default function MusicPicker({
     onPick(t)
   }
 
-  return (
-    <div className="fixed inset-0 z-[70] bg-black/75 flex items-end md:items-center justify-center md:px-4 sheet-backdrop" onClick={close}>
+  // Se dibuja directamente en <body> (portal). Así NO queda atrapado dentro de otra ventana (por ejemplo la de
+  // «Tu nota»), que la recortaba y dejaba la barra de búsqueda fuera de la pantalla.
+  const picker = (
+    <div
+      className="fixed inset-0 z-[80] bg-black/75 flex items-end md:items-center justify-center md:px-4 sheet-backdrop"
+      onClick={(e) => {
+        e.stopPropagation()
+        close()
+      }}
+    >
       <div
         className="sheet-panel pb-[env(safe-area-inset-bottom)] md:pb-0 surface-raised border border-ink-600 rounded-t-3xl md:rounded-3xl w-full md:max-w-lg h-[82dvh] md:h-[640px] md:max-h-[85dvh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
@@ -244,4 +253,6 @@ export default function MusicPicker({
       </div>
     </div>
   )
+
+  return typeof document === 'undefined' ? null : createPortal(picker, document.body)
 }
