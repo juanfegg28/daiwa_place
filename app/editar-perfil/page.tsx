@@ -8,6 +8,7 @@ import AppShell, { useAppSession } from '../components/AppShell'
 import ProfilePreviewCard from '../components/ProfilePreviewCard'
 import { useAvatarCropper, BANNER_CROP } from '../components/AvatarCropper'
 import { CameraIcon } from '../components/icons'
+import IdentityFields from '../components/IdentityFields'
 import { ESTADOS_SENTIMENTALES } from '../lib/constants'
 import { checkStudentName, NAME_HELP, NAME_PLACEHOLDER } from '../lib/nameFilter'
 import MusicField from '../components/MusicField'
@@ -31,6 +32,8 @@ function EditProfileForm() {
   const [grado, setGrado] = useState('')
   const [birthday, setBirthday] = useState('')
   const [estadoPersonal, setEstadoPersonal] = useState('')
+  const [identity, setIdentity] = useState('')
+  const [identityDetail, setIdentityDetail] = useState('')
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [bannerPreview, setBannerPreview] = useState<string | null>(null)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
@@ -69,6 +72,10 @@ function EditProfileForm() {
       setGrado(data.grado ?? '')
       setBirthday(data.birthday ?? '')
       setEstadoPersonal(data.estado_personal ?? '')
+      // Identidad (v1.1.10): se pide aparte para que Editar perfil cargue igual si todavía falta el SQL nuevo
+      const { data: idRow } = await supabase.from('profiles').select('identity, identity_detail').eq('id', userId).maybeSingle()
+      setIdentity((idRow as { identity: string | null } | null)?.identity ?? '')
+      setIdentityDetail((idRow as { identity_detail: string | null } | null)?.identity_detail ?? '')
       setAvatarPreview(data.avatar_url ?? null)
       setBannerPreview(data.banner_url ?? null)
     }
@@ -167,6 +174,19 @@ function EditProfileForm() {
       setError(updateError.message)
       setSaving(false)
       return
+    }
+
+    const { error: identityError } = await supabase
+      .from('profiles')
+      .update({ identity: identity || null, identity_detail: identityDetail.trim() || null })
+      .eq('id', userId)
+    if (identityError && !/identity|column|schema cache/i.test(identityError.message)) {
+      setError(identityError.message)
+      setSaving(false)
+      return
+    }
+    if (identityError && identity) {
+      uploadWarnings.push('Identidad: falta correr el SQL de la v1.1.10 en Supabase')
     }
 
     setUploadNotice(uploadWarnings.length > 0 ? uploadWarnings : null)
@@ -301,6 +321,15 @@ function EditProfileForm() {
             ))}
           </select>
         </div>
+
+        <IdentityFields
+          identity={identity}
+          detail={identityDetail}
+          onIdentityChange={setIdentity}
+          onDetailChange={setIdentityDetail}
+          labelClass="block mb-1 text-sm text-neutral-400"
+          inputClass="w-full bg-ink-900 border border-ink-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-garnet-600"
+        />
 
         {error && <p className="text-garnet-400 text-sm">{error}</p>}
         {success && <p className="text-emerald-500 text-sm">Perfil actualizado</p>}

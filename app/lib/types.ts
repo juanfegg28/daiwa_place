@@ -13,6 +13,8 @@ export type AuthorProfile = {
   user_roles?: RoleBadgeInfo[]
   /** Clubes y pandillas a los que pertenece (se muestran como etiquetas junto al nombre) */
   club_members?: ClubMembershipTag[]
+  /** 'public' o 'followers': las cuentas «solo seguidores» no se pueden compartir */
+  posts_visibility?: 'public' | 'followers' | null
 } | null
 
 export type PostImage = {
@@ -44,6 +46,8 @@ export type Post = {
   music?: unknown
   profiles: AuthorProfile
   likes: { user_id: string }[]
+  /** Quiénes la compartieron (v1.1.10) */
+  reposts?: { user_id: string }[]
   comments: Comment[]
 }
 
@@ -73,6 +77,7 @@ export type NotificationType =
   | 'club_declined'
   | 'club_join_request'
   | 'club_join_accepted'
+  | 'repost'
 
 export type NotificationItem = {
   id: string
@@ -96,4 +101,13 @@ export type NotificationItem = {
   club_request_id?: string | null
   club?: { name: string; slug: string; kind: 'club' | 'pandilla'; avatar_url: string | null } | null
   club_request?: { club_name: string; kind: 'club' | 'pandilla'; decline_reason: string | null } | null
+}
+
+/** Un elemento del feed: una publicación original o un compartido (v1.1.10) */
+export type FeedItem = {
+  /** Clave única (una misma publicación puede salir como original y como compartida) */
+  key: string
+  post: Post
+  repostedBy: { id: string; username: string; id_student: string | null } | null
+  sortAt: string
 }

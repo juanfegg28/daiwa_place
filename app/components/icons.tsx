@@ -851,3 +851,15 @@ export function BoardPinIcon({ className = base }: IconProps) {
     </svg>
   )
 }
+
+/** Compartir (repost): dos flechas en círculo */
+export function RepostIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="m17 3 3.5 3.5L17 10" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 11V9.5A3 3 0 0 1 7 6.5h13.5" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="m7 21-3.5-3.5L7 14" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M20 13v1.5a3 3 0 0 1-3 3H3.5" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}

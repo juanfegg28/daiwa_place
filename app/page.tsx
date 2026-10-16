@@ -14,12 +14,12 @@ import FormatToolbar from './components/FormatToolbar'
 import DailyQuestionCard, { DAILY_TAG } from './components/DailyQuestionCard'
 import { dayPartFor, firstNameOf, pickGreeting, type DayPart } from './lib/greeting'
 import { prepareImage } from './lib/images'
-import { POST_SELECT, POST_IMAGES_BUCKET, MAX_POST_IMAGES, MAX_POST_LENGTH } from './lib/queries'
+import { POST_SELECT, POST_IMAGES_BUCKET, MAX_POST_IMAGES, MAX_POST_LENGTH, fetchFeedItems } from './lib/queries'
 import MusicChip from './components/MusicChip'
 import MusicPicker from './components/MusicPicker'
 import { MusicIcon } from './components/icons'
 import { normalizeTrack, toStoredTrack } from './lib/music'
-import type { Post, PostImage } from './lib/types'
+import type { Post, PostImage, FeedItem } from './lib/types'
 
 const FEED_PAGE = 15
 
@@ -41,7 +41,7 @@ export default function HomePage() {
 
 function Feed() {
   const { userId, username, avatarUrl, displayName } = useAppSession()
-  const [posts, setPosts] = useState<Post[]>([])
+  const [items, setItems] = useState<FeedItem[]>([])
   const [content, setContent] = useState('')
   const [drafts, setDrafts] = useState<DraftImage[]>([])
   const [processingImages, setProcessingImages] = useState(false)
@@ -92,26 +92,36 @@ function Feed() {
   const [postMusic, setPostMusic] = useState<ReturnType<typeof toStoredTrack> | null>(null)
   const [musicPickerOpen, setMusicPickerOpen] = useState(false)
 
-  const loadPosts = async () => {
-    const query = () =>
+  // Feed clásico (sin compartidos): solo se usa si todavía no se corrió el SQL de la v1.1.10
+  const loadLegacyPosts = async () => {
+    const query = (select: string) =>
       supabase
         .from('posts')
-        .select(POST_SELECT)
+        .select(select)
         .order('created_at', { ascending: false })
         .limit(feedLimit.current + 1)
-    let { data, error } = await query()
+    let res: { data: unknown; error: { message: string } | null } = await query(POST_SELECT)
     // A veces Supabase rechaza la sesión por un instante ("JWT issued at future": relojes desfasados).
     // Es pasajero: se reintenta una vez a los 1.5 s en vez de dejar el inicio vacío.
-    if (error && /JWT/i.test(error.message)) {
+    if (res.error && /JWT/i.test(res.error.message)) {
       await new Promise((resolve) => setTimeout(resolve, 1500))
-      ;({ data, error } = await query())
+      res = await query(POST_SELECT)
     }
-    if (error) console.error('Error cargando posts:', error.message)
-    const rows = (data as unknown as Post[]) ?? []
-    const page = rows.slice(0, feedLimit.current)
-    setHasMoreFeed(rows.length > feedLimit.current)
-    setPosts(page)
-    newestSeen.current = page[0]?.created_at ?? null
+    if (res.error && /reposts|posts_visibility|relationship|schema cache/i.test(res.error.message)) {
+      res = await query(POST_SELECT.replace(', reposts(user_id)', '').replace('posts_visibility, ', ''))
+    }
+    if (res.error) console.error('Error cargando posts:', res.error.message)
+    return { posts: (res.data as Post[] | null) ?? [], error: res.error?.message ?? '' }
+  }
+
+  // El feed lo arma la base de datos (feed_items): publicaciones + compartidos, sin lo que ocultaste y
+  // según tu preferencia de Configuración (Todos / Siguiendo / Amigos).
+  const loadPosts = async () => {
+    const res = await fetchFeedItems('home', feedLimit.current, null, loadLegacyPosts)
+    if (res.error) console.error('Error cargando posts:', res.error)
+    setHasMoreFeed(res.hasMore)
+    setItems(res.items)
+    newestSeen.current = res.items[0]?.sortAt ?? null
     setNewPostsAvailable(false)
     setLoadingPosts(false)
   }
@@ -128,13 +138,18 @@ function Feed() {
       loadPosts()
     }
     run()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Aviso de "hay publicaciones nuevas": se revisa cada 45 s y al volver a la pestaña (sin mover lo que estás leyendo)
   useEffect(() => {
     async function check() {
-      const { data } = await supabase.from('posts').select('created_at').order('created_at', { ascending: false }).limit(1)
-      const latest = data?.[0]?.created_at as string | undefined
+      const { data: feedHead, error: feedErr } = await supabase.rpc('feed_items', { p_scope: 'home', p_user: null, p_limit: 1 })
+      let latest = (feedHead as { sort_at: string }[] | null)?.[0]?.sort_at as string | undefined
+      if (feedErr) {
+        const { data } = await supabase.from('posts').select('created_at').order('created_at', { ascending: false }).limit(1)
+        latest = data?.[0]?.created_at as string | undefined
+      }
       if (latest && newestSeen.current && new Date(latest).getTime() > new Date(newestSeen.current).getTime()) {
         setNewPostsAvailable(true)
       }
@@ -456,16 +471,18 @@ function Feed() {
         )}
         {loadingPosts ? (
           <p className="text-neutral-500 text-sm text-center py-10">Cargando publicaciones...</p>
-        ) : posts.length === 0 ? (
+        ) : items.length === 0 ? (
           <p className="text-neutral-500 text-sm text-center py-10">
             Todavía no hay publicaciones. ¡Sé el primero!
           </p>
         ) : (
-          posts.map((post, postIndex) => (
+          items.map((item, postIndex) => (
             <PostCard
               priorityImages={postIndex === 0}
-              key={post.id}
-              post={post}
+              key={item.key}
+              post={item.post}
+              repostedBy={item.repostedBy}
+              onUserHidden={() => loadPosts()}
               currentUserId={userId}
               onToggleLike={handleLike}
               onToggleCommentLike={handleLikeComment}

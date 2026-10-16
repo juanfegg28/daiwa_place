@@ -20,6 +20,8 @@ import {
   FlagIcon,
   PinIcon,
   CloseIcon,
+  RepostIcon,
+  EyeOffIcon,
 } from './icons'
 import KebabMenu, { type MenuItem } from './KebabMenu'
 import ConfirmDialog from './ConfirmDialog'
@@ -34,6 +36,7 @@ import MusicField from './MusicField'
 import ImageLightbox from './ImageLightbox'
 import RoleBadges from './RoleBadge'
 import ClubTags from './ClubTag'
+import { useBlockedIds } from '../lib/useBlocked'
 
 type PostCardProps = {
   post: Post
@@ -73,6 +76,12 @@ type PostCardProps = {
    * o null si todo salió bien. Si no se pasa, el menú no muestra la opción de fijar.
    */
   onTogglePin?: (post: Post, pin: boolean) => Promise<string | null> | string | null
+  /** Si esta tarjeta es un compartido: quién lo compartió (se muestra «@usuario compartió» arriba) */
+  repostedBy?: { id: string; username: string; id_student: string | null } | null
+  /** Privacidad de la cuenta autora cuando no viene en la publicación (en el perfil). Las cuentas «solo seguidores» no se pueden compartir */
+  authorVisibility?: 'public' | 'followers' | null
+  /** Se llama cuando la persona oculta a este usuario (para quitar sus publicaciones del feed al instante) */
+  onUserHidden?: (userId: string) => void
 }
 
 const ROOT_PREVIEW = 3 // comentarios principales visibles antes de "Ver más"
@@ -489,6 +498,9 @@ export default function PostCard({
   focusCommentId = null,
   pinned = false,
   onTogglePin,
+  repostedBy = null,
+  authorVisibility = null,
+  onUserHidden,
 }: PostCardProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
   const [commentText, setCommentText] = useState('')
@@ -546,6 +558,39 @@ export default function PostCard({
   const likedByMe = currentUserId ? post.likes.some((l) => l.user_id === currentUserId) : false
   const author = post.profiles
   const isMine = !!currentUserId && post.user_id === currentUserId
+  const blockedIds = useBlockedIds(currentUserId)
+  const [repostBusy, setRepostBusy] = useState(false)
+  const repostCount = post.reposts?.length ?? 0
+  const repostedByMe = !!currentUserId && !!post.reposts?.some((r) => r.user_id === currentUserId)
+  // Las cuentas «solo seguidores» / privadas no se pueden compartir: el botón ni se muestra
+  const authorIsPrivate = (author?.posts_visibility ?? authorVisibility) === 'followers'
+  const canShowRepost = !authorIsPrivate && (post.reposts !== undefined)
+  const repostLocked = isMine || (blockedIds.has(post.user_id) && !repostedByMe)
+
+  const toggleRepost = async () => {
+    if (!currentUserId || repostBusy) return
+    setRepostBusy(true)
+    setActionError('')
+    const { error } = await supabase.rpc('repost_toggle', { p_post: post.id })
+    setRepostBusy(false)
+    if (error) {
+      setActionError(error.message)
+      return
+    }
+    onRefresh?.()
+  }
+
+  const hideUser = async () => {
+    if (!currentUserId) return
+    setActionError('')
+    const { error } = await supabase.from('muted_users').insert({ user_id: currentUserId, muted_user_id: post.user_id })
+    if (error && !/duplicate/i.test(error.message)) {
+      setActionError(error.message.includes('muted_users') ? 'Falta correr el SQL de la v1.1.10 en Supabase.' : error.message)
+      return
+    }
+    if (onUserHidden) onUserHidden(post.user_id)
+    else onRefresh?.()
+  }
   const images = post.images ?? []
   const isFrozen = (authorIsFrozen ?? author?.is_frozen ?? false) && !isMine
   const interactionsDisabled = isFrozen
@@ -705,6 +750,9 @@ export default function PostCard({
 
   const postMenu: MenuItem[] = [
     { label: 'Copiar enlace', icon: <LinkIcon className="w-4 h-4" />, onClick: copyLink },
+    ...(!isMine && currentUserId && !onProfilePage
+      ? [{ label: 'Ocultar publicaciones de este usuario', icon: <EyeOffIcon className="w-4 h-4" />, onClick: hideUser }]
+      : []),
     ...(!isMine && currentUserId
       ? [{ label: 'Reportar publicación', icon: <FlagIcon className="w-4 h-4" />, onClick: () => setShowReport(true) }]
       : []),
@@ -791,6 +839,15 @@ export default function PostCard({
 
   return (
     <article className="surface-card rounded-2xl p-3.5 sm:p-4">
+      {repostedBy && (
+        <p className="flex items-center gap-1.5 text-[11.5px] font-medium text-neutral-400 mb-2.5">
+          <RepostIcon className="w-3.5 h-3.5 text-garnet-400" />
+          <Link href={`/perfil/${repostedBy.username}`} className="hover:text-garnet-400 transition truncate">
+            {currentUserId && repostedBy.id === currentUserId ? 'Tú' : `@${repostedBy.username}`}
+          </Link>
+          <span className="shrink-0">{currentUserId && repostedBy.id === currentUserId ? 'compartiste' : 'compartió'}</span>
+        </p>
+      )}
       {pinned && (
         <p className="flex items-center gap-1.5 text-[11px] font-medium text-garnet-300 mb-2.5">
           <PinIcon className="w-3.5 h-3.5" filled />
@@ -942,6 +999,30 @@ export default function PostCard({
           <CommentIcon className="w-[18px] h-[18px]" />
           {post.comments.length}
         </button>
+        {canShowRepost && (
+          <button
+            type="button"
+            onClick={toggleRepost}
+            disabled={!currentUserId || repostBusy || interactionsDisabled || repostLocked}
+            aria-pressed={repostedByMe}
+            aria-label={repostedByMe ? 'Dejar de compartir' : 'Compartir publicación'}
+            title={
+              isMine
+                ? 'No puedes compartir tu propia publicación'
+                : repostLocked
+                  ? 'No puedes compartir publicaciones de una cuenta bloqueada'
+                  : repostedByMe
+                    ? 'Toca para dejar de compartirla'
+                    : 'Compartir en tu perfil'
+            }
+            className={`flex items-center gap-1.5 text-sm transition disabled:opacity-40 ${
+              repostedByMe ? 'text-garnet-500' : 'hover:text-garnet-400'
+            }`}
+          >
+            <RepostIcon className="w-[18px] h-[18px]" />
+            <span className="tabular-nums">{repostCount}</span>
+          </button>
+        )}
       </div>
 
       {expanded && (

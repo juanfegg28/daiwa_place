@@ -11,6 +11,8 @@ import { ESTADOS_SENTIMENTALES } from '../../lib/constants'
 import { checkStudentName, NAME_HELP, NAME_PLACEHOLDER } from '../../lib/nameFilter'
 import { USERNAME_MIN, USERNAME_REGEX, normalizeUsername, passwordReport } from '../../lib/authRules'
 import AuthField, { AuthSelect, AuthTextarea, type FieldTone } from '../../components/auth/AuthField'
+import { IDENTITIES, identityField } from '../../lib/identities'
+import { SparklesIcon } from '../../components/icons'
 import PasswordField from '../../components/auth/PasswordField'
 import PasswordMeter from '../../components/auth/PasswordMeter'
 import SoftNotice from '../../components/auth/SoftNotice'
@@ -28,6 +30,8 @@ export default function RegisterPage() {
   const [grado, setGrado] = useState('')
   const [birthday, setBirthday] = useState('')
   const [estadoPersonal, setEstadoPersonal] = useState('')
+  const [identity, setIdentity] = useState('')
+  const [identityDetail, setIdentityDetail] = useState('')
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [bannerFile, setBannerFile] = useState<File | null>(null)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
@@ -219,6 +223,11 @@ export default function RegisterPage() {
       return
     }
 
+    // Identidad (v1.1.10): se guarda aparte para que el registro nunca falle si todavía falta el SQL nuevo
+    if (identity) {
+      await supabase.from('profiles').update({ identity, identity_detail: identityDetail.trim() || null }).eq('id', userId)
+    }
+
     setLoading(false)
     if (uploadWarnings.length > 0) {
       setPostWarnings(uploadWarnings)
@@ -401,6 +410,53 @@ export default function RegisterPage() {
                 </option>
               ))}
             </AuthSelect>
+
+            <AuthSelect
+              id="identity"
+              label="Identidad"
+              icon={<SparklesIcon className="h-[18px] w-[18px]" />}
+              value={identity}
+              onChange={(e) => {
+                setIdentity(e.target.value)
+                setIdentityDetail('')
+              }}
+            >
+              <option value="">Sin especificar</option>
+              {IDENTITIES.map((op) => (
+                <option key={op} value={op}>
+                  {op}
+                </option>
+              ))}
+            </AuthSelect>
+
+            {identityField(identity) && (
+              identityField(identity)?.type === 'select' ? (
+                <AuthSelect
+                  id="identity-detail"
+                  label={identityField(identity)?.label ?? ''}
+                  icon={<SparklesIcon className="h-[18px] w-[18px]" />}
+                  value={identityDetail}
+                  onChange={(e) => setIdentityDetail(e.target.value)}
+                >
+                  <option value="">Sin especificar</option>
+                  {identityField(identity)?.options?.map((op) => (
+                    <option key={op} value={op}>
+                      {op}
+                    </option>
+                  ))}
+                </AuthSelect>
+              ) : (
+                <AuthField
+                  id="identity-detail"
+                  label={identityField(identity)?.label ?? ''}
+                  icon={<SparklesIcon className="h-[18px] w-[18px]" />}
+                  type={identityField(identity)?.type === 'date' ? 'date' : identityField(identity)?.type === 'number' ? 'number' : 'text'}
+                  value={identityDetail}
+                  onChange={(e) => setIdentityDetail(e.target.value.slice(0, identityField(identity)?.max ?? 80))}
+                  placeholder={identityField(identity)?.placeholder}
+                />
+              )
+            )}
 
             <AuthTextarea
               id="bio"

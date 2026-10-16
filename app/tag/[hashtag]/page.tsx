@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { supabase } from '../../lib/supabaseClient'
 import AppShell, { useAppSession } from '../../components/AppShell'
 import PostCard from '../../components/PostCard'
-import { POST_SELECT } from '../../lib/queries'
+import { fetchPostsByIds } from '../../lib/queries'
 import type { Post } from '../../lib/types'
 
 export default function TagPage() {
@@ -27,13 +27,15 @@ function TagContent() {
   const [loading, setLoading] = useState(true)
 
   const loadPosts = async () => {
-    const { data, error } = await supabase
+    const { data: idRows } = await supabase
       .from('posts')
-      .select(POST_SELECT)
+      .select('id')
       .ilike('content', `%#${tag}%`)
       .order('created_at', { ascending: false })
-    if (error) console.error('Error cargando la tendencia:', error.message)
-    setPosts((data as unknown as Post[]) ?? [])
+    const { posts: found, error } = await fetchPostsByIds(((idRows as { id: string }[] | null) ?? []).map((r) => r.id))
+    if (error) console.error('Error cargando la tendencia:', error)
+    // fetchPostsByIds no garantiza el orden: se ordena del más nuevo al más viejo
+    setPosts([...found].sort((a, b) => b.created_at.localeCompare(a.created_at)))
     setLoading(false)
   }
 

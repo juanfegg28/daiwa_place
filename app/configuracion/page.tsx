@@ -5,25 +5,27 @@ import { useRouter } from 'next/navigation'
 import AppShell, { useAppSession } from '../components/AppShell'
 import { isSupremeAdmin } from '../lib/permissions'
 import { supabase } from '../lib/supabaseClient'
-import { ShieldIcon, EyeIcon, SparklesIcon, BellIcon, BlockIcon } from '../components/icons'
+import { ShieldIcon, EyeIcon, SparklesIcon, BellIcon, BlockIcon, RepostIcon } from '../components/icons'
 import type { ConfigProfile } from './types'
 import CuentaTab from './CuentaTab'
 import PrivacidadTab from './PrivacidadTab'
 import AparienciaTab from './AparienciaTab'
 import NotificacionesTab from './NotificacionesTab'
 import BloqueadosTab from './BloqueadosTab'
+import FeedTab from './FeedTab'
 
 const TABS = [
   { id: 'cuenta', label: 'Cuenta y Seguridad', icon: ShieldIcon },
   { id: 'privacidad', label: 'Privacidad', icon: EyeIcon },
   { id: 'apariencia', label: 'Apariencia', icon: SparklesIcon },
+  { id: 'feed', label: 'Feed', icon: RepostIcon },
   { id: 'notificaciones', label: 'Notificaciones', icon: BellIcon },
   { id: 'bloqueados', label: 'Cuentas Bloqueadas', icon: BlockIcon },
 ] as const
 
 type TabId = (typeof TABS)[number]['id']
 
-const DEFAULT_NOTIF_PREFS = { comments: true, mentions: true, likes: true, follows: true, note_likes: true, whispers: true, tags: true }
+const DEFAULT_NOTIF_PREFS = { comments: true, mentions: true, likes: true, follows: true, note_likes: true, whispers: true, tags: true, reposts: true }
 
 export default function ConfiguracionPage() {
   return (
@@ -49,6 +51,7 @@ function ConfiguracionContent() {
     // Se pide aparte para no romper Configuración si todavía no se corrió el SQL de la v0.12.0
     const { data: onlineRow } = await supabase.from('profiles').select('show_online_status').eq('id', id).maybeSingle()
     const { data: receiptsRow } = await supabase.from('profiles').select('show_read_receipts').eq('id', id).maybeSingle()
+    const { data: feedRow } = await supabase.from('profiles').select('feed_pref').eq('id', id).maybeSingle()
     if (data) {
       setProfile({
         id: data.id,
@@ -61,6 +64,7 @@ function ConfiguracionContent() {
         badge_color: data.badge_color ?? null,
         show_online_status: onlineRow?.show_online_status !== false,
         show_read_receipts: receiptsRow?.show_read_receipts !== false,
+        feed_pref: ((feedRow as { feed_pref?: string } | null)?.feed_pref as 'all' | 'following' | 'mutuals') ?? 'all',
         notif_prefs: { ...DEFAULT_NOTIF_PREFS, ...(data.notif_prefs ?? {}) },
       })
     }
@@ -132,6 +136,7 @@ function ConfiguracionContent() {
           showVipBadge={hasAnyRole || isSupremeAdmin(username)}
         />
       )}
+      {tab === 'feed' && <FeedTab profile={profile} onUpdate={setProfile} />}
       {tab === 'notificaciones' && <NotificacionesTab profile={profile} onUpdate={setProfile} />}
       {tab === 'bloqueados' && <BloqueadosTab currentUserId={profile.id} />}
     </div>

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useAppSession } from '../components/AppShell'
 import PostCard from '../components/PostCard'
-import { POST_SELECT } from '../lib/queries'
+import { fetchPostsByIds } from '../lib/queries'
 import { usePostActions } from '../lib/usePostActions'
 import { friendlyClubError } from '../lib/clubs'
 import type { Post } from '../lib/types'
@@ -41,14 +41,10 @@ export default function ClubFeed({ clubId = null, emptyText }: { clubId?: string
       setLoading(false)
       return
     }
-    const { data, error: postsError } = await supabase
-      .from('posts')
-      .select(POST_SELECT)
-      .in('id', pageIds)
-      .order('created_at', { ascending: false })
-    if (postsError) setError(friendlyClubError(postsError.message))
+    const { posts: found, error: postsError } = await fetchPostsByIds(pageIds)
+    if (postsError) setError(friendlyClubError(postsError))
     else setError('')
-    setPosts((data as unknown as Post[]) ?? [])
+    setPosts([...found].sort((a, b) => b.created_at.localeCompare(a.created_at)))
     setLoading(false)
   }
 

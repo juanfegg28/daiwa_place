@@ -15,8 +15,45 @@ export const RELEASE_STAGE: 'beta' | 'stable' = 'stable'
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.10',
+    date: '2026-10-16',
+    title: 'Compartidos, ocultar usuarios, identidades y tarjetas para Discord',
+    sections: [
+      {
+        heading: 'Compartidos',
+        items: [
+          'Nuevo botón 🔁 junto al like y los comentarios, con su contador. Un toque comparte la publicación en tu perfil y otro toque la quita. Si ya la compartiste, el ícono se ve del color de acento.',
+          'En el Inicio y en el perfil, lo compartido aparece mezclado con las publicaciones, del más nuevo al más viejo, con una cabecera «@usuario compartió».',
+          'Solo se pueden compartir publicaciones de cuentas públicas. No puedes compartir las tuyas ni las de cuentas que bloqueaste o que te bloquearon, y solo una vez por publicación. Si se borra la original, también desaparecen sus compartidos.',
+          'Recibes un aviso cuando alguien comparte una publicación tuya. Lo puedes apagar en Configuración → Notificaciones.',
+        ],
+      },
+      {
+        heading: 'Ocultar usuarios y preferencia del feed',
+        items: [
+          'En el menú ⋯ de cualquier publicación ya puedes elegir «Ocultar publicaciones de este usuario». Dejas de verlo en el Inicio y en Clubes y Pandillas, pero sí lo ves si entras a su perfil. Nadie se entera.',
+          'Configuración → Feed: elige qué ves en el Inicio (Todos, Siguiendo o Amigos) y mira o deshaz tu lista de usuarios ocultos.',
+        ],
+      },
+      {
+        heading: 'Identidades',
+        items: [
+          'Nuevo selector de Identidad en el registro y en Editar perfil, con más de 20 opciones (de Hombre y Mujer a Ángel caído, Alien, Diva, NPC, Supernova, Batman y Vampiro/a).',
+          'Algunas identidades desbloquean un campo especial (por ejemplo, Planeta natal para Alien o Año de conversión para Vampiro/a) que se muestra destacado en la cabecera de tu perfil.',
+        ],
+      },
+      {
+        heading: 'Tarjetas de enlace',
+        items: [
+          'Al pegar un enlace de DaiwaPlace en Discord y otras redes, ahora sale una tarjeta con título, descripción e imagen: para el sitio, las publicaciones, los perfiles y los clubes.',
+          'Si la cuenta es solo para seguidores, está congelada o ya no existe, la tarjeta es la genérica de DaiwaPlace: nunca se muestra contenido privado.',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.1.0',
-    date: '2026-10-15',
+    date: '2026-10-16',
     title: 'Clubes y Pandillas, fotos que se autodestruyen y menú nuevo',
     sections: [
       {
@@ -515,4 +552,4 @@ export const CHANGELOG: Release[] = [
 
 export const LATEST_RELEASE = CHANGELOG[0]
 // Versión que se muestra en la app. Si un parche pequeño (1.0.x) no lleva notas en el changelog, igual se sube este número a mano.
-export const APP_VERSION = '1.1.0'
+export const APP_VERSION = '1.1.10'

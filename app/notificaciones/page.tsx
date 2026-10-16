@@ -9,7 +9,7 @@ import { stripFormatting } from '../lib/hashtags'
 import AppShell, { useAppSession } from '../components/AppShell'
 import { NOTIFICATION_SELECT } from '../lib/queries'
 import type { NotificationItem, NotificationType } from '../lib/types'
-import { AtIcon, BellIcon, ClubsIcon, CloseIcon, CommentIcon, HeartIcon, ReplyIcon, UsersIcon, WhisperIcon } from '../components/icons'
+import { AtIcon, BellIcon, ClubsIcon, RepostIcon, CloseIcon, CommentIcon, HeartIcon, ReplyIcon, UsersIcon, WhisperIcon } from '../components/icons'
 import AnonAvatar from '../susurros/AnonAvatar'
 import { ANON_NAME } from '../lib/whispers'
 
@@ -55,6 +55,7 @@ const ACTION_TEXT: Record<NotificationType, string> = {
   club_declined: 'declinó tu solicitud para crear la página de un club o pandilla',
   club_join_request: 'quiere unirse a tu club',
   club_join_accepted: 'te aceptó en su club',
+  repost: 'compartió tu publicación',
 }
 
 /** Los avisos de aprobar o declinar un club vienen del equipo, no de una persona en concreto */
@@ -67,6 +68,7 @@ function TypeIcon({ type }: { type: NotificationType }) {
   if (type === 'like_post' || type === 'like_comment' || type === 'like_note') return <HeartIcon filled className={cls} />
   if (type === 'club_approved' || type === 'club_declined' || type === 'club_join_request' || type === 'club_join_accepted')
     return <ClubsIcon className={cls} />
+  if (type === 'repost') return <RepostIcon className={cls} />
   if (type === 'whisper_comment' || type === 'whisper_reply') return <WhisperIcon className={cls} />
   if (type === 'comment') return <CommentIcon className={cls} />
   if (type === 'reply') return <ReplyIcon className={cls} />
@@ -88,7 +90,7 @@ function hrefFor(n: NotificationItem): string {
     return n.whisper_id ? `/susurros/${n.whisper_id}${n.whisper_comment_id ? `?c=${n.whisper_comment_id}` : ''}` : '/susurros'
   }
   if (!n.post_id) return '/'
-  const focus = n.comment_id && n.type !== 'like_post' && n.type !== 'mention_post' ? `?c=${n.comment_id}` : ''
+  const focus = n.comment_id && n.type !== 'like_post' && n.type !== 'mention_post' && n.type !== 'repost' ? `?c=${n.comment_id}` : ''
   return `/post/${n.post_id}${focus}`
 }
 
@@ -102,7 +104,7 @@ function snippetFor(n: NotificationItem): string | null {
   if (n.type === 'whisper_comment' || n.type === 'whisper_reply' || n.type === 'whisper_comment_mention')
     return n.wcomment?.content ? shorten(n.wcomment.content) : null
   if (n.type === 'whisper_mention') return n.whisper?.content ? shorten(n.whisper.content) : null
-  if (n.type === 'like_post' || n.type === 'mention_post') {
+  if (n.type === 'like_post' || n.type === 'mention_post' || n.type === 'repost') {
     if (!n.post) return null
     if (n.post.content?.trim()) return shorten(stripFormatting(n.post.content))
     return (n.post.images?.length ?? 0) > 0 ? 'Publicación con foto' : null
