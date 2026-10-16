@@ -2,12 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { CheckIcon, CloseIcon, CopyIcon, EditIcon, FlagIcon, MoreIcon, ReplyIcon, SmileIcon, TrashIcon } from '../components/icons'
-import { MAX_MESSAGE_LENGTH, REACTIONS, formatClock, previewText, type DmMessage } from '../lib/dm'
+import DmImage from './DmImage'
+import { MAX_MESSAGE_LENGTH, REACTIONS, formatClock, messageSnippet, type DmMessage } from '../lib/dm'
 
 type MenuProps = {
   anchor: DOMRect
   mine: boolean
   canEdit: boolean
+  canCopy: boolean
   myReaction: string | null
   onClose: () => void
   onReact: (emoji: string) => void
@@ -19,7 +21,7 @@ type MenuProps = {
 }
 
 /** Menú flotante de un mensaje: reacciones arriba y acciones abajo. Se posiciona con la pantalla, no con el scroll del chat. */
-function MessageMenu({ anchor, mine, canEdit, myReaction, onClose, onReact, onReply, onCopy, onEdit, onDelete, onReport }: MenuProps) {
+function MessageMenu({ anchor, mine, canEdit, canCopy, myReaction, onClose, onReact, onReply, onCopy, onEdit, onDelete, onReport }: MenuProps) {
   const ref = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -44,7 +46,7 @@ function MessageMenu({ anchor, mine, canEdit, myReaction, onClose, onReact, onRe
   }, [onClose])
 
   const width = 236
-  const itemCount = 2 + (mine && canEdit ? 2 : 0) + (!mine && onReport ? 1 : 0)
+  const itemCount = (canCopy ? 2 : 1) + (mine && canEdit ? 2 : 0) + (!mine && onReport ? 1 : 0)
   const height = 58 + itemCount * 38
   const left = Math.max(8, Math.min(mine ? anchor.right - width : anchor.left, window.innerWidth - width - 8))
   const above = anchor.top - height - 6
@@ -76,7 +78,7 @@ function MessageMenu({ anchor, mine, canEdit, myReaction, onClose, onReact, onRe
         ))}
       </div>
       <MenuItem icon={<ReplyIcon className="w-4 h-4" />} label="Responder" onClick={() => { onClose(); onReply() }} />
-      <MenuItem icon={<CopyIcon className="w-4 h-4" />} label="Copiar" onClick={() => { onClose(); onCopy() }} />
+      {canCopy && <MenuItem icon={<CopyIcon className="w-4 h-4" />} label="Copiar" onClick={() => { onClose(); onCopy() }} />}
       {!mine && onReport && (
         <MenuItem icon={<FlagIcon className="w-4 h-4" />} label="Reportar" danger onClick={() => { onClose(); onReport() }} />
       )}
@@ -147,6 +149,7 @@ export default function MessageBubble({
   const deleted = !!message.deleted_at
   const failed = message.pending === 'failed'
   const sending = message.pending === 'sending'
+  const hasPhoto = !!message.image_path
   const interactive = !deleted && !message.pending
 
   const [menuAnchor, setMenuAnchor] = useState<DOMRect | null>(null)
@@ -216,7 +219,7 @@ export default function MessageBubble({
                 {message.reply
                   ? message.reply.deleted_at
                     ? 'Mensaje eliminado'
-                    : previewText(message.reply.content, 70)
+                    : messageSnippet(message.reply, 70)
                   : 'Mensaje no disponible'}
               </span>
             </button>
@@ -262,7 +265,7 @@ export default function MessageBubble({
             ) : (
               <div
                 onClick={handleBubbleClick}
-                className={`rounded-2xl px-3.5 py-2 text-[14.5px] leading-snug break-words whitespace-pre-wrap select-text transition ${
+                className={`rounded-2xl ${hasPhoto && !deleted ? 'p-1.5' : 'px-3.5 py-2'} text-[14.5px] leading-snug break-words whitespace-pre-wrap select-text transition ${
                   deleted
                     ? 'border border-ink-700 text-neutral-600 italic bg-transparent'
                     : mine
@@ -270,9 +273,16 @@ export default function MessageBubble({
                       : 'bg-ink-700 text-neutral-100 rounded-bl-md'
                 } ${flash ? 'ring-2 ring-garnet-400' : ''} ${sending ? 'opacity-60' : ''} ${failed ? 'opacity-70 ring-1 ring-garnet-500' : ''}`}
               >
-                {deleted ? (mine ? 'Eliminaste este mensaje' : 'Mensaje eliminado') : message.content}
+                {deleted ? (
+                  mine ? 'Eliminaste este mensaje' : 'Mensaje eliminado'
+                ) : (
+                  <>
+                    {hasPhoto && <DmImage message={message} mine={mine} />}
+                    {message.content && <span className={hasPhoto ? 'block px-2 pt-1.5' : ''}>{message.content}</span>}
+                  </>
+                )}
                 {!deleted && (
-                  <span className={`ml-2 align-bottom text-[10px] ${mine ? 'text-white/70' : 'text-neutral-500'}`}>
+                  <span className={`${hasPhoto ? 'block text-right px-2 pb-0.5 pt-1' : 'ml-2 align-bottom'} text-[10px] ${mine ? 'text-white/70' : 'text-neutral-500'}`}>
                     {message.edited_at ? 'editado · ' : ''}
                     {formatClock(message.created_at)}
                   </span>
@@ -341,7 +351,8 @@ export default function MessageBubble({
         <MessageMenu
           anchor={menuAnchor}
           mine={mine}
-          canEdit={mine}
+          canEdit={mine && !message.image_path}
+          canCopy={!message.image_path || !!message.content.trim()}
           myReaction={myReaction}
           onClose={() => setMenuAnchor(null)}
           onReact={(emoji) => onReact(message, emoji)}

@@ -20,6 +20,7 @@ export const PERMISSION_KEYS = [
   'global_announcements',
   'moderate_whispers',
   'reveal_whisper_authors',
+  'manage_clubs',
 ] as const
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number]
@@ -67,6 +68,12 @@ export const PERMISSION_INFO: Record<PermissionKey, { label: string; level: Perm
     level: 2,
     description:
       'Ve los reportes del Muro, puede ocultar, restaurar o eliminar confesiones y comentarios, y silenciar a su autor por unos días sin saber quién es.',
+  },
+  manage_clubs: {
+    label: 'Aceptar o declinar solicitudes de Clubes y Pandillas',
+    level: 2,
+    description:
+      'Ve las solicitudes para crear la página de un club o pandilla, las acepta o las declina, y puede cerrar un club que rompa las reglas. No le da poder dentro de los clubes.',
   },
   reveal_whisper_authors: {
     label: 'Ver quién escribió un susurro anónimo',

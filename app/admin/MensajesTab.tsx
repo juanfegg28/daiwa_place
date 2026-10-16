@@ -8,8 +8,9 @@ import { hasAny } from '../lib/permissions'
 import { inboxTime } from '../lib/dm'
 import { reasonLabel } from '../lib/whispers'
 import { MessageIcon } from '../components/icons'
+import { DM_IMAGE_BUCKET } from '../lib/dm'
 
-type SnapshotMessage = { id: string; from: 'reporter' | 'reported'; content: string; at: string; flagged?: boolean }
+type SnapshotMessage = { id: string; from: 'reporter' | 'reported'; content: string; at: string; flagged?: boolean; image_path?: string | null }
 
 type DmReportRow = {
   id: string
@@ -45,6 +46,16 @@ export default function MensajesTab() {
   const [busyId, setBusyId] = useState<string | null>(null)
   const [noteFor, setNoteFor] = useState<{ id: string; status: 'resolved' | 'dismissed' } | null>(null)
   const [note, setNote] = useState('')
+
+  // Foto que se autodestruye: el equipo solo puede abrir las que tienen un reporte encima (lo decide la base de datos)
+  const viewPhoto = async (path: string) => {
+    const { data, error } = await supabase.storage.from(DM_IMAGE_BUCKET).createSignedUrl(path, 300)
+    if (error || !data) {
+      setMessage('Esa foto ya no está disponible (se autodestruyó o ya se borró).')
+      return
+    }
+    window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
+  }
 
   const load = useCallback(async () => {
     if (!allowed) {
@@ -194,6 +205,15 @@ export default function MensajesTab() {
                             {m.flagged ? ' · mensaje reportado' : ''}
                           </span>
                           {m.content}
+                          {m.image_path && (
+                            <button
+                              type="button"
+                              onClick={() => viewPhoto(m.image_path as string)}
+                              className="mt-1 block text-[11px] text-garnet-300 hover:text-garnet-200 underline"
+                            >
+                              Ver la foto reportada
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))

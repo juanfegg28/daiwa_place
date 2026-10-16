@@ -9,7 +9,7 @@ import { stripFormatting } from '../lib/hashtags'
 import AppShell, { useAppSession } from '../components/AppShell'
 import { NOTIFICATION_SELECT } from '../lib/queries'
 import type { NotificationItem, NotificationType } from '../lib/types'
-import { AtIcon, BellIcon, CloseIcon, CommentIcon, HeartIcon, ReplyIcon, UsersIcon, WhisperIcon } from '../components/icons'
+import { AtIcon, BellIcon, ClubsIcon, CloseIcon, CommentIcon, HeartIcon, ReplyIcon, UsersIcon, WhisperIcon } from '../components/icons'
 import AnonAvatar from '../susurros/AnonAvatar'
 import { ANON_NAME } from '../lib/whispers'
 
@@ -51,13 +51,22 @@ const ACTION_TEXT: Record<NotificationType, string> = {
   mention_comment: 'te etiquetó en un comentario',
   whisper_mention: 'te etiquetó en una confesión del Muro',
   whisper_comment_mention: 'te etiquetó en un comentario del Muro',
+  club_approved: 'aprobó tu solicitud. ¡Ya puedes crear la página de tu club o pandilla!',
+  club_declined: 'declinó tu solicitud para crear la página de un club o pandilla',
+  club_join_request: 'quiere unirse a tu club',
+  club_join_accepted: 'te aceptó en su club',
 }
+
+/** Los avisos de aprobar o declinar un club vienen del equipo, no de una persona en concreto */
+const isTeamNotice = (t: NotificationType) => t === 'club_approved' || t === 'club_declined'
 
 function TypeIcon({ type }: { type: NotificationType }) {
   const cls = 'w-3 h-3'
   if (type === 'mention_post' || type === 'mention_comment' || type === 'whisper_mention' || type === 'whisper_comment_mention')
     return <AtIcon className={cls} />
   if (type === 'like_post' || type === 'like_comment' || type === 'like_note') return <HeartIcon filled className={cls} />
+  if (type === 'club_approved' || type === 'club_declined' || type === 'club_join_request' || type === 'club_join_accepted')
+    return <ClubsIcon className={cls} />
   if (type === 'whisper_comment' || type === 'whisper_reply') return <WhisperIcon className={cls} />
   if (type === 'comment') return <CommentIcon className={cls} />
   if (type === 'reply') return <ReplyIcon className={cls} />
@@ -65,6 +74,9 @@ function TypeIcon({ type }: { type: NotificationType }) {
 }
 
 function hrefFor(n: NotificationItem): string {
+  if (n.type === 'club_approved') return n.club_request_id ? `/clubes/configurar/${n.club_request_id}` : '/clubes'
+  if (n.type === 'club_declined') return '/clubes'
+  if (n.type === 'club_join_request' || n.type === 'club_join_accepted') return n.club?.slug ? `/clubes/${n.club.slug}` : '/clubes'
   if (n.type === 'follow') return n.actor ? `/perfil/${n.actor.username}` : '/'
   if (n.type === 'like_note') return '/mensajes'
   if (
@@ -81,6 +93,10 @@ function hrefFor(n: NotificationItem): string {
 }
 
 function snippetFor(n: NotificationItem): string | null {
+  if (n.type === 'club_approved') return n.club_request?.club_name ? `«${n.club_request.club_name}» · Toca para configurarlo` : 'Toca para configurarlo'
+  if (n.type === 'club_declined')
+    return n.club_request?.decline_reason ? `«${n.club_request.club_name}»: ${shorten(n.club_request.decline_reason)}` : n.club_request?.club_name ? `«${n.club_request.club_name}»` : null
+  if (n.type === 'club_join_request' || n.type === 'club_join_accepted') return n.club?.name ?? null
   if (n.type === 'follow') return null
   if (n.type === 'like_note') return n.note?.content ? shorten(n.note.content) : null
   if (n.type === 'whisper_comment' || n.type === 'whisper_reply' || n.type === 'whisper_comment_mention')
@@ -312,7 +328,8 @@ function NotificacionesContent() {
             const unread = g.items.some((x) => !x.read)
             // En el Muro, si el comentario es anónimo no se muestra a nadie (ni foto ni @usuario)
             const anon = !!n.anonymous
-            const actorName = anon ? ANON_NAME : many ? actorLabel(g) : n.actor?.id_student || n.actor?.username || 'Alguien'
+            const team = isTeamNotice(n.type)
+            const actorName = anon ? ANON_NAME : team ? 'El equipo de DaiwaPlace' : many ? actorLabel(g) : n.actor?.id_student || n.actor?.username || 'Alguien'
             const snippet = snippetFor(n)
             return (
               <li key={g.key} className="relative group">
@@ -328,6 +345,10 @@ function NotificacionesContent() {
                   <div className="relative shrink-0">
                     {anon ? (
                       <AnonAvatar size="w-10 h-10" />
+                    ) : team ? (
+                      <div className="relative w-10 h-10 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center text-garnet-300">
+                        <ClubsIcon filled className="w-5 h-5" />
+                      </div>
                     ) : (
                       <div className="relative w-10 h-10 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center">
                         {n.actor?.avatar_url ? (
@@ -347,7 +368,7 @@ function NotificacionesContent() {
                   <div className="min-w-0 flex-1 leading-snug">
                     <p className="text-sm text-neutral-200">
                       <span className="font-bold text-neutral-50">{actorName}</span>{' '}
-                      {!anon && !many && n.actor && <span className="text-neutral-600 text-xs">@{n.actor.username} </span>}
+                      {!anon && !team && !many && n.actor && <span className="text-neutral-600 text-xs">@{n.actor.username} </span>}
                       {many ? (PLURAL_ACTION[n.type] ?? ACTION_TEXT[n.type]) : ACTION_TEXT[n.type]}
                     </p>
                     {snippet && (

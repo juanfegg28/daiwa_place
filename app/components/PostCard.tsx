@@ -19,6 +19,7 @@ import {
   SnowflakeIcon,
   FlagIcon,
   PinIcon,
+  CloseIcon,
 } from './icons'
 import KebabMenu, { type MenuItem } from './KebabMenu'
 import ConfirmDialog from './ConfirmDialog'
@@ -32,6 +33,7 @@ import MusicChip from './MusicChip'
 import MusicField from './MusicField'
 import ImageLightbox from './ImageLightbox'
 import RoleBadges from './RoleBadge'
+import ClubTags from './ClubTag'
 
 type PostCardProps = {
   post: Post
@@ -130,6 +132,15 @@ function countDescendants(id: string, map: Map<string, Comment[]>): number {
 
 type ThreadContextValue = {
   childrenByParent: Map<string, Comment[]>
+  /** Todos los comentarios por id: sirve para saber a QUIÉN le responde cada respuesta */
+  commentsById: Map<string, Comment>
+  /** Quién escribió la publicación (sus comentarios llevan la etiqueta «Autor») */
+  postAuthorId: string
+  /** Comentario que se resalta porque el cursor está sobre «respondiendo a ...» */
+  hoverId: string | null
+  setHoverId: (id: string | null) => void
+  /** Baja hasta un comentario y lo resalta un momento */
+  jumpToComment: (id: string) => void
   currentUserId: string | null
   interactionsDisabled: boolean
   onToggleCommentLike: (commentId: string, alreadyLiked: boolean) => void
@@ -164,7 +175,11 @@ function CommentThread({ comment, depth }: { comment: Comment; depth: number }) 
   const descendants = countDescendants(comment.id, t.childrenByParent)
   const isReplyingHere = t.replyingTo === comment.id
   const isMine = !!t.currentUserId && comment.user_id === t.currentUserId
+  const isPostAuthor = comment.user_id === t.postAuthorId
   const likedByMe = t.currentUserId ? comment.comment_likes.some((l) => l.user_id === t.currentUserId) : false
+  // A quién le está respondiendo este comentario (si es una respuesta)
+  const parent = comment.parent_comment_id ? t.commentsById.get(comment.parent_comment_id) ?? null : null
+  const parentName = parent?.profiles?.username ?? null
 
   const [collapsed, setCollapsed] = useState(descendants > COLLAPSE_THRESHOLD && !t.focusPath.has(comment.id))
   const [editing, setEditing] = useState(false)
@@ -222,13 +237,20 @@ function CommentThread({ comment, depth }: { comment: Comment; depth: number }) 
       ]
     : []
 
+  // Resaltado: llegada desde una notificación, el comentario al que se le está respondiendo,
+  // o el comentario "padre" mientras el cursor está sobre «respondiendo a ...»
+  const emphasized = t.highlightId === comment.id || t.hoverId === comment.id
+  const beingRepliedTo = isReplyingHere
+
+  const displayName = commentAuthor?.id_student?.trim() || commentAuthor?.username || 'Estudiante'
+
   return (
     <div id={`comment-${comment.id}`}>
       <div className="flex items-start gap-2">
         <MiniAvatar
           username={commentAuthor?.username ?? 'usuario'}
           avatarUrl={commentAuthor?.avatar_url ?? null}
-          size={depth > 0 ? 'w-6 h-6' : 'w-7 h-7'}
+          size={depth > 0 ? 'w-7 h-7' : 'w-8 h-8'}
         />
         <div className="flex-1 min-w-0">
           {editing ? (
@@ -263,40 +285,74 @@ function CommentThread({ comment, depth }: { comment: Comment; depth: number }) 
               </div>
             </div>
           ) : (
-            <div className="flex items-start gap-1">
-              <div
-                className={`min-w-0 rounded-2xl rounded-tl-sm bg-ink-700 px-3 py-2 transition ${
-                  t.highlightId === comment.id ? 'ring-2 ring-garnet-500/70' : ''
-                }`}
-              >
-                {commentAuthor ? (
-                  <Link
-                    href={`/perfil/${commentAuthor.username}`}
-                    className="text-xs font-semibold text-garnet-400 hover:underline"
-                  >
-                    @{commentAuthor.username}
-                  </Link>
-                ) : (
-                  <span className="text-xs font-semibold text-garnet-400">@usuario</span>
+            <div
+              className={`rounded-2xl rounded-tl-md bg-ink-700 px-3 py-2 transition-shadow duration-200 ${
+                emphasized ? 'ring-2 ring-garnet-500/70' : beingRepliedTo ? 'ring-2 ring-garnet-500/50' : ''
+              }`}
+            >
+              {/* Encabezado: nombre del personaje, @usuario, «Autor» y el menú ⋯ */}
+              <div className="flex items-start justify-between gap-1">
+                <div className="min-w-0 leading-tight">
+                  {commentAuthor ? (
+                    <Link href={`/perfil/${commentAuthor.username}`} className="group/name inline-flex items-baseline gap-1.5 max-w-full">
+                      <span className="text-[13px] font-bold text-neutral-50 group-hover/name:text-garnet-400 truncate">{displayName}</span>
+                      <span className="text-[11px] text-neutral-500 truncate">@{commentAuthor.username}</span>
+                    </Link>
+                  ) : (
+                    <span className="text-[13px] font-bold text-neutral-50">Estudiante</span>
+                  )}
+                  {isPostAuthor && (
+                    <span
+                      title="Escribió esta publicación"
+                      className="ml-1.5 align-middle rounded-md bg-garnet-600/20 border border-garnet-500/40 text-garnet-300 text-[9.5px] font-semibold px-1.5 py-[1px] uppercase tracking-wide"
+                    >
+                      Autor
+                    </span>
+                  )}
+                </div>
+                {menuItems.length > 0 && (
+                  <div className="-mt-1 -mr-1.5 shrink-0">
+                    <KebabMenu items={menuItems} label="Opciones del comentario" small />
+                  </div>
                 )}
-                <p className="text-sm text-neutral-100 break-words whitespace-pre-wrap">{renderRichText(comment.content, { hashtags: false })}</p>
               </div>
-              <KebabMenu items={menuItems} label="Opciones del comentario" small />
+
+              {/* ¿A QUIÉN le responde? Se ve clarísimo y al tocarlo te lleva al comentario original */}
+              {comment.parent_comment_id && (
+                <button
+                  type="button"
+                  onClick={() => t.jumpToComment(comment.parent_comment_id as string)}
+                  onMouseEnter={() => t.setHoverId(comment.parent_comment_id)}
+                  onMouseLeave={() => t.setHoverId(null)}
+                  onFocus={() => t.setHoverId(comment.parent_comment_id)}
+                  onBlur={() => t.setHoverId(null)}
+                  title={parent ? `Ir al comentario: «${parent.content.replace(/\s+/g, ' ').slice(0, 120)}»` : 'Ir al comentario original'}
+                  className="mt-1 mb-0.5 max-w-full inline-flex items-center gap-1.5 rounded-lg bg-ink-900/60 hover:bg-ink-900 border border-ink-600/70 px-2 py-1 text-left transition"
+                >
+                  <ReplyIcon className="w-3 h-3 shrink-0 text-garnet-400" />
+                  <span className="text-[11px] text-neutral-400 shrink-0">En respuesta a</span>
+                  <span className="text-[11px] font-semibold text-garnet-400 truncate">@{parentName ?? 'comentario eliminado'}</span>
+                </button>
+              )}
+
+              <p className="text-sm text-neutral-100 break-words whitespace-pre-wrap leading-relaxed mt-0.5">
+                {renderRichText(comment.content, { hashtags: false })}
+              </p>
             </div>
           )}
 
           {error && <p className="text-xs text-garnet-400 mt-1 ml-1">{error}</p>}
 
           {!editing && (
-            <div className="flex items-center gap-3 mt-1 ml-1">
+            <div className="flex items-center gap-4 mt-1 ml-1">
               <button
                 onClick={() => t.onToggleCommentLike(comment.id, likedByMe)}
                 disabled={t.interactionsDisabled}
-                className={`flex items-center gap-1 text-[11px] transition disabled:opacity-40 ${
-                  likedByMe ? 'text-garnet-500' : 'text-neutral-600 hover:text-garnet-400'
+                className={`flex items-center gap-1 text-[11.5px] transition disabled:opacity-40 ${
+                  likedByMe ? 'text-garnet-500' : 'text-neutral-500 hover:text-garnet-400'
                 }`}
               >
-                <HeartIcon filled={likedByMe} className="w-3 h-3" />
+                <HeartIcon filled={likedByMe} className="w-3.5 h-3.5" />
                 {comment.comment_likes.length}
               </button>
               {t.currentUserId && !t.interactionsDisabled && (
@@ -306,13 +362,15 @@ function CommentThread({ comment, depth }: { comment: Comment; depth: number }) 
                     t.setReplyText('')
                     setCollapsed(false)
                   }}
-                  className="flex items-center gap-1 text-[11px] text-neutral-600 hover:text-garnet-400 transition"
+                  className={`flex items-center gap-1 text-[11.5px] font-medium transition ${
+                    isReplyingHere ? 'text-garnet-400' : 'text-neutral-500 hover:text-garnet-400'
+                  }`}
                 >
-                  <ReplyIcon className="w-3 h-3" />
+                  <ReplyIcon className="w-3.5 h-3.5" />
                   {isReplyingHere ? 'Cancelar' : 'Responder'}
                 </button>
               )}
-              <span className="text-[10px] text-neutral-600" title={fullDate(comment.created_at)}>
+              <span className="text-[10.5px] text-neutral-600" title={fullDate(comment.created_at)}>
                 {timeAgo(comment.created_at)}
                 {comment.edited_at ? ' · editado' : ''}
               </span>
@@ -320,26 +378,43 @@ function CommentThread({ comment, depth }: { comment: Comment; depth: number }) 
           )}
 
           {isReplyingHere && (
-            <div className="flex items-center gap-2 mt-2">
-              <MentionField
-                autoFocus
-                value={t.replyText}
-                onValueChange={t.setReplyText}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') t.submitReply(comment.id)
-                }}
-                placeholder={`Responder a @${commentAuthor?.username ?? 'usuario'}...`}
-                wrapperClassName="flex-1 min-w-0"
-                className="w-full bg-ink-900 border border-ink-700 rounded-full px-3.5 py-1.5 text-xs focus:outline-none focus:border-garnet-600"
-              />
-              <button
-                onClick={() => t.submitReply(comment.id)}
-                disabled={t.sendingReply}
-                className="w-7 h-7 shrink-0 rounded-full bg-garnet-600 hover:bg-garnet-500 text-white flex items-center justify-center transition disabled:opacity-60"
-                aria-label="Enviar respuesta"
-              >
-                <SendIcon className="w-3.5 h-3.5" />
-              </button>
+            <div className="mt-2 rounded-xl border border-garnet-600/40 bg-garnet-600/[0.08] p-2">
+              <p className="flex items-center gap-1.5 text-[11.5px] text-neutral-300 min-w-0">
+                <ReplyIcon className="w-3.5 h-3.5 shrink-0 text-garnet-400" />
+                <span className="shrink-0">Respondiendo a</span>
+                <span className="font-semibold text-garnet-300 shrink-0">@{commentAuthor?.username ?? 'usuario'}</span>
+                <span className="truncate text-neutral-500">«{comment.content.replace(/\s+/g, ' ').slice(0, 60)}»</span>
+              </p>
+              <div className="flex items-center gap-2 mt-1.5">
+                <MentionField
+                  autoFocus
+                  value={t.replyText}
+                  onValueChange={t.setReplyText}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') t.submitReply(comment.id)
+                    if (e.key === 'Escape') t.setReplyingTo(null)
+                  }}
+                  placeholder={`Tu respuesta para @${commentAuthor?.username ?? 'usuario'}...`}
+                  wrapperClassName="flex-1 min-w-0"
+                  className="w-full bg-ink-900 border border-ink-700 rounded-full px-3.5 py-1.5 text-[13px] focus:outline-none focus:border-garnet-600"
+                />
+                <button
+                  onClick={() => t.submitReply(comment.id)}
+                  disabled={t.sendingReply}
+                  className="w-8 h-8 shrink-0 rounded-full bg-garnet-600 hover:bg-garnet-500 text-white flex items-center justify-center transition disabled:opacity-60"
+                  aria-label="Enviar respuesta"
+                >
+                  <SendIcon className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => t.setReplyingTo(null)}
+                  className="w-8 h-8 shrink-0 rounded-full text-neutral-400 hover:text-neutral-100 hover:bg-ink-700 flex items-center justify-center transition"
+                  aria-label="Cancelar respuesta"
+                >
+                  <CloseIcon className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           )}
 
@@ -347,7 +422,7 @@ function CommentThread({ comment, depth }: { comment: Comment; depth: number }) 
             <button
               type="button"
               onClick={() => setCollapsed((v) => !v)}
-              className="mt-1.5 ml-1 text-[11px] font-medium text-garnet-400 hover:underline"
+              className="mt-1.5 ml-1 text-[11.5px] font-medium text-garnet-400 hover:underline"
             >
               {collapsed
                 ? `Ver ${descendants} ${descendants === 1 ? 'respuesta' : 'respuestas'}`
@@ -358,14 +433,24 @@ function CommentThread({ comment, depth }: { comment: Comment; depth: number }) 
       </div>
 
       {children.length > 0 && !collapsed && (
-        <div
-          className={`mt-2 space-y-2 ${
-            depth < MAX_INDENT_LEVEL ? 'ml-3 pl-3 border-l border-ink-600' : ''
-          }`}
-        >
-          {children.map((child) => (
-            <CommentThread key={child.id} comment={child} depth={depth + 1} />
-          ))}
+        <div className={`mt-2 flex ${depth < MAX_INDENT_LEVEL ? 'ml-3.5' : ''}`}>
+          {depth < MAX_INDENT_LEVEL && (
+            // Línea del hilo, como en Reddit: al tocarla se pliegan las respuestas
+            <button
+              type="button"
+              onClick={() => setCollapsed(true)}
+              aria-label="Ocultar respuestas"
+              title="Ocultar respuestas"
+              className="group/rail shrink-0 w-4 flex justify-center cursor-pointer"
+            >
+              <span className="w-[2px] h-full rounded-full bg-ink-600 group-hover/rail:bg-garnet-500 transition-colors" />
+            </button>
+          )}
+          <div className="min-w-0 flex-1 space-y-2.5">
+            {children.map((child) => (
+              <CommentThread key={child.id} comment={child} depth={depth + 1} />
+            ))}
+          </div>
         </div>
       )}
 
@@ -428,8 +513,18 @@ export default function PostCard({
   const [lightbox, setLightbox] = useState<number | null>(null)
   const closeLightbox = useCallback(() => setLightbox(null), [])
   const [highlightId, setHighlightId] = useState<string | null>(null)
+  const [hoverId, setHoverId] = useState<string | null>(null)
 
   const router = useRouter()
+
+  // Baja hasta un comentario (por ejemplo el original al que responde una respuesta) y lo resalta unos segundos
+  const jumpToComment = useCallback((id: string) => {
+    const el = document.getElementById(`comment-${id}`)
+    if (!el) return
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    setHighlightId(id)
+    window.setTimeout(() => setHighlightId((cur) => (cur === id ? null : cur)), 1800)
+  }, [])
 
   // Llegada desde una notificación: baja hasta el comentario y lo resalta unos segundos
   useEffect(() => {
@@ -457,6 +552,7 @@ export default function PostCard({
 
   // Árbol de comentarios: principales vs. respuestas agrupadas por su padre
   const childrenByParent = new Map<string, Comment[]>()
+  const commentsById = new Map<string, Comment>(post.comments.map((c) => [c.id, c]))
   const rootComments: Comment[] = []
   const sortedByTime = [...post.comments].sort(
     (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
@@ -674,6 +770,7 @@ export default function PostCard({
           size="xs"
           founderStyle="icon"
         />
+        <ClubTags memberships={author.club_members} size="xs" />
       </div>
       {onProfilePage ? (
         <span className="block text-xs text-neutral-600 truncate">@{author.username}</span>
@@ -851,6 +948,11 @@ export default function PostCard({
         <ThreadContext.Provider
           value={{
             childrenByParent,
+            commentsById,
+            postAuthorId: post.user_id,
+            hoverId,
+            setHoverId,
+            jumpToComment,
             currentUserId,
             interactionsDisabled,
             onToggleCommentLike,
@@ -896,7 +998,11 @@ export default function PostCard({
             )}
 
             {interactionsDisabled ? null : currentUserId ? (
-              <div className="flex items-center gap-2 pt-1">
+              <div className="pt-1">
+                <p className="text-[11px] text-neutral-500 mb-1 ml-1">
+                  {replyingTo ? 'Estás respondiendo a un comentario (arriba). Esta caja es para comentar la publicación:' : 'Comenta la publicación'}
+                </p>
+                <div className="flex items-center gap-2">
                 <MentionField
                   value={commentText}
                   onValueChange={setCommentText}
@@ -915,6 +1021,7 @@ export default function PostCard({
                 >
                   <SendIcon className="w-4 h-4" />
                 </button>
+                </div>
               </div>
             ) : (
               <Link href="/login" className="text-xs text-neutral-400 underline">

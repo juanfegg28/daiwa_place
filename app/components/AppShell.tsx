@@ -21,6 +21,9 @@ import {
   WrenchIcon,
   LogoutIcon,
   LoginIcon,
+  MenuIcon,
+  ClubsIcon,
+  CloseIcon,
   type IconProps,
 } from './icons'
 
@@ -90,6 +93,8 @@ type NavItem = {
   match: (pathname: string) => boolean
   /** Numerito rojo (ej. notificaciones sin leer). 0 o undefined = no se muestra */
   badge?: number
+  /** Entrada destacada del menú (Clubes y Pandillas): un poco más grande y con color propio */
+  featured?: boolean
 }
 
 function formatBadge(n: number) {
@@ -121,6 +126,31 @@ function MaintenanceScreen({ onLogout }: { onLogout: () => void }) {
   )
 }
 
+/** Burbuja roja con número. Hace un «pop» cada vez que el número SUBE (llegó algo nuevo). */
+function CountBubble({ count, className = '' }: { count: number; className?: string }) {
+  const prev = useRef(count)
+  const [pop, setPop] = useState(0)
+  useEffect(() => {
+    if (count > prev.current) {
+      function bump() {
+        setPop((v) => v + 1)
+      }
+      bump()
+    }
+    prev.current = count
+  }, [count])
+  if (count <= 0) return null
+  return (
+    <span
+      key={pop}
+      aria-label={`${count} sin leer`}
+      className={`${pop > 0 ? 'badge-pop' : ''} min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10.5px] font-bold leading-none flex items-center justify-center shadow-[0_0_0_2px_var(--color-ink-950)] ${className}`}
+    >
+      {formatBadge(count)}
+    </span>
+  )
+}
+
 export default function AppShell({
   children,
   hideMobileChrome = false,
@@ -144,6 +174,7 @@ export default function AppShell({
   const [dmVersion, setDmVersion] = useState(0)
   const [showOnline, setShowOnline] = useState(true)
   const [showReadReceipts, setShowReadReceipts] = useState(true)
+  const [drawerOpen, setDrawerOpen] = useState(false)
   const [onlineIds, setOnlineIds] = useState<Set<string>>(new Set())
   const presenceRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
   const pathname = usePathname()
@@ -364,6 +395,7 @@ export default function AppShell({
   const isSupreme = isSupremeAdmin(username)
   const canSeeAdmin = isSupreme || hasAnyRole
 
+  // Entradas principales del menú (los Avisos y los Mensajes van aparte, más destacados)
   const navItems: NavItem[] = [
     { href: '/', label: 'Inicio', icon: HomeIcon, match: (p) => p === '/' },
     ...(username
@@ -382,19 +414,11 @@ export default function AppShell({
             match: (p: string) => p === '/explorar',
           },
           {
-            href: '/notificaciones',
-            label: 'Notificaciones',
-            shortLabel: 'Avisos',
-            icon: BellIcon,
-            match: (p: string) => p === '/notificaciones',
-            badge: unreadCount,
-          },
-          {
-            href: '/mensajes',
-            label: 'Mensajes',
-            icon: MessageIcon,
-            match: (p: string) => p.startsWith('/mensajes'),
-            badge: unreadMessages,
+            href: '/clubes',
+            label: 'Clubes y Pandillas',
+            icon: ClubsIcon,
+            match: (p: string) => p.startsWith('/clubes'),
+            featured: true,
           },
           {
             href: '/susurros',
@@ -417,9 +441,101 @@ export default function AppShell({
       : []),
   ]
 
+  const quickItems: NavItem[] = username
+    ? [
+        {
+          href: '/notificaciones',
+          label: 'Notificaciones',
+          shortLabel: 'Avisos',
+          icon: BellIcon,
+          match: (p: string) => p === '/notificaciones',
+          badge: unreadCount,
+        },
+        {
+          href: '/mensajes',
+          label: 'Mensajes',
+          icon: MessageIcon,
+          match: (p: string) => p.startsWith('/mensajes'),
+          badge: unreadMessages,
+        },
+      ]
+    : []
+
+  // Lo que ve el numerito de las 3 rayitas: avisos + chats sin leer
+  const menuBadge = userId ? unreadCount + unreadMessages : 0
+
+  // El panel lateral se cierra solo al cambiar de página, con Escape, y no deja mover el fondo mientras está abierto
+  useEffect(() => {
+    function close() {
+      setDrawerOpen(false)
+    }
+    close()
+  }, [pathname])
+
+  useEffect(() => {
+    if (!drawerOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDrawerOpen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prevOverflow
+    }
+  }, [drawerOpen])
+
+  // Deslizar el panel hacia la izquierda lo cierra
+  const swipeStart = useRef<{ x: number; y: number } | null>(null)
+
   // El mantenimiento solo bloquea a estudiantes normales (sin ningún rol ni Admin Supremo)
   if (!loading && userId && maintenanceOn && !canSeeAdmin) {
     return <MaintenanceScreen onLogout={handleLogout} />
+  }
+
+  const displayLabel = idStudent || username
+
+  const renderNavLink = (item: NavItem, variant: 'desktop' | 'drawer') => {
+    const active = item.match(pathname)
+    const Icon = item.icon
+    const size = variant === 'drawer' ? 'py-3 text-[15px]' : 'py-2.5 text-sm'
+    if (item.featured) {
+      return (
+        <Link
+          key={item.href}
+          href={item.href}
+          className={`group relative flex items-center gap-3 px-3 ${variant === 'drawer' ? 'py-3.5 text-[15.5px]' : 'py-3 text-[15px]'} rounded-xl font-semibold transition border ${
+            active
+              ? 'bg-garnet-600/90 text-white border-garnet-400/40 shadow-[0_8px_24px_-8px] shadow-garnet-600/70'
+              : 'text-neutral-50 border-garnet-500/30 bg-gradient-to-r from-garnet-600/20 via-garnet-600/10 to-transparent hover:from-garnet-600/30'
+          }`}
+        >
+          <span
+            className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+              active ? 'bg-white/20 text-white' : 'bg-garnet-600/25 text-garnet-300'
+            }`}
+          >
+            <Icon filled className="w-[18px] h-[18px]" />
+          </span>
+          {item.label}
+        </Link>
+      )
+    }
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        className={`flex items-center gap-3 px-3 ${size} rounded-xl transition ${
+          active
+            ? 'bg-garnet-600/90 text-white shadow-[0_8px_24px_-8px] shadow-garnet-600/70'
+            : 'text-neutral-300 hover:bg-ink-800'
+        }`}
+      >
+        <Icon filled={active} className="w-5 h-5" />
+        {item.label}
+      </Link>
+    )
   }
 
   return (
@@ -448,46 +564,45 @@ export default function AppShell({
     >
       <div className="min-h-screen bg-ink-950 text-neutral-100 md:flex">
         {/* Sidebar de escritorio */}
-        <aside className="hidden md:flex md:flex-col md:w-64 lg:w-72 md:shrink-0 md:h-screen md:sticky md:top-0 border-r border-ink-800 bg-ink-900/60 px-4 py-6">
-          <Link href="/" className="px-2 mb-8 inline-block">
+        <aside className="hidden md:flex md:flex-col md:w-64 lg:w-72 md:shrink-0 md:h-screen md:sticky md:top-0 border-r border-ink-800 bg-ink-900/60 px-4 py-6 overflow-y-auto">
+          <Link href="/" className="px-2 mb-6 inline-block">
             <Logo size="md" />
           </Link>
 
-          <nav className="flex-1 space-y-1">
-            {navItems.map((item) => {
-              const active = item.match(pathname)
-              const Icon = item.icon
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition ${
-                    active
-                      ? 'bg-garnet-600/90 text-white shadow-[0_8px_24px_-8px] shadow-garnet-600/70'
-                      : 'text-neutral-300 hover:bg-ink-800'
-                  }`}
-                >
-                  <Icon filled={active} className="w-5 h-5" />
-                  {item.label}
-                  {!!item.badge && item.badge > 0 && (
-                    <span
-                      className={`ml-auto min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-semibold flex items-center justify-center ${
-                        active ? 'bg-white text-garnet-600' : 'bg-garnet-600 text-white'
-                      }`}
-                    >
-                      {formatBadge(item.badge)}
+          {/* Avisos y Mensajes: aparte de las demás opciones, más grandes y con su numerito */}
+          {quickItems.length > 0 && (
+            <div className="mb-5 grid grid-cols-2 gap-2 pb-5 border-b border-ink-800">
+              {quickItems.map((item) => {
+                const active = item.match(pathname)
+                const Icon = item.icon
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    aria-label={item.label}
+                    className={`relative flex flex-col items-center justify-center gap-1.5 rounded-2xl py-3.5 transition border ${
+                      active
+                        ? 'bg-garnet-600/90 text-white border-garnet-400/40 shadow-[0_8px_24px_-8px] shadow-garnet-600/70'
+                        : 'bg-ink-800 border-ink-700 text-neutral-200 hover:bg-ink-700'
+                    }`}
+                  >
+                    <span className="relative">
+                      <Icon filled={active} className="w-6 h-6" />
+                      {!!item.badge && item.badge > 0 && <CountBubble count={item.badge} className="absolute -top-2 -right-3" />}
                     </span>
-                  )}
-                </Link>
-              )
-            })}
+                    <span className="text-[11.5px] font-medium">{item.shortLabel ?? item.label}</span>
+                  </Link>
+                )
+              })}
+            </div>
+          )}
 
-          </nav>
+          <nav className="flex-1 space-y-1">{navItems.map((item) => renderNavLink(item, 'desktop'))}</nav>
 
           {username && (
             <Link
               href="/configuracion"
-              className={`mb-1 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition ${
+              className={`mb-1 mt-3 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition ${
                 pathname === '/configuracion'
                   ? 'bg-ink-800 text-neutral-100'
                   : 'text-neutral-300 hover:bg-ink-800'
@@ -527,7 +642,7 @@ export default function AppShell({
                   </div>
                   <div className="min-w-0 flex-1 leading-tight">
                     <p className="text-sm font-bold text-neutral-100 truncate group-hover:text-garnet-400 transition">
-                      {idStudent || username}
+                      {displayLabel}
                     </p>
                     <p className="text-xs text-neutral-600 truncate">@{username}</p>
                   </div>
@@ -552,73 +667,164 @@ export default function AppShell({
           </div>
         </aside>
 
-        {/* Barra superior movil */}
-        <header className={`${hideMobileChrome ? 'hidden' : 'md:hidden'} sticky top-0 z-30 flex items-center justify-center border-b border-ink-800 bg-ink-950/75 backdrop-blur-xl px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top,0px))]`}>
-          <Logo size="sm" />
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
-            {username && (
-              <Link
-                href="/configuracion"
-                aria-label="Configuración"
-                className="p-1.5 rounded-full text-neutral-500 hover:text-garnet-400 hover:bg-ink-800 transition"
-              >
-                <SettingsIcon className="w-[18px] h-[18px]" />
-              </Link>
-            )}
-            <Link
-              href="/novedades"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-[11px] text-neutral-500 hover:text-garnet-400 transition px-1.5"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-garnet-500" />v{APP_VERSION}
+        {/* Barra superior móvil: las 3 rayitas (con la burbuja roja), el logo y listo. Ya no hay barra de abajo. */}
+        <header className={`${hideMobileChrome ? 'hidden' : 'md:hidden'} sticky top-0 z-30 flex items-center justify-between border-b border-ink-800 bg-ink-950/75 backdrop-blur-xl px-3 pb-2.5 pt-[calc(0.625rem+env(safe-area-inset-top,0px))]`}>
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            aria-label={menuBadge > 0 ? `Abrir menú (${menuBadge} sin leer)` : 'Abrir menú'}
+            aria-expanded={drawerOpen}
+            className="press relative w-10 h-10 rounded-full flex items-center justify-center text-neutral-200 hover:bg-ink-800 active:bg-ink-800 transition"
+          >
+            <MenuIcon className="w-6 h-6" />
+            <CountBubble count={menuBadge} className="absolute top-0.5 right-0" />
+          </button>
+          <Link href="/" aria-label="Inicio">
+            <Logo size="sm" />
+          </Link>
+          {/* Espacio del mismo ancho que el botón de la izquierda para que el logo quede centrado */}
+          {!loading && !userId ? (
+            <Link href="/login" className="text-xs font-medium text-garnet-400 px-2 w-10 text-right">
+              Entrar
             </Link>
-          </div>
+          ) : (
+            <span className="w-10" aria-hidden="true" />
+          )}
         </header>
 
-        <main className={`flex-1 min-w-0 md:pb-0 ${hideMobileChrome ? 'pb-0' : 'pb-[calc(5rem+env(safe-area-inset-bottom,0px))]'}`}>{children}</main>
+        <main className="flex-1 min-w-0 pb-[env(safe-area-inset-bottom,0px)] md:pb-0">{children}</main>
 
-        {/* Barra inferior movil */}
-        <nav className={`${hideMobileChrome ? 'hidden' : 'md:hidden'} fixed bottom-0 inset-x-0 z-30 border-t border-ink-800/80 bg-ink-900/75 backdrop-blur-xl px-1 pb-[env(safe-area-inset-bottom,0px)] overflow-hidden`}>
-          <div className="flex items-center py-2">
-            {navItems.map((item) => {
-              const active = item.match(pathname)
-              const Icon = item.icon
-              return (
+        {/* Panel lateral del celular (off-canvas) */}
+        <div
+          className={`md:hidden fixed inset-0 z-50 ${drawerOpen ? '' : 'pointer-events-none'}`}
+          aria-hidden={!drawerOpen}
+        >
+          <div
+            onClick={() => setDrawerOpen(false)}
+            className={`absolute inset-0 bg-black/65 backdrop-blur-[2px] transition-opacity duration-300 ${drawerOpen ? 'opacity-100' : 'opacity-0'}`}
+          />
+          <aside
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menú de navegación"
+            onTouchStart={(e) => {
+              swipeStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+            }}
+            onTouchEnd={(e) => {
+              const start = swipeStart.current
+              swipeStart.current = null
+              if (!start) return
+              const dx = e.changedTouches[0].clientX - start.x
+              const dy = Math.abs(e.changedTouches[0].clientY - start.y)
+              if (dx < -60 && dy < 50) setDrawerOpen(false)
+            }}
+            className={`absolute inset-y-0 left-0 w-[84vw] max-w-[22rem] flex flex-col bg-ink-900 border-r border-ink-800 shadow-[0_0_60px_rgba(0,0,0,0.7)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] pt-[env(safe-area-inset-top,0px)] pb-[env(safe-area-inset-bottom,0px)] ${
+              drawerOpen ? 'translate-x-0' : '-translate-x-full'
+            }`}
+          >
+            <div className="flex items-center justify-between px-4 pt-4 pb-3">
+              <Link href="/" onClick={() => setDrawerOpen(false)}>
+                <Logo size="sm" />
+              </Link>
+              <button
+                type="button"
+                onClick={() => setDrawerOpen(false)}
+                aria-label="Cerrar menú"
+                className="w-9 h-9 rounded-full flex items-center justify-center text-neutral-400 hover:text-neutral-100 hover:bg-ink-800 transition"
+              >
+                <CloseIcon className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-3 pb-3">
+              {userId && (
                 <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`press flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1 text-[10px] min-[360px]:text-[10.5px] font-medium transition-colors duration-200 active:scale-95 active:opacity-80 ${
-                    active ? 'text-garnet-400' : 'text-neutral-500'
+                  href={`/perfil/${username}`}
+                  className="flex items-center gap-3 px-2 py-2.5 mb-3 rounded-2xl bg-ink-800 hover:bg-ink-700 transition"
+                >
+                  <div className="relative w-11 h-11 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center shrink-0">
+                    {avatarUrl ? (
+                      <AvatarPhoto src={avatarUrl} username={username ?? '?'} sizes="48px" />
+                    ) : (
+                      <span className="text-base font-semibold text-garnet-400">{(username ?? '?').charAt(0).toUpperCase()}</span>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1 leading-tight">
+                    <p className="text-[15px] font-bold text-neutral-50 truncate">{displayLabel}</p>
+                    <p className="text-xs text-neutral-500 truncate">@{username} · Ver mi perfil</p>
+                  </div>
+                </Link>
+              )}
+
+              {/* Avisos y Mensajes, destacados y separados del resto */}
+              {quickItems.length > 0 && (
+                <div className="grid grid-cols-2 gap-2 pb-4 mb-3 border-b border-ink-800">
+                  {quickItems.map((item) => {
+                    const active = item.match(pathname)
+                    const Icon = item.icon
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={`relative flex items-center gap-2.5 rounded-2xl px-3 py-3 border transition ${
+                          active
+                            ? 'bg-garnet-600/90 text-white border-garnet-400/40'
+                            : 'bg-ink-800 border-ink-700 text-neutral-100 hover:bg-ink-700'
+                        }`}
+                      >
+                        <Icon filled={active} className="w-[22px] h-[22px] shrink-0" />
+                        <span className="text-[13.5px] font-medium truncate">{item.shortLabel ?? item.label}</span>
+                        {!!item.badge && item.badge > 0 && <CountBubble count={item.badge} className="ml-auto" />}
+                      </Link>
+                    )
+                  })}
+                </div>
+              )}
+
+              <nav className="space-y-1">{navItems.map((item) => renderNavLink(item, 'drawer'))}</nav>
+
+              {username && (
+                <Link
+                  href="/configuracion"
+                  className={`mt-3 flex items-center gap-3 px-3 py-3 rounded-xl text-[15px] transition ${
+                    pathname === '/configuracion' ? 'bg-ink-800 text-neutral-100' : 'text-neutral-300 hover:bg-ink-800'
                   }`}
                 >
-                  <span
-                    className={`relative flex items-center justify-center h-7 w-full max-w-[3.25rem] rounded-full transition-colors duration-200 ${active ? 'bg-garnet-600/15' : ''}`}
-                  >
-                    <span key={active ? 'on' : 'off'} className={active ? 'nav-pop' : 'inline-flex'}>
-                      <Icon filled={active} className="w-[22px] h-[22px]" />
-                    </span>
-                    {!!item.badge && item.badge > 0 && (
-                      <span className="absolute -top-0.5 right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-garnet-600 text-white text-[9.5px] font-semibold flex items-center justify-center">
-                        {formatBadge(item.badge)}
-                      </span>
-                    )}
-                  </span>
-                  <span className="block max-w-full truncate leading-tight">{item.shortLabel ?? item.label}</span>
+                  <SettingsIcon className="w-5 h-5" />
+                  Configuración
                 </Link>
-              )
-            })}
-            {!loading && !userId && (
+              )}
+            </div>
+
+            <div className="px-4 py-3 border-t border-ink-800 flex items-center justify-between gap-3">
               <Link
-                href="/login"
-                className="press flex-1 min-w-0 flex flex-col items-center gap-0.5 py-1 text-[10.5px] text-garnet-400 active:scale-95 active:opacity-80"
+                href="/novedades"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-[11.5px] text-neutral-500 hover:text-garnet-400 transition"
               >
-                <LoginIcon className="w-5 h-5" />
-                Entrar
+                <span className="w-1.5 h-1.5 rounded-full bg-garnet-500" />v{APP_VERSION} · Novedades
               </Link>
-            )}
-          </div>
-        </nav>
+              {userId ? (
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="inline-flex items-center gap-1.5 text-xs text-neutral-400 hover:text-garnet-400 transition"
+                >
+                  <LogoutIcon className="w-4 h-4" />
+                  Cerrar sesión
+                </button>
+              ) : (
+                !loading && (
+                  <Link href="/login" className="inline-flex items-center gap-1.5 text-xs font-medium text-garnet-400">
+                    <LoginIcon className="w-4 h-4" />
+                    Iniciar sesión
+                  </Link>
+                )
+              )}
+            </div>
+          </aside>
+        </div>
       </div>
     </AppSessionContext.Provider>
   )

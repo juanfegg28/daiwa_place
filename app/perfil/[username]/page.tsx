@@ -19,6 +19,8 @@ import {
   UsersIcon,
 } from '../../components/icons'
 import RoleBadges from '../../components/RoleBadge'
+import ClubTags from '../../components/ClubTag'
+import type { ClubMembershipTag } from '../../lib/clubs'
 import MusicChip from '../../components/MusicChip'
 import { normalizeTrack } from '../../lib/music'
 import { PROFILE_POST_SELECT } from '../../lib/queries'
@@ -63,6 +65,7 @@ function ProfileContent() {
   const [notFound, setNotFound] = useState(false)
 
   const [roles, setRoles] = useState<RoleBadgeInfo[]>([])
+  const [clubTags, setClubTags] = useState<ClubMembershipTag[]>([])
   const [followersCount, setFollowersCount] = useState(0)
   const [followingCount, setFollowingCount] = useState(0)
   const [isFollowing, setIsFollowing] = useState(false)
@@ -172,8 +175,17 @@ function ProfileContent() {
         .eq('user_id', profileData.id)
       setRoles((data as unknown as RoleBadgeInfo[]) ?? [])
     }
+    // Etiquetas de club/pandilla: se piden aparte, así el perfil carga igual aunque falte el SQL de la v1.1.0
+    const loadClubTags = async () => {
+      const { data } = await supabase
+        .from('club_members')
+        .select('joined_at, clubs!club_members_club_id_fkey(slug, name, kind, color), club_roles!club_members_role_id_fkey(name, color, is_leader)')
+        .eq('user_id', profileData.id)
+        .order('joined_at')
+      setClubTags((data as unknown as ClubMembershipTag[]) ?? [])
+    }
     postsLimit.current = 15
-    await Promise.all([loadPosts(profileData.id, profileData.pinned_post_id ?? null), loadFollowState(profileData.id), loadRoles()])
+    await Promise.all([loadPosts(profileData.id, profileData.pinned_post_id ?? null), loadFollowState(profileData.id), loadRoles(), loadClubTags()])
     setLoading(false)
   }
 
@@ -275,6 +287,7 @@ function ProfileContent() {
     is_frozen: profile.is_frozen,
     badge_color: profile.badge_color,
     user_roles: roles,
+    club_members: clubTags,
   }
 
   const isMyProfile = myUsername === profile.username
@@ -335,6 +348,7 @@ function ProfileContent() {
           <h1 className="text-xl font-semibold text-neutral-50 flex items-center gap-2 flex-wrap">
             {profile.id_student || profile.username}
             <RoleBadges username={profile.username} roles={roles} badgeColorOverride={profile.badge_color} />
+            <ClubTags memberships={clubTags} max={4} />
             {profile.is_frozen && (
               <span
                 title="Cuenta congelada"

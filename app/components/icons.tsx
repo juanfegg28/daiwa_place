@@ -793,3 +793,61 @@ export function KeyIcon({ className = base }: IconProps) {
     </svg>
   )
 }
+
+/** Las 3 rayitas del menú (celular) */
+export function MenuIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+/** Banderín: Clubes y Pandillas */
+export function ClubsIcon({ className = base, filled = false }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M6 21V4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path
+        d="M6 5h11.2a.8.8 0 0 1 .6 1.3L15.2 9.5l2.6 3.2a.8.8 0 0 1-.6 1.3H6"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+        fill={filled ? 'currentColor' : 'none'}
+        fillOpacity={filled ? 0.18 : 0}
+      />
+    </svg>
+  )
+}
+
+/** Reloj de arena / temporizador (fotos que se autodestruyen) */
+export function TimerIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <circle cx="12" cy="13.2" r="7.2" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M12 9.4v4l2.6 1.6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9.6 3.6h4.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+/** Foto con destello: imagen efímera */
+export function FlashPhotoIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <rect x="3.5" y="5" width="17" height="14" rx="2.5" stroke="currentColor" strokeWidth="1.8" />
+      <circle cx="9" cy="10" r="1.6" stroke="currentColor" strokeWidth="1.6" />
+      <path d="m4.5 17 4.6-4.4a1 1 0 0 1 1.4 0l2.2 2.1 1.9-1.8a1 1 0 0 1 1.4 0L19.5 16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+/** Megáfono de anuncios fijados (tablón del club) */
+export function BoardPinIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M8.5 4h7l-1 5.2 3 2.3v1.5H6.5v-1.5l3-2.3L8.5 4Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+      <path d="M12 13v7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  )
+}

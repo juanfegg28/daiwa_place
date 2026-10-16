@@ -15,8 +15,57 @@ export const RELEASE_STAGE: 'beta' | 'stable' = 'stable'
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.1.0',
+    date: '2026-10-15',
+    title: 'Clubes y Pandillas, fotos que se autodestruyen y menú nuevo',
+    sections: [
+      {
+        heading: 'Clubes y Pandillas',
+        items: [
+          'Nueva sección «Clubes y Pandillas» en el menú, con un feed exclusivo: solo salen las publicaciones de personas que pertenecen a un club o a una pandilla.',
+          'A la derecha (en PC) o en una tira deslizable (en celular) descubres los clubes y pandillas que existen, en un orden distinto cada vez que recargas. Cada uno muestra su foto, su banner y si es «Club» o «Pandilla». Arriba hay un buscador por nombre.',
+          '¿Eres el líder oficial de un grupo? Toca «Solicitar crear Club/Pandilla». Es solo para crear la página web: el grupo ya debe estar oficializado en Discord y en el rol de Gakuran. El equipo la acepta o la declina desde el Centro de Mando (pestaña Clubes).',
+          'Si te aprueban, te llega una notificación con un enlace personal, de un solo uso, para crear la página con el mismo editor de recorte y zoom del registro.',
+          'Cada club tiene su propia página: información, miembros, feed de sus integrantes y un Tablón de anuncios fijado donde el líder deja comunicados («Hoy a las 8 PM reunión en la azotea»).',
+          '«Solicitar Unirse»: avisa que debes haber coordinado tu ingreso con el líder por Discord. El líder acepta o declina desde su panel.',
+          'El líder administra solo su club: recibe el rol «Líder de [nombre]» y puede crear roles de adorno (Tesorero, Comandante...) para sus miembros. Esos roles NO dan ningún permiso en DaiwaPlace.',
+          'Las etiquetas de club se ven junto al nombre en el feed y en el perfil, con un diseño distinto (borde punteado, color del club) al de las insignias oficiales de Staff y Dev, para que nadie las confunda con una autoridad.',
+        ],
+      },
+      {
+        heading: 'Fotos que se autodestruyen en los DMs',
+        items: [
+          'Ahora puedes enviar fotos por mensaje directo. Antes de enviar tienes que elegir cuánto duran: 1, 4, 8, 12 o 24 horas.',
+          'La foto muestra una cuenta regresiva y desaparece del chat cuando se cumple el tiempo. Se guardan en un espacio privado: nadie con el enlace puede verlas.',
+          'No se puede impedir que alguien haga una captura de pantalla. Envía solo lo que te sientas cómodo/a compartiendo.',
+        ],
+      },
+      {
+        heading: 'Menú nuevo',
+        items: [
+          'En el celular ya no hay barra de abajo: ahora hay un botón de 3 rayitas arriba que abre un panel lateral con todas las opciones. Una burbuja roja con número te avisa cuando tienes mensajes o notificaciones nuevas.',
+          'En PC, Notificaciones y Mensajes salieron de la lista y ahora están arriba del menú lateral, en botones grandes y separados, con su numerito.',
+        ],
+      },
+      {
+        heading: 'Comentarios más claros',
+        items: [
+          'Cada respuesta dice «En respuesta a @usuario». Al tocarlo te lleva al comentario original y lo resalta.',
+          'Mientras respondes, aparece un recuadro «Respondiendo a @usuario» con un resumen de lo que le contestas, y ese comentario queda resaltado. La caja de abajo ahora dice «Comenta la publicación».',
+          'Los comentarios muestran el nombre del personaje, el @usuario y una etiqueta «Autor» si lo escribió quien publicó. La línea del hilo (como en Reddit) se puede tocar para ocultar las respuestas.',
+        ],
+      },
+      {
+        heading: 'Más saludos',
+        items: [
+          'La caja de publicar tiene muchos más saludos según la hora, y ahora también según el día de la semana (lunes de ánimo, viernes de plan, domingo de pereza) y horas especiales como la merienda o la madrugada.',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.0.6',
-    date: '2026-10-14',
+    date: '2026-10-15',
     title: 'Pregunta del día, formato de texto y publicación fijada',
     sections: [
       {
@@ -466,4 +515,4 @@ export const CHANGELOG: Release[] = [
 
 export const LATEST_RELEASE = CHANGELOG[0]
 // Versión que se muestra en la app. Si un parche pequeño (1.0.x) no lleva notas en el changelog, igual se sube este número a mano.
-export const APP_VERSION = '1.0.6'
+export const APP_VERSION = '1.1.0'

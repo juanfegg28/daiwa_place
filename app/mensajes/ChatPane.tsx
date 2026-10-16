@@ -8,10 +8,15 @@ import { useAppSession } from '../components/AppShell'
 import KebabMenu, { type MenuItem } from '../components/KebabMenu'
 import ConfirmDialog from '../components/ConfirmDialog'
 import UserAvatar from '../components/UserAvatar'
-import { ArrowLeftIcon, BlockIcon, CloseIcon, EditIcon, FlagIcon, SendIcon, TrashIcon, UserIcon } from '../components/icons'
+import { ArrowLeftIcon, BlockIcon, CloseIcon, EditIcon, FlagIcon, FlashPhotoIcon, SendIcon, TrashIcon, UserIcon } from '../components/icons'
 import MessageBubble from './MessageBubble'
 import DmReportDialog from './DmReportDialog'
+import EphemeralPhotoModal from './EphemeralPhotoModal'
+import { prepareImage, type PreparedImage } from '../lib/images'
 import {
+  DM_IMAGE_BUCKET,
+  messageSnippet,
+  type DmImageHours,
   MAX_MESSAGE_LENGTH,
   MAX_NICKNAME_LENGTH,
   MESSAGE_SELECT,
@@ -21,7 +26,6 @@ import {
   displayName,
   friendlyDmError,
   mergeById,
-  previewText,
   sameDay,
   type ChatInfo,
   type DmMessage,
@@ -61,6 +65,11 @@ export default function ChatPane({ convId, me, friendIds }: Props) {
   const [showBlock, setShowBlock] = useState(false)
   const [reportTarget, setReportTarget] = useState<{ messageId: string | null } | null>(null)
   const [busyAction, setBusyAction] = useState(false)
+  const [photoDraft, setPhotoDraft] = useState<PreparedImage | null>(null)
+  const [sendingPhoto, setSendingPhoto] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  // Fotos que se están enviando: se guardan para poder reintentar si falla
+  const pendingPhotos = useRef(new Map<string, { blob: Blob; w: number; h: number; hours: DmImageHours; caption: string }>())
 
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
@@ -313,6 +322,119 @@ export default function ChatPane({ convId, me, friendIds }: Props) {
     refreshDm()
   }
 
+  const pickPhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null
+    e.target.value = ''
+    if (!file) return
+    try {
+      const prepared = await prepareImage(file, 1280, 0.82)
+      setPhotoDraft(prepared)
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : 'No se pudo cargar la foto')
+    }
+  }
+
+  const closePhotoDraft = () => {
+    if (photoDraft) URL.revokeObjectURL(photoDraft.previewUrl)
+    setPhotoDraft(null)
+  }
+
+  /** Sube la foto al bucket privado y manda el mensaje con su duración elegida (expires_at lo pone la base de datos) */
+  const sendPhoto = async (
+    photo: { blob: Blob; w: number; h: number; hours: DmImageHours; caption: string },
+    reply: DmMessage | null,
+    preview: string,
+    retryId?: string
+  ) => {
+    const tempId = retryId ?? `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    pendingPhotos.current.set(tempId, photo)
+    const temp: DmMessage = {
+      id: tempId,
+      conversation_id: convId,
+      sender_id: me,
+      content: photo.caption,
+      reply_to_id: reply?.id ?? null,
+      created_at: new Date().toISOString(),
+      edited_at: null,
+      deleted_at: null,
+      message_reactions: [],
+      reply: reply
+        ? { id: reply.id, content: reply.content, sender_id: reply.sender_id, deleted_at: reply.deleted_at, image_path: reply.image_path ?? null }
+        : null,
+      image_path: 'pending',
+      image_w: photo.w,
+      image_h: photo.h,
+      image_hours: photo.hours,
+      expires_at: null,
+      localPreview: preview,
+      pending: 'sending',
+    }
+    setMessages((prev) => [...prev.filter((m) => m.id !== tempId), temp])
+    stickToBottom.current = true
+
+    const path = `${convId}/${me}/${crypto.randomUUID()}.jpg`
+    const { error: upError } = await supabase.storage
+      .from(DM_IMAGE_BUCKET)
+      .upload(path, photo.blob, { contentType: 'image/jpeg', cacheControl: '3600' })
+    if (upError) {
+      setMessages((prev) => prev.map((m) => (m.id === tempId ? { ...m, pending: 'failed' } : m)))
+      setNotice(
+        /Bucket not found|not found/i.test(upError.message)
+          ? 'Falta correr el SQL de la v1.1.0 en Supabase (el bucket «dm-images» no existe).'
+          : /row-level security|not allowed/i.test(upError.message)
+            ? friendlyDmError('row-level security')
+            : `No se pudo subir la foto: ${upError.message}`
+      )
+      return
+    }
+
+    const { data, error } = await supabase
+      .from('messages')
+      .insert({
+        conversation_id: convId,
+        sender_id: me,
+        content: photo.caption,
+        reply_to_id: reply?.id ?? null,
+        image_path: path,
+        image_w: photo.w,
+        image_h: photo.h,
+        image_hours: photo.hours,
+      })
+      .select(MESSAGE_SELECT)
+      .single()
+
+    if (error || !data) {
+      // no quedó ningún mensaje: se borra el archivo para no dejar fotos sueltas
+      await supabase.storage.from(DM_IMAGE_BUCKET).remove([path])
+      setMessages((prev) => prev.map((m) => (m.id === tempId ? { ...m, pending: 'failed' } : m)))
+      setNotice(friendlyDmError(error?.message))
+      return
+    }
+    pendingPhotos.current.delete(tempId)
+    setNotice('')
+    const real = data as unknown as DmMessage
+    setMessages((prev) => mergeById(prev.filter((m) => m.id !== tempId), [real], sortKey))
+    if (info?.status === 'pending') {
+      const { data: infoData } = await supabase.rpc('dm_chat_info', { p_conv: convId })
+      const row = (Array.isArray(infoData) ? infoData[0] : infoData) as ChatInfo | undefined
+      if (row) setInfo(row)
+    }
+    refreshDm()
+  }
+
+  const confirmPhoto = async (hours: DmImageHours, caption: string) => {
+    if (!photoDraft) return
+    const draft = photoDraft
+    const reply = replyTo
+    setSendingPhoto(true)
+    setReplyTo(null)
+    setPhotoDraft(null)
+    setSendingPhoto(false)
+    // la vista previa local se queda viva hasta que el mensaje real llegue
+    await sendPhoto({ blob: draft.blob, w: draft.w, h: draft.h, hours, caption }, reply, draft.previewUrl)
+    URL.revokeObjectURL(draft.previewUrl)
+  }
+
   const submit = () => {
     const content = text.trim()
     if (!content) return
@@ -324,6 +446,12 @@ export default function ChatPane({ convId, me, friendIds }: Props) {
   }
 
   const retry = (m: DmMessage) => {
+    const photo = pendingPhotos.current.get(m.id)
+    if (photo && m.localPreview) {
+      const replyMsg = m.reply ? ({ ...m.reply, conversation_id: convId } as unknown as DmMessage) : null
+      sendPhoto(photo, replyMsg, m.localPreview, m.id)
+      return
+    }
     const reply = m.reply ? ({ ...m.reply, conversation_id: convId } as unknown as DmMessage) : null
     sendMessage(m.content, reply, m.id)
   }
@@ -391,6 +519,10 @@ export default function ChatPane({ convId, me, friendIds }: Props) {
       })
     )
     if (replyTo?.id === m.id) setReplyTo(null)
+    // si era una foto, también se borra el archivo del Storage (el cron job se encarga de las que vencen solas)
+    if (m.image_path && m.image_path !== 'pending') {
+      await supabase.storage.from(DM_IMAGE_BUCKET).remove([m.image_path])
+    }
     refreshDm()
   }
 
@@ -606,7 +738,10 @@ export default function ChatPane({ convId, me, friendIds }: Props) {
                   onDelete={(x) => setDeleteTarget(x)}
                   onJumpTo={jumpTo}
                   onRetry={retry}
-                  onDiscard={(x) => setMessages((prev2) => prev2.filter((y) => y.id !== x.id))}
+                  onDiscard={(x) => {
+                    pendingPhotos.current.delete(x.id)
+                    setMessages((prev2) => prev2.filter((y) => y.id !== x.id))
+                  }}
                   onReport={(x) => setReportTarget({ messageId: x.id })}
                 />
               </div>
@@ -682,7 +817,7 @@ export default function ChatPane({ convId, me, friendIds }: Props) {
                 <p className="text-[11px] font-semibold text-garnet-400">
                   Respondiendo a {replyTo.sender_id === me ? 'ti' : name}
                 </p>
-                <p className="text-xs text-neutral-400 truncate">{previewText(replyTo.content, 90)}</p>
+                <p className="text-xs text-neutral-400 truncate">{messageSnippet(replyTo, 90)}</p>
               </div>
               <button
                 type="button"
@@ -695,6 +830,16 @@ export default function ChatPane({ convId, me, friendIds }: Props) {
             </div>
           )}
           <div className="flex items-end gap-2">
+            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={pickPhoto} />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              aria-label="Enviar una foto que se autodestruye"
+              title="Foto que se autodestruye"
+              className="shrink-0 w-10 h-10 rounded-full text-neutral-400 hover:text-garnet-400 hover:bg-ink-800 flex items-center justify-center transition"
+            >
+              <FlashPhotoIcon className="w-[22px] h-[22px]" />
+            </button>
             <textarea
               ref={textareaRef}
               value={text}
@@ -729,6 +874,10 @@ export default function ChatPane({ convId, me, friendIds }: Props) {
             <p className="text-[10.5px] text-neutral-600 text-right mt-1">{text.length}/{MAX_MESSAGE_LENGTH}</p>
           )}
         </div>
+      )}
+
+      {photoDraft && (
+        <EphemeralPhotoModal image={photoDraft} sending={sendingPhoto} onCancel={closePhotoDraft} onSend={confirmPhoto} />
       )}
 
       {/* Apodo */}

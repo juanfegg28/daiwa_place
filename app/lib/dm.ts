@@ -54,9 +54,21 @@ export type DmMessage = {
   edited_at: string | null
   deleted_at: string | null
   message_reactions: DmReaction[]
-  reply: { id: string; content: string; sender_id: string; deleted_at: string | null } | null
+  reply: { id: string; content: string; sender_id: string; deleted_at: string | null; image_path?: string | null } | null
+  /** Foto que se autodestruye (v1.1.0): ruta dentro del bucket privado «dm-images» */
+  image_path?: string | null
+  image_w?: number | null
+  image_h?: number | null
+  /** Duración elegida: 1, 4, 8, 12 o 24 horas */
+  image_hours?: number | null
+  /** Cuándo desaparece la foto (la calcula la base de datos al enviar) */
+  expires_at?: string | null
+  /** Cuándo el cron job borró de verdad el archivo del Storage */
+  image_purged_at?: string | null
   /** Solo en el navegador: mensaje que todavía se está enviando o falló */
   pending?: 'sending' | 'failed'
+  /** Solo en el navegador: vista previa local de la foto mientras se sube */
+  localPreview?: string
 }
 
 export type NoteItem = {
@@ -71,7 +83,47 @@ export type NoteItem = {
 }
 
 export const MESSAGE_SELECT =
-  'id, conversation_id, sender_id, content, reply_to_id, created_at, edited_at, deleted_at, message_reactions(user_id, emoji), reply:reply_to_id(id, content, sender_id, deleted_at)'
+  'id, conversation_id, sender_id, content, reply_to_id, created_at, edited_at, deleted_at, image_path, image_w, image_h, image_hours, expires_at, image_purged_at, message_reactions(user_id, emoji), reply:reply_to_id(id, content, sender_id, deleted_at, image_path)'
+
+// ───────── Fotos que se autodestruyen (v1.1.0) ─────────
+// Las fotos viven en el bucket PRIVADO «dm-images» (ruta: <conversación>/<quien la manda>/<archivo>.jpg) y la
+// pantalla las pide con enlaces firmados de corta vida. Cada mensaje con foto guarda `expires_at`; cuando llega
+// esa hora el chat deja de mostrarla y la base de datos deja de entregarla.
+// NOTA: el borrado REAL del archivo en Supabase Storage lo hace un cron job de Supabase que lee `expires_at`
+// y llama a /api/cron/dm-purge (ver el SQL de la v1.1.0, sección 2.6). Aquí en el navegador solo se oculta.
+export const DM_IMAGE_BUCKET = 'dm-images'
+export const DM_IMAGE_DURATIONS = [1, 4, 8, 12, 24] as const
+export type DmImageHours = (typeof DM_IMAGE_DURATIONS)[number]
+
+export function imageDurationLabel(hours: number) {
+  return hours === 1 ? '1 hora' : `${hours} horas`
+}
+
+/** ¿La foto de este mensaje ya se autodestruyó? */
+export function isImageGone(m: Pick<DmMessage, 'image_path' | 'expires_at' | 'image_purged_at'>, now = Date.now()) {
+  if (!m.image_path) return false
+  if (m.image_purged_at) return true
+  return !!m.expires_at && new Date(m.expires_at).getTime() <= now
+}
+
+/** «3 h 12 min», «45 min», «menos de 1 min» */
+export function remainingLabel(expiresAt: string, now = Date.now()) {
+  const ms = new Date(expiresAt).getTime() - now
+  if (ms <= 0) return 'ahora'
+  const totalMin = Math.ceil(ms / 60000)
+  if (totalMin < 2) return 'menos de 1 min'
+  const h = Math.floor(totalMin / 60)
+  const m = totalMin % 60
+  if (h === 0) return `${m} min`
+  return m === 0 ? `${h} h` : `${h} h ${m} min`
+}
+
+/** Texto corto de un mensaje para respuestas y avisos: si es solo una foto, «📷 Foto» */
+export function messageSnippet(m: { content: string; image_path?: string | null }, max = 60) {
+  const text = previewText(m.content, max)
+  if (m.image_path && !text) return '📷 Foto'
+  return m.image_path ? `📷 ${text}` : text
+}
 
 export const NOTE_SELECT =
   'id, user_id, content, music, created_at, expires_at, profiles!notes_user_id_fkey(username, id_student, avatar_url), note_likes(user_id)'

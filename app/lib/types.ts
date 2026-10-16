@@ -2,6 +2,8 @@ export type RoleBadgeInfo = {
   roles: { name: string; badge_color: string } | null
 }
 
+import type { ClubMembershipTag } from './clubs'
+
 export type AuthorProfile = {
   username: string
   avatar_url: string | null
@@ -9,6 +11,8 @@ export type AuthorProfile = {
   is_frozen: boolean
   badge_color?: string | null
   user_roles?: RoleBadgeInfo[]
+  /** Clubes y pandillas a los que pertenece (se muestran como etiquetas junto al nombre) */
+  club_members?: ClubMembershipTag[]
 } | null
 
 export type PostImage = {
@@ -65,6 +69,10 @@ export type NotificationType =
   | 'mention_comment'
   | 'whisper_mention'
   | 'whisper_comment_mention'
+  | 'club_approved'
+  | 'club_declined'
+  | 'club_join_request'
+  | 'club_join_accepted'
 
 export type NotificationItem = {
   id: string
@@ -84,4 +92,8 @@ export type NotificationItem = {
   note?: { content: string } | null
   wcomment?: { content: string } | null
   whisper?: { content: string } | null
+  club_id?: string | null
+  club_request_id?: string | null
+  club?: { name: string; slug: string; kind: 'club' | 'pandilla'; avatar_url: string | null } | null
+  club_request?: { club_name: string; kind: 'club' | 'pandilla'; decline_reason: string | null } | null
 }

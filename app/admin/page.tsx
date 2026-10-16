@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AppShell, { useAppSession } from '../components/AppShell'
 import { hasAny, type Permissions } from '../lib/permissions'
-import { FlagIcon, ShieldAdminIcon, UserCogIcon, MegaphoneIcon, WrenchIcon, WhisperIcon, MessageIcon, SparklesIcon } from '../components/icons'
+import { FlagIcon, ShieldAdminIcon, UserCogIcon, MegaphoneIcon, WrenchIcon, WhisperIcon, MessageIcon, SparklesIcon, ClubsIcon } from '../components/icons'
 import ReportesTab from './ReportesTab'
 import RolesTab from './RolesTab'
 import IdentidadesTab from './IdentidadesTab'
@@ -13,6 +13,7 @@ import PreguntaTab from './PreguntaTab'
 import SistemaTab from './SistemaTab'
 import SusurrosTab from './SusurrosTab'
 import MensajesTab from './MensajesTab'
+import ClubesTab from './ClubesTab'
 
 const TAB_DEFS = [
   {
@@ -33,6 +34,12 @@ const TAB_DEFS = [
     label: 'Susurros',
     icon: WhisperIcon,
     check: (p: Permissions, sup: boolean) => sup || hasAny(p, ['moderate_whispers', 'reveal_whisper_authors']),
+  },
+  {
+    id: 'clubes' as const,
+    label: 'Clubes',
+    icon: ClubsIcon,
+    check: (p: Permissions, sup: boolean) => sup || hasAny(p, ['manage_clubs']),
   },
   {
     id: 'roles' as const,
@@ -142,6 +149,7 @@ function AdminContent() {
           {tab === 'reportes' && <ReportesTab />}
           {tab === 'mensajes' && <MensajesTab />}
           {tab === 'susurros' && <SusurrosTab />}
+          {tab === 'clubes' && <ClubesTab />}
           {tab === 'roles' && <RolesTab />}
           {tab === 'identidades' && <IdentidadesTab />}
           {tab === 'anuncios' && <AnunciosTab />}

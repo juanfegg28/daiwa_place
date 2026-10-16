@@ -74,6 +74,18 @@ export async function POST(request: Request) {
   await supabaseAdmin.from('blocks').delete().or(`blocker_id.eq.${userId},blocked_id.eq.${userId}`)
   await supabaseAdmin.from('reports').delete().or(`reporter_id.eq.${userId},reported_user_id.eq.${userId}`)
 
+  // Fotos que se autodestruyen (v1.1.0): se borran sus archivos antes de que desaparezcan los mensajes
+  const { data: dmPhotos } = await supabaseAdmin
+    .from('messages')
+    .select('image_path')
+    .eq('sender_id', userId)
+    .not('image_path', 'is', null)
+    .limit(1000)
+  const dmPaths = ((dmPhotos as { image_path: string | null }[] | null) ?? []).map((m) => m.image_path).filter((p): p is string => !!p)
+  if (dmPaths.length > 0) {
+    await supabaseAdmin.storage.from('dm-images').remove(dmPaths)
+  }
+
   const { data: avatarFiles } = await supabaseAdmin.storage.from('avatars').list(userId)
   if (avatarFiles && avatarFiles.length > 0) {
     await supabaseAdmin.storage.from('avatars').remove(avatarFiles.map((f) => `${userId}/${f.name}`))
