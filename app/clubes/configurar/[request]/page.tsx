@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '../../../lib/supabaseClient'
@@ -44,6 +44,8 @@ function ConfigurarContent() {
   const [bannerPreview, setBannerPreview] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const bannerInputRef = useRef<HTMLInputElement | null>(null)
+  const avatarInputRef = useRef<HTMLInputElement | null>(null)
 
   // El MISMO editor de recorte y zoom del registro de usuarios
   const { openCropper, cropperElement } = useAvatarCropper(
@@ -181,20 +183,30 @@ function ConfigurarContent() {
             // eslint-disable-next-line @next/next/no-img-element
             <img src={bannerPreview} alt="Banner del club" className="absolute inset-0 w-full h-full object-cover" />
           )}
-          <label className="absolute right-3 bottom-3 inline-flex items-center gap-1.5 bg-black/60 hover:bg-black/75 text-white text-xs font-medium rounded-full px-3 py-1.5 cursor-pointer transition">
+          {/* z-20: la tarjeta de abajo (foto + nombre) se mete 36 px sobre el banner y antes tapaba este botón */}
+          <button
+            type="button"
+            onClick={() => bannerInputRef.current?.click()}
+            className="absolute right-3 bottom-12 z-20 inline-flex items-center gap-1.5 bg-black/60 hover:bg-black/75 text-white text-xs font-medium rounded-full px-3.5 py-2 cursor-pointer transition"
+          >
             <CameraIcon className="w-4 h-4" />
             {bannerPreview ? 'Cambiar banner' : 'Agregar banner'}
-            <input type="file" accept="image/*" className="hidden" onChange={(e) => pickFile(e, openBannerCropper)} />
-          </label>
+          </button>
+          <input ref={bannerInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => pickFile(e, openBannerCropper)} />
         </div>
-        <div className="px-4 pb-4 -mt-9 relative">
+        <div className="px-4 pb-4 -mt-9 relative pointer-events-none [&_*]:pointer-events-auto">
           <div className="flex items-end gap-3">
             <div className="relative">
               <ClubAvatar club={previewClub} size="w-[72px] h-[72px]" textClass="text-2xl" />
-              <label className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-garnet-600 hover:bg-garnet-500 text-white flex items-center justify-center cursor-pointer transition border-2 border-ink-800">
+              <button
+                type="button"
+                onClick={() => avatarInputRef.current?.click()}
+                aria-label="Cambiar foto del club"
+                className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-garnet-600 hover:bg-garnet-500 text-white flex items-center justify-center cursor-pointer transition border-2 border-ink-800"
+              >
                 <CameraIcon className="w-3.5 h-3.5" />
-                <input type="file" accept="image/*" className="hidden" onChange={(e) => pickFile(e, openCropper)} aria-label="Cambiar foto del club" />
-              </label>
+              </button>
+              <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => pickFile(e, openCropper)} />
             </div>
             <div className="min-w-0 pb-1">
               <p className="text-base font-bold text-neutral-50 truncate">{request.club_name}</p>
