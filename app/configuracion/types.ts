@@ -11,5 +11,8 @@ export type ConfigProfile = {
   show_read_receipts: boolean
   /** Qué se ve en el Inicio: todos, solo seguidos o solo amigos (mutuals) */
   feed_pref: 'all' | 'following' | 'mutuals'
-  notif_prefs: { comments: boolean; mentions: boolean; likes: boolean; follows: boolean; note_likes: boolean; whispers: boolean; tags: boolean; reposts: boolean }
+  /** v1.2.0: audiencia por defecto de tus historias y quién puede responderlas */
+  story_default_audience: 'followers' | 'friends'
+  story_replies: 'all' | 'friends' | 'off'
+  notif_prefs: { comments: boolean; mentions: boolean; likes: boolean; follows: boolean; note_likes: boolean; whispers: boolean; tags: boolean; reposts: boolean; story_likes: boolean }
 }

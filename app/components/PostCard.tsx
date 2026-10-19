@@ -28,6 +28,7 @@ import ConfirmDialog from './ConfirmDialog'
 import ReportDialog from './ReportDialog'
 import PostImages from './PostImages'
 import AvatarPhoto from './AvatarPhoto'
+import { AvatarWithRing } from './stories/StoryRing'
 import MentionField, { type MentionFieldHandle } from './MentionField'
 import FormatToolbar from './FormatToolbar'
 import LikesModal from './LikesModal'
@@ -865,7 +866,9 @@ export default function PostCard({
                 className={`shrink-0 ${onProfilePage ? 'cursor-default' : 'cursor-pointer'}`}
                 aria-label={author ? `Ver perfil de @${author.username}` : 'Ver perfil'}
               >
-                <MiniAvatar username={author?.username ?? 'usuario'} avatarUrl={author?.avatar_url ?? null} />
+                <AvatarWithRing userId={post.user_id}>
+                  <MiniAvatar username={author?.username ?? 'usuario'} avatarUrl={author?.avatar_url ?? null} />
+                </AvatarWithRing>
               </button>
               {nameBlock}
             </>

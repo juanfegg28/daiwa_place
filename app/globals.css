@@ -371,3 +371,87 @@ select optgroup {
 .badge-pop {
   animation: daiwa-badge-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
+
+
+/* ───────── v1.2.0: historias ───────── */
+@keyframes story-heart-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.35); }
+  70% { transform: scale(0.92); }
+  100% { transform: scale(1); }
+}
+@keyframes story-heart-float {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+  18% { opacity: 1; transform: translate(-50%, -60%) scale(1.15); }
+  100% { opacity: 0; transform: translate(-50%, -170%) scale(1); }
+}
+@keyframes story-emoji-rise {
+  0% { opacity: 0; transform: translateY(0) scale(0.6); }
+  15% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-62cqh) scale(1.3); }
+}
+@keyframes story-cube-in-left {
+  from { transform: perspective(900px) rotateY(-70deg); opacity: 0.2; transform-origin: right center; }
+  to { transform: perspective(900px) rotateY(0); opacity: 1; transform-origin: right center; }
+}
+@keyframes story-cube-in-right {
+  from { transform: perspective(900px) rotateY(70deg); opacity: 0.2; transform-origin: left center; }
+  to { transform: perspective(900px) rotateY(0); opacity: 1; transform-origin: left center; }
+}
+@keyframes story-marquee {
+  0%, 15% { transform: translateX(0); }
+  85%, 100% { transform: translateX(var(--marquee-shift, -30%)); }
+}
+@keyframes story-ring-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+@keyframes story-pop {
+  0% { transform: scale(0.94); opacity: 0.4; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes story-tray-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes story-flip {
+  0% { transform: rotateX(0); }
+  100% { transform: rotateX(-180deg); }
+}
+@keyframes story-grow {
+  from { transform: scale(0.2); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.story-heart-pop { animation: story-heart-pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.story-heart-float { animation: story-heart-float 0.7s ease-out forwards; }
+.story-ring-pulse { animation: story-ring-pulse 0.7s ease-in-out 1; }
+.story-sticker-pop { animation: story-pop 0.16s ease-out; }
+.story-tray-in { animation: story-tray-in 0.35s ease-out both; }
+.story-marquee { display: inline-block; white-space: nowrap; animation: story-marquee 6s ease-in-out infinite alternate; }
+.story-cube-left { animation: story-cube-in-left 0.28s ease-out both; }
+.story-cube-right { animation: story-cube-in-right 0.28s ease-out both; }
+.story-grow { animation: story-grow 0.22s ease-out both; }
+.story-scroll-hide { scrollbar-width: none; }
+.story-scroll-hide::-webkit-scrollbar { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .story-heart-pop, .story-ring-pulse, .story-sticker-pop, .story-tray-in, .story-grow { animation: none; }
+  .story-marquee { animation: none; }
+  .story-cube-left, .story-cube-right { animation: daiwa-fade 0.2s ease-out both; }
+  .story-heart-float { animation-duration: 0.01s; }
+  .story-neon-glow { text-shadow: none !important; }
+}
+@keyframes story-flip-in {
+  from { transform: rotateX(-90deg); opacity: 0.2; }
+  to { transform: rotateX(0); opacity: 1; }
+}
+.story-flip-in { animation: story-flip-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; transform-origin: center; }
+@media (prefers-reduced-motion: reduce) { .story-flip-in { animation: none; } }
+.story-range { -webkit-appearance: none; appearance: none; height: 18px; background: transparent; cursor: pointer; }
+.story-range::-webkit-slider-runnable-track { height: 4px; border-radius: 99px; background: linear-gradient(to right, #fff var(--pct, 35%), rgba(255,255,255,.3) var(--pct, 35%)); }
+.story-range::-moz-range-track { height: 4px; border-radius: 99px; background: rgba(255,255,255,.3); }
+.story-range::-moz-range-progress { height: 4px; border-radius: 99px; background: #fff; }
+.story-range::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: #fff; margin-top: -4px; box-shadow: 0 1px 4px rgba(0,0,0,.5); }
+.story-range::-moz-range-thumb { width: 12px; height: 12px; border: 0; border-radius: 50%; background: #fff; }
+.story-stage-wrap { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: max(100vw, calc(100dvh * 9 / 16)); }
+@media (min-width: 768px) { .story-stage-wrap { width: 100%; } }

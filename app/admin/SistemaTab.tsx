@@ -6,6 +6,7 @@ import { useAppSession } from '../components/AppShell'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { SearchIcon, WrenchIcon, TrashIcon, MusicIcon } from '../components/icons'
 import type { UserSearchResult } from './types'
+import { fetchStorySettings, saveStorySettings } from '../lib/stories'
 
 export default function SistemaTab() {
   const { refresh, isSupreme } = useAppSession()
@@ -13,6 +14,34 @@ export default function SistemaTab() {
   const [explicitLoaded, setExplicitLoaded] = useState(false)
   const [savingExplicit, setSavingExplicit] = useState(false)
   const [explicitError, setExplicitError] = useState('')
+
+  // Historias (v1.2.0)
+  const [stLimit, setStLimit] = useState(3)
+  const [stArchive, setStArchive] = useState(30)
+  const [stPlaces, setStPlaces] = useState('')
+  const [stMsg, setStMsg] = useState('')
+  const [stSaving, setStSaving] = useState(false)
+  useEffect(() => {
+    if (!isSupreme) return
+    let cancelled = false
+    fetchStorySettings().then((v) => {
+      if (cancelled) return
+      setStLimit(v.limit_per_day)
+      setStArchive(v.archive_days)
+      setStPlaces(v.places.join('\n'))
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [isSupreme])
+  const saveStories = async () => {
+    setStSaving(true)
+    setStMsg('')
+    const places = stPlaces.split('\n').map((x) => x.trim()).filter(Boolean)
+    const err = await saveStorySettings(stLimit, stArchive, places)
+    setStSaving(false)
+    setStMsg(err ?? 'Guardado.')
+  }
 
   useEffect(() => {
     if (!isSupreme) return
@@ -237,6 +266,31 @@ export default function SistemaTab() {
 
         {deleteMsg && <p className="text-sm text-neutral-400 mt-3">{deleteMsg}</p>}
       </section>
+
+      {isSupreme && (
+        <section className="surface-card rounded-2xl p-5">
+          <h2 className="text-base font-semibold text-neutral-50 mb-1">Historias</h2>
+          <p className="text-sm text-neutral-500 mb-4 max-w-md leading-relaxed">Límite de publicaciones, días de archivo privado y lugares sugeridos. Si no hay valor guardado se usan 3, 30 y la lista por defecto.</p>
+          <div className="grid sm:grid-cols-2 gap-4 max-w-md mb-4">
+            <label className="block text-xs text-neutral-400">
+              Historias por día (1–20)
+              <input type="number" min={1} max={20} value={stLimit} onChange={(e) => setStLimit(Number(e.target.value))} className="mt-1 w-full rounded-lg bg-ink-800 border border-ink-600 px-3 py-2 text-sm text-neutral-100" />
+            </label>
+            <label className="block text-xs text-neutral-400">
+              Días de archivo privado (0 = sin archivo)
+              <input type="number" min={0} max={365} value={stArchive} onChange={(e) => setStArchive(Number(e.target.value))} className="mt-1 w-full rounded-lg bg-ink-800 border border-ink-600 px-3 py-2 text-sm text-neutral-100" />
+            </label>
+          </div>
+          <label className="block text-xs text-neutral-400 max-w-md">
+            Lugares sugeridos (uno por línea, máx. 20)
+            <textarea value={stPlaces} onChange={(e) => setStPlaces(e.target.value)} rows={6} className="mt-1 w-full rounded-lg bg-ink-800 border border-ink-600 px-3 py-2 text-sm text-neutral-100" />
+          </label>
+          <div className="mt-3 flex items-center gap-3">
+            <button type="button" onClick={saveStories} disabled={stSaving} className="rounded-full bg-garnet-600 hover:bg-garnet-500 text-white text-sm px-4 py-2 disabled:opacity-60">{stSaving ? 'Guardando…' : 'Guardar'}</button>
+            {stMsg && <span className="text-xs text-neutral-400">{stMsg}</span>}
+          </div>
+        </section>
+      )}
 
       <ConfirmDialog
         open={confirmOpen}

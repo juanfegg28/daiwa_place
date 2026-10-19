@@ -8,6 +8,7 @@ import { hasAny } from '../lib/permissions'
 import { TrashIcon, SnowflakeIcon } from '../components/icons'
 import ConfirmDialog from '../components/ConfirmDialog'
 import type { ReportRow } from './types'
+import HistoriasReportes from './HistoriasReportes'
 
 const REPORT_SELECT =
   'id, reporter_id, reported_user_id, post_id, comment_id, target_type, reason, status, created_at, reporter:profiles!reports_reporter_id_fkey(username), reported:profiles!reports_reported_user_id_fkey(username, id_student, is_frozen), post:posts!reports_post_id_fkey(id, content)'
@@ -183,6 +184,7 @@ export default function ReportesTab() {
           ))}
         </div>
       )}
+      <HistoriasReportes />
     </div>
   )
 }

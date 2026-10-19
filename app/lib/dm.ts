@@ -65,6 +65,8 @@ export type DmMessage = {
   expires_at?: string | null
   /** Cuándo el cron job borró de verdad el archivo del Storage */
   image_purged_at?: string | null
+  /** Si es la respuesta a una historia (v1.2.0) */
+  story_id?: string | null
   /** Solo en el navegador: mensaje que todavía se está enviando o falló */
   pending?: 'sending' | 'failed'
   /** Solo en el navegador: vista previa local de la foto mientras se sube */
@@ -83,7 +85,7 @@ export type NoteItem = {
 }
 
 export const MESSAGE_SELECT =
-  'id, conversation_id, sender_id, content, reply_to_id, created_at, edited_at, deleted_at, image_path, image_w, image_h, image_hours, expires_at, image_purged_at, message_reactions(user_id, emoji), reply:reply_to_id(id, content, sender_id, deleted_at, image_path)'
+  'id, conversation_id, sender_id, content, reply_to_id, created_at, edited_at, deleted_at, image_path, image_w, image_h, image_hours, expires_at, image_purged_at, story_id, message_reactions(user_id, emoji), reply:reply_to_id(id, content, sender_id, deleted_at, image_path)'
 
 // ───────── Fotos que se autodestruyen (v1.1.0) ─────────
 // Las fotos viven en el bucket PRIVADO «dm-images» (ruta: <conversación>/<quien la manda>/<archivo>.jpg) y la

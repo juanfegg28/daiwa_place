@@ -118,7 +118,7 @@ export default function MusicPicker({
   // «Tu nota»), que la recortaba y dejaba la barra de búsqueda fuera de la pantalla.
   const picker = (
     <div
-      className="fixed inset-0 z-[80] bg-black/75 flex items-end md:items-center justify-center md:px-4 sheet-backdrop"
+      className="fixed inset-0 z-[145] bg-black/75 flex items-end md:items-center justify-center md:px-4 sheet-backdrop"
       onClick={(e) => {
         e.stopPropagation()
         close()

@@ -15,8 +15,41 @@ export const RELEASE_STAGE: 'beta' | 'stable' = 'stable'
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.2.0',
+    date: '2026-10-18',
+    title: 'Historias',
+    sections: [
+      {
+        heading: 'Historias de 24 horas',
+        items: [
+          'Publica una historia con foto o solo texto: texto en 8 estilos y colores, emojis, ubicación y una hora que tú personalizas (8 diseños de reloj).',
+          'Música en tus historias: elige el momento de la canción (5, 10 o 15 s) y un sticker con su carátula en 6 diseños. Al ver una historia el sonido empieza apagado y tú controlas el volumen.',
+          'Solo ves a quien sigues, y tus amigos van primero. Elige si tu historia la ven tus seguidores o solo tus amigos. Máximo 3 historias cada 24 horas.',
+        ],
+      },
+      {
+        heading: 'Interacción',
+        items: [
+          'Responde a una historia (te llega como mensaje directo con una tarjeta de contexto) o dale like con doble toque. Los likes te llegan como aviso.',
+          'En tu historia ves quién la vio y a quién le gustó: las personas con corazón salen arriba de todo.',
+        ],
+      },
+      {
+        heading: 'Destacadas y archivo',
+        items: [
+          'Guarda tus mejores historias en destacadas con portada y título, en tu perfil. Tus historias vencidas se quedan 30 días en tu archivo privado.',
+          'Reporta historias y silencia las de alguien desde el menú ⋯. El equipo las revisa en el Centro de Mando.',
+        ],
+      },
+      {
+        heading: 'Menú más limpio',
+        items: ['Avisos y Mensajes ahora son más pequeños y Clubes y Pandillas ya no resalta: se ve igual que las demás opciones.'],
+      },
+    ],
+  },
+  {
     version: '1.1.10',
-    date: '2026-10-16',
+    date: '2026-10-17',
     title: 'Compartidos, ocultar usuarios, identidades y tarjetas para Discord',
     sections: [
       {
@@ -552,4 +585,4 @@ export const CHANGELOG: Release[] = [
 
 export const LATEST_RELEASE = CHANGELOG[0]
 // Versión que se muestra en la app. Si un parche pequeño (1.0.x) no lleva notas en el changelog, igual se sube este número a mano.
-export const APP_VERSION = '1.1.10'
+export const APP_VERSION = '1.2.0'

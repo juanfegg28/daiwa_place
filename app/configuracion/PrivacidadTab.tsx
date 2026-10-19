@@ -46,6 +46,22 @@ export default function PrivacidadTab({
     if (!error) onUpdate({ ...profile, posts_visibility: v })
   }
 
+  const setStoryAudience = async (v: 'followers' | 'friends') => {
+    if (v === profile.story_default_audience) return
+    setSaving(true)
+    const { error } = await supabase.from('profiles').update({ story_default_audience: v }).eq('id', profile.id)
+    setSaving(false)
+    if (!error) onUpdate({ ...profile, story_default_audience: v })
+  }
+
+  const setStoryReplies = async (v: 'all' | 'friends' | 'off') => {
+    if (v === profile.story_replies) return
+    setSaving(true)
+    const { error } = await supabase.from('profiles').update({ story_replies: v }).eq('id', profile.id)
+    setSaving(false)
+    if (!error) onUpdate({ ...profile, story_replies: v })
+  }
+
   const toggleGhost = async () => {
     setSaving(true)
     const { error } = await supabase
@@ -58,6 +74,46 @@ export default function PrivacidadTab({
 
   return (
     <div className="space-y-6">
+      <section className="surface-card rounded-2xl p-5">
+        <h2 className="text-base font-semibold text-neutral-50 mb-1">Historias</h2>
+        <p className="text-sm text-neutral-500 mb-4 leading-relaxed max-w-md">
+          Tus historias duran 24 horas. Solo las ven personas que te siguen.
+        </p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-2">Audiencia por defecto</p>
+        <div className="grid grid-cols-2 gap-2 max-w-md mb-5">
+          {([['followers', 'Seguidores', 'Las personas que te siguen'], ['friends', 'Solo amigos', 'Quienes te siguen y tú también sigues']] as const).map(([id, title, desc]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setStoryAudience(id)}
+              disabled={saving}
+              className={`text-left rounded-xl border px-3.5 py-3 transition disabled:opacity-60 ${profile.story_default_audience === id ? 'border-garnet-600 bg-garnet-600/10' : 'border-ink-700 hover:bg-ink-800'}`}
+            >
+              <p className="text-sm font-medium text-neutral-100">{title}</p>
+              <p className="text-xs text-neutral-500">{desc}</p>
+            </button>
+          ))}
+        </div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500 mb-2">Quién puede responder a mis historias</p>
+        <div className="space-y-2 max-w-md mb-4">
+          {([['all', 'Todos los que las ven'], ['friends', 'Solo amigos'], ['off', 'Nadie']] as const).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setStoryReplies(id)}
+              disabled={saving}
+              className={`w-full text-left rounded-xl border px-4 py-2.5 text-sm transition disabled:opacity-60 ${profile.story_replies === id ? 'border-garnet-600 bg-garnet-600/10 text-neutral-100' : 'border-ink-700 text-neutral-300 hover:bg-ink-800'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <ul className="text-xs text-neutral-500 space-y-1 max-w-md list-disc pl-4">
+          <li>Quien abre tu historia queda registrado en la lista de vistas. No se puede desactivar.</li>
+          <li>Tus historias vencidas se guardan 30 días en tu archivo privado.</li>
+        </ul>
+      </section>
+
       <section className="surface-card rounded-2xl p-5">
         <h2 className="text-base font-semibold text-neutral-50 mb-1">Visibilidad de tus publicaciones</h2>
         <p className="text-sm text-neutral-500 mb-4 leading-relaxed max-w-md">

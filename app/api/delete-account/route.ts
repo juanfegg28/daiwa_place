@@ -95,6 +95,15 @@ export async function POST(request: Request) {
     await supabaseAdmin.storage.from('post-images').remove(postImageFiles.map((f) => `${userId}/${f.name}`))
   }
 
+  // Historias (v1.2.0): se borran los archivos de sus historias y las portadas de sus destacadas
+  // (las filas de historias, vistas, likes y destacadas se van solas al borrar el perfil)
+  for (const bucket of ['story-media', 'highlight-covers']) {
+    const { data: files } = await supabaseAdmin.storage.from(bucket).list(userId, { limit: 1000 })
+    if (files && files.length > 0) {
+      await supabaseAdmin.storage.from(bucket).remove(files.map((f) => `${userId}/${f.name}`))
+    }
+  }
+
   await supabaseAdmin.from('profiles').delete().eq('id', userId)
 
   const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId)

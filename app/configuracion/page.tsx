@@ -25,7 +25,7 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]['id']
 
-const DEFAULT_NOTIF_PREFS = { comments: true, mentions: true, likes: true, follows: true, note_likes: true, whispers: true, tags: true, reposts: true }
+const DEFAULT_NOTIF_PREFS = { comments: true, mentions: true, likes: true, follows: true, note_likes: true, whispers: true, tags: true, reposts: true, story_likes: true }
 
 export default function ConfiguracionPage() {
   return (
@@ -52,6 +52,8 @@ function ConfiguracionContent() {
     const { data: onlineRow } = await supabase.from('profiles').select('show_online_status').eq('id', id).maybeSingle()
     const { data: receiptsRow } = await supabase.from('profiles').select('show_read_receipts').eq('id', id).maybeSingle()
     const { data: feedRow } = await supabase.from('profiles').select('feed_pref').eq('id', id).maybeSingle()
+    // Se piden aparte para no romper Configuración si todavía no se corrió el SQL de la v1.2.0
+    const { data: storyRow } = await supabase.from('profiles').select('story_default_audience, story_replies').eq('id', id).maybeSingle()
     if (data) {
       setProfile({
         id: data.id,
@@ -65,6 +67,8 @@ function ConfiguracionContent() {
         show_online_status: onlineRow?.show_online_status !== false,
         show_read_receipts: receiptsRow?.show_read_receipts !== false,
         feed_pref: ((feedRow as { feed_pref?: string } | null)?.feed_pref as 'all' | 'following' | 'mutuals') ?? 'all',
+        story_default_audience: ((storyRow as { story_default_audience?: string } | null)?.story_default_audience as 'followers' | 'friends') ?? 'followers',
+        story_replies: ((storyRow as { story_replies?: string } | null)?.story_replies as 'all' | 'friends' | 'off') ?? 'all',
         notif_prefs: { ...DEFAULT_NOTIF_PREFS, ...(data.notif_prefs ?? {}) },
       })
     }

@@ -78,6 +78,7 @@ export type NotificationType =
   | 'club_join_request'
   | 'club_join_accepted'
   | 'repost'
+  | 'like_story'
 
 export type NotificationItem = {
   id: string
@@ -87,6 +88,8 @@ export type NotificationItem = {
   post_id: string | null
   comment_id: string | null
   note_id?: string | null
+  /** v1.2.0: like a una historia */
+  story_id?: string | null
   whisper_id?: string | null
   whisper_comment_id?: string | null
   /** true = el comentario del Muro es anónimo: no se muestra a nadie */
@@ -95,6 +98,7 @@ export type NotificationItem = {
   post: { content: string; images: PostImage[] | null } | null
   comment: { content: string } | null
   note?: { content: string } | null
+  story?: { id: string; kind: 'photo' | 'text'; media_path: string | null; bg: unknown; expires_at: string; deleted_at: string | null } | null
   wcomment?: { content: string } | null
   whisper?: { content: string } | null
   club_id?: string | null

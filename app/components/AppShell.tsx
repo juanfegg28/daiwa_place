@@ -93,8 +93,6 @@ type NavItem = {
   match: (pathname: string) => boolean
   /** Numerito rojo (ej. notificaciones sin leer). 0 o undefined = no se muestra */
   badge?: number
-  /** Entrada destacada del menú (Clubes y Pandillas): un poco más grande y con color propio */
-  featured?: boolean
 }
 
 function formatBadge(n: number) {
@@ -127,7 +125,7 @@ function MaintenanceScreen({ onLogout }: { onLogout: () => void }) {
 }
 
 /** Burbuja roja con número. Hace un «pop» cada vez que el número SUBE (llegó algo nuevo). */
-function CountBubble({ count, className = '' }: { count: number; className?: string }) {
+function CountBubble({ count, className = '', small = false }: { count: number; className?: string; small?: boolean }) {
   const prev = useRef(count)
   const [pop, setPop] = useState(0)
   useEffect(() => {
@@ -144,7 +142,7 @@ function CountBubble({ count, className = '' }: { count: number; className?: str
     <span
       key={pop}
       aria-label={`${count} sin leer`}
-      className={`${pop > 0 ? 'badge-pop' : ''} min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10.5px] font-bold leading-none flex items-center justify-center shadow-[0_0_0_2px_var(--color-ink-950)] ${className}`}
+      className={`${pop > 0 ? 'badge-pop' : ''} ${small ? 'min-w-[16px] h-[16px] px-[3px] text-[10px]' : 'min-w-[18px] h-[18px] px-1 text-[10.5px]'} rounded-full bg-red-500 text-white font-bold leading-none flex items-center justify-center shadow-[0_0_0_2px_var(--color-ink-950)] ${className}`}
     >
       {formatBadge(count)}
     </span>
@@ -418,7 +416,6 @@ export default function AppShell({
             label: 'Clubes y Pandillas',
             icon: ClubsIcon,
             match: (p: string) => p.startsWith('/clubes'),
-            featured: true,
           },
           {
             href: '/susurros',
@@ -500,28 +497,6 @@ export default function AppShell({
     const active = item.match(pathname)
     const Icon = item.icon
     const size = variant === 'drawer' ? 'py-3 text-[15px]' : 'py-2.5 text-sm'
-    if (item.featured) {
-      return (
-        <Link
-          key={item.href}
-          href={item.href}
-          className={`group relative flex items-center gap-3 px-3 ${variant === 'drawer' ? 'py-3.5 text-[15.5px]' : 'py-3 text-[15px]'} rounded-xl font-semibold transition border ${
-            active
-              ? 'bg-garnet-600/90 text-white border-garnet-400/40 shadow-[0_8px_24px_-8px] shadow-garnet-600/70'
-              : 'text-neutral-50 border-garnet-500/30 bg-gradient-to-r from-garnet-600/20 via-garnet-600/10 to-transparent hover:from-garnet-600/30'
-          }`}
-        >
-          <span
-            className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-              active ? 'bg-white/20 text-white' : 'bg-garnet-600/25 text-garnet-300'
-            }`}
-          >
-            <Icon filled className="w-[18px] h-[18px]" />
-          </span>
-          {item.label}
-        </Link>
-      )
-    }
     return (
       <Link
         key={item.href}
@@ -569,9 +544,9 @@ export default function AppShell({
             <Logo size="md" />
           </Link>
 
-          {/* Avisos y Mensajes: aparte de las demás opciones, más grandes y con su numerito */}
+          {/* Avisos y Mensajes: aparte de las demás opciones, en píldoras compactas con su numerito */}
           {quickItems.length > 0 && (
-            <div className="mb-5 grid grid-cols-2 gap-2 pb-5 border-b border-ink-800">
+            <div className="mb-4 grid grid-cols-2 gap-1.5 pb-4 border-b border-ink-800">
               {quickItems.map((item) => {
                 const active = item.match(pathname)
                 const Icon = item.icon
@@ -580,17 +555,17 @@ export default function AppShell({
                     key={item.href}
                     href={item.href}
                     aria-label={item.label}
-                    className={`relative flex flex-col items-center justify-center gap-1.5 rounded-2xl py-3.5 transition border ${
+                    className={`flex items-center justify-center gap-2 rounded-xl px-2.5 py-2 text-[12.5px] font-medium transition border ${
                       active
-                        ? 'bg-garnet-600/90 text-white border-garnet-400/40 shadow-[0_8px_24px_-8px] shadow-garnet-600/70'
-                        : 'bg-ink-800 border-ink-700 text-neutral-200 hover:bg-ink-700'
+                        ? 'bg-garnet-600/90 text-white border-garnet-400/40 shadow-sm'
+                        : 'bg-ink-800/70 border-ink-700 text-neutral-200 hover:bg-ink-700'
                     }`}
                   >
                     <span className="relative">
-                      <Icon filled={active} className="w-6 h-6" />
-                      {!!item.badge && item.badge > 0 && <CountBubble count={item.badge} className="absolute -top-2 -right-3" />}
+                      <Icon filled={active} className="w-[18px] h-[18px]" />
+                      {!!item.badge && item.badge > 0 && <CountBubble small count={item.badge} className="absolute -top-1.5 -right-2" />}
                     </span>
-                    <span className="text-[11.5px] font-medium">{item.shortLabel ?? item.label}</span>
+                    <span>{item.shortLabel ?? item.label}</span>
                   </Link>
                 )
               })}
@@ -756,9 +731,9 @@ export default function AppShell({
                 </Link>
               )}
 
-              {/* Avisos y Mensajes, destacados y separados del resto */}
+              {/* Avisos y Mensajes, compactos y separados del resto */}
               {quickItems.length > 0 && (
-                <div className="grid grid-cols-2 gap-2 pb-4 mb-3 border-b border-ink-800">
+                <div className="grid grid-cols-2 gap-2 pb-3 mb-3 border-b border-ink-800">
                   {quickItems.map((item) => {
                     const active = item.match(pathname)
                     const Icon = item.icon
@@ -766,15 +741,15 @@ export default function AppShell({
                       <Link
                         key={item.href}
                         href={item.href}
-                        className={`relative flex items-center gap-2.5 rounded-2xl px-3 py-3 border transition ${
+                        className={`relative flex items-center gap-2 rounded-xl px-3 py-2 border transition ${
                           active
                             ? 'bg-garnet-600/90 text-white border-garnet-400/40'
-                            : 'bg-ink-800 border-ink-700 text-neutral-100 hover:bg-ink-700'
+                            : 'bg-ink-800/70 border-ink-700 text-neutral-100 hover:bg-ink-700'
                         }`}
                       >
-                        <Icon filled={active} className="w-[22px] h-[22px] shrink-0" />
-                        <span className="text-[13.5px] font-medium truncate">{item.shortLabel ?? item.label}</span>
-                        {!!item.badge && item.badge > 0 && <CountBubble count={item.badge} className="ml-auto" />}
+                        <Icon filled={active} className="w-[18px] h-[18px] shrink-0" />
+                        <span className="text-[13px] font-medium truncate">{item.shortLabel ?? item.label}</span>
+                        {!!item.badge && item.badge > 0 && <CountBubble small count={item.badge} className="ml-auto" />}
                       </Link>
                     )
                   })}

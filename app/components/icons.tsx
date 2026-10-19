@@ -863,3 +863,111 @@ export function RepostIcon({ className = base }: IconProps) {
     </svg>
   )
 }
+
+// ───────── v1.2.0: historias ─────────
+
+/** Altavoz con 4 variantes: mute (con barra), low, mid, high */
+export function VolumeIcon({ className = base, level = 'mid' }: IconProps & { level?: 'mute' | 'low' | 'mid' | 'high' }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M4 9.5v5h3.2L12 18.5v-13L7.2 9.5H4Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" fill="currentColor" fillOpacity="0.15" />
+      {level === 'mute' && <path d="m16 9.5 5 5m0-5-5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />}
+      {(level === 'low' || level === 'mid' || level === 'high') && <path d="M15.5 9.8a3.3 3.3 0 0 1 0 4.4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />}
+      {(level === 'mid' || level === 'high') && <path d="M17.7 7.6a6.4 6.4 0 0 1 0 8.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />}
+      {level === 'high' && <path d="M19.9 5.4a9.5 9.5 0 0 1 0 13.2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />}
+    </svg>
+  )
+}
+
+export function PlayIcon({ className = base, filled = true }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M8 5.5v13l11-6.5-11-6.5Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" fill={filled ? 'currentColor' : 'none'} />
+    </svg>
+  )
+}
+
+export function PauseIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <rect x="6.5" y="5" width="4" height="14" rx="1.2" fill="currentColor" />
+      <rect x="13.5" y="5" width="4" height="14" rx="1.2" fill="currentColor" />
+    </svg>
+  )
+}
+
+export function MapPinIcon({ className = base, filled = false }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M12 21s7-6.1 7-11.2A7 7 0 0 0 5 9.8C5 14.9 12 21 12 21Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" fill={filled ? 'currentColor' : 'none'} fillOpacity={filled ? 0.2 : 0} />
+      <circle cx="12" cy="9.8" r="2.4" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  )
+}
+
+export function ClockIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M12 7.5V12l3 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+export function TextAaIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M3 18 8 6l5 12M4.8 14h6.4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M15.5 18v-5.2m0 1.2a2.6 2.6 0 1 0 0 .01M15.5 18h4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+export function PaletteIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.4 0 2-.9 2-1.8 0-1.4-1.3-1.6-1.3-2.9 0-1 .8-1.7 1.8-1.7h2.2a3.3 3.3 0 0 0 3.3-3.3C20 7 16.5 3.5 12 3.5Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <circle cx="8" cy="11" r="1.1" fill="currentColor" />
+      <circle cx="11" cy="7.8" r="1.1" fill="currentColor" />
+      <circle cx="15.2" cy="8.6" r="1.1" fill="currentColor" />
+    </svg>
+  )
+}
+
+export function ArchiveIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M3.5 12a8.5 8.5 0 1 0 2.8-6.3M3.5 4.5v4h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 8v4.2l2.6 1.6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+export function UndoIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M9 7 4.5 11.5 9 16M5 11.5h9a5 5 0 0 1 0 10h-2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" transform="translate(0 -3)" />
+    </svg>
+  )
+}
+
+export function RedoIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="m15 7 4.5 4.5L15 16M19 11.5h-9a5 5 0 0 0 0 10h2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" transform="translate(0 -3)" />
+    </svg>
+  )
+}
+
+export function GripIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <circle cx="9" cy="6.5" r="1.5" />
+      <circle cx="15" cy="6.5" r="1.5" />
+      <circle cx="9" cy="12" r="1.5" />
+      <circle cx="15" cy="12" r="1.5" />
+      <circle cx="9" cy="17.5" r="1.5" />
+      <circle cx="15" cy="17.5" r="1.5" />
+    </svg>
+  )
+}

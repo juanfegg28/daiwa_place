@@ -29,8 +29,12 @@ export const MAX_POST_LENGTH = 1000
 
 // Notificaciones: quién la generó, y un pedacito de la publicación / comentario
 // al que se refiere (para mostrar el fragmento en la lista)
-export const NOTIFICATION_SELECT =
+export const NOTIFICATION_SELECT_BASE =
   'id, type, read, created_at, post_id, comment_id, club_id, club_request_id, whisper_id, whisper_comment_id, anonymous, actor:profiles!notifications_actor_id_fkey(username, id_student, avatar_url), post:posts!notifications_post_id_fkey(content, images), comment:comments!notifications_comment_id_fkey(content), club:clubs!notifications_club_id_fkey(name, slug, kind, avatar_url), club_request:club_requests!notifications_club_request_id_fkey(club_name, kind, decline_reason), note:notes!notifications_note_id_fkey(content), wcomment:whisper_comments!notifications_whisper_comment_id_fkey(content), whisper:whispers!notifications_whisper_id_fkey(content)'
+
+// Con las historias de la v1.2.0 (si todavía no corriste ese SQL, la página usa la versión de arriba)
+export const NOTIFICATION_SELECT =
+  'id, type, read, story_id, created_at, post_id, comment_id, club_id, club_request_id, whisper_id, whisper_comment_id, anonymous, actor:profiles!notifications_actor_id_fkey(username, id_student, avatar_url), post:posts!notifications_post_id_fkey(content, images), comment:comments!notifications_comment_id_fkey(content), club:clubs!notifications_club_id_fkey(name, slug, kind, avatar_url), club_request:club_requests!notifications_club_request_id_fkey(club_name, kind, decline_reason), note:notes!notifications_note_id_fkey(content), wcomment:whisper_comments!notifications_whisper_comment_id_fkey(content), whisper:whispers!notifications_whisper_id_fkey(content), story:stories!notifications_story_id_fkey(id, kind, media_path, bg, expires_at, deleted_at)'
 
 // ───────── Feed con compartidos (v1.1.10) ─────────
 

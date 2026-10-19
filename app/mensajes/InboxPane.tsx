@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import UserAvatar from '../components/UserAvatar'
+import { AvatarWithRing } from '../components/stories/StoryRing'
 import { ArrowLeftIcon, EditIcon, SearchIcon } from '../components/icons'
 import NotesRow from './NotesRow'
 import { displayName, inboxTime, previewText, type InboxItem, type NoteItem } from '../lib/dm'
@@ -171,7 +172,7 @@ export default function InboxPane({
                 ? mine
                   ? 'Eliminaste un mensaje'
                   : 'Mensaje eliminado'
-                : `${mine ? 'Tú: ' : ''}${previewText(c.last_content, 48)}`
+                : `${mine && !c.last_content?.startsWith('📖') ? 'Tú: ' : ''}${previewText(c.last_content, 48)}`
               return (
                 <li key={c.conversation_id}>
                   <Link
@@ -180,7 +181,9 @@ export default function InboxPane({
                       activeId === c.conversation_id ? 'bg-ink-800' : 'hover:bg-ink-900'
                     }`}
                   >
-                    <UserAvatar username={c.other_username} avatarUrl={c.other_avatar_url} size="w-[52px] h-[52px]" online={online} textSize="text-lg" />
+                    <AvatarWithRing userId={c.other_id}>
+                      <UserAvatar username={c.other_username} avatarUrl={c.other_avatar_url} size="w-[52px] h-[52px]" online={online} textSize="text-lg" />
+                    </AvatarWithRing>
                     <div className="min-w-0 flex-1 leading-tight">
                       <p className={`text-[15px] truncate ${unread ? 'font-bold text-neutral-50' : 'text-neutral-100'}`}>{name}</p>
                       <p className={`text-[13px] truncate ${unread ? 'font-semibold text-neutral-200' : 'text-neutral-500'} ${c.last_deleted ? 'italic' : ''}`}>

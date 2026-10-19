@@ -2,6 +2,9 @@
 
 import Image from 'next/image'
 import AvatarPhoto from '../../components/AvatarPhoto'
+import HighlightsRow from '../../components/stories/HighlightsRow'
+import { RingOverlay, rememberOrigin, useRingStatus } from '../../components/stories/StoryRing'
+import { ArchiveIcon, PlusIcon } from '../../components/icons'
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -83,6 +86,7 @@ function ProfileContent() {
   const [clubTags, setClubTags] = useState<ClubMembershipTag[]>([])
   const [followersCount, setFollowersCount] = useState(0)
   const [followingCount, setFollowingCount] = useState(0)
+  const ringStatus = useRingStatus(profile?.id)
   const [isFollowing, setIsFollowing] = useState(false)
   const [followsMe, setFollowsMe] = useState(false)
   const [iBlockedThem, setIBlockedThem] = useState(false)
@@ -330,7 +334,18 @@ function ProfileContent() {
 
       <div className="max-w-2xl mx-auto px-4 sm:px-6">
         <div className="relative z-10 -mt-14 sm:-mt-16 mb-4 flex justify-between items-end">
-          <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full border-4 border-ink-950 bg-ink-700 overflow-hidden flex items-center justify-center shadow-[0_0_0_2px] shadow-garnet-500/45">
+          <div className="relative shrink-0 w-28 h-28 sm:w-32 sm:h-32">
+            <button
+              type="button"
+              disabled={!ringStatus?.has_story}
+              onClick={(e) => {
+                rememberOrigin(e.currentTarget)
+                router.push(`/historias/${profile.username}`)
+              }}
+              aria-label={ringStatus?.has_story ? `Ver las historias de @${profile.username}` : 'Foto de perfil'}
+              className={`block w-full h-full rounded-full ${ringStatus?.has_story ? 'cursor-pointer' : 'cursor-default'}`}
+            >
+          <div className="relative w-full h-full rounded-full border-4 border-ink-950 bg-ink-700 overflow-hidden flex items-center justify-center shadow-[0_0_0_2px] shadow-garnet-500/45">
             {profile.avatar_url ? (
               <AvatarPhoto src={profile.avatar_url} username={profile.username} sizes="128px" priority textClass="text-3xl" />
             ) : (
@@ -339,15 +354,37 @@ function ProfileContent() {
               </span>
             )}
           </div>
+            </button>
+            <RingOverlay status={ringStatus} uid={profile.id} />
+            {isMyProfile && (
+              <Link
+                href="/historias/nueva"
+                aria-label="Crear una historia"
+                className="absolute bottom-1 right-1 w-7 h-7 rounded-full bg-garnet-600 hover:bg-garnet-500 text-white border-[3px] border-ink-950 flex items-center justify-center"
+              >
+                <PlusIcon className="w-3.5 h-3.5" />
+              </Link>
+            )}
+          </div>
 
           {isMyProfile ? (
-            <Link
-              href="/editar-perfil"
-              className="mb-2 flex items-center gap-1.5 text-sm border border-ink-600 text-neutral-300 rounded-full px-4 py-1.5 hover:bg-ink-800 transition"
-            >
-              <EditIcon className="w-4 h-4" />
-              Editar perfil
-            </Link>
+            <div className="mb-2 flex items-center gap-2">
+              <Link
+                href="/historias/archivo"
+                aria-label="Archivo de historias"
+                title="Archivo de historias"
+                className="flex items-center justify-center w-9 h-9 border border-ink-600 text-neutral-300 rounded-full hover:bg-ink-800 transition"
+              >
+                <ArchiveIcon className="w-[18px] h-[18px]" />
+              </Link>
+              <Link
+                href="/editar-perfil"
+                className="flex items-center gap-1.5 text-sm border border-ink-600 text-neutral-300 rounded-full px-4 py-1.5 hover:bg-ink-800 transition"
+              >
+                <EditIcon className="w-4 h-4" />
+                Editar perfil
+              </Link>
+            </div>
           ) : (
             <div className="mb-2">
               <ProfileActions
@@ -481,7 +518,10 @@ function ProfileContent() {
               </Link>
             </div>
 
-            <div className="space-y-4">
+            {/* Destacadas (v1.2.0) */}
+            <HighlightsRow profileId={profile.id} username={profile.username} isOwn={isMyProfile} />
+
+            <div className="space-y-4 mt-4">
               {items.length === 0 && !pinnedPost ? (
                 <p className="text-neutral-500 text-sm text-center py-10">
                   {isMyProfile

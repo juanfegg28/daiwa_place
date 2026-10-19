@@ -12,6 +12,7 @@ const OPTIONS: { key: keyof ConfigProfile['notif_prefs']; label: string; descrip
   { key: 'reposts', label: 'Compartidos', description: 'Cuando alguien comparte una de tus publicaciones.' },
   { key: 'follows', label: 'Nuevos seguidores', description: 'Cuando alguien empieza a seguirte.' },
   { key: 'note_likes', label: 'Likes en tus notas', description: 'Cuando un amigo le da like a tu nota de los mensajes directos.' },
+  { key: 'story_likes', label: 'Likes en tus historias', description: 'Cuando alguien le da like a tu historia.' },
   { key: 'whispers', label: 'Muro de los Susurros', description: 'Cuando alguien comenta tu confesión o responde un comentario tuyo en el Muro (incluso si lo hizo de forma anónima).' },
 ]
 
@@ -26,7 +27,7 @@ export default function NotificacionesTab({
 
   const toggle = async (key: keyof ConfigProfile['notif_prefs']) => {
     setSaving(key)
-    const next = { ...profile.notif_prefs, [key]: !profile.notif_prefs[key] }
+    const next = { ...profile.notif_prefs, [key]: !(profile.notif_prefs[key] !== false) }
     const { error } = await supabase.from('profiles').update({ notif_prefs: next }).eq('id', profile.id)
     setSaving(null)
     if (!error) onUpdate({ ...profile, notif_prefs: next })
@@ -43,7 +44,7 @@ export default function NotificacionesTab({
         </p>
         <div className="space-y-1">
           {OPTIONS.map((opt) => {
-            const enabled = profile.notif_prefs[opt.key]
+            const enabled = profile.notif_prefs[opt.key] !== false
             return (
               <div
                 key={opt.key}

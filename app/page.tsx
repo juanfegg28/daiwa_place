@@ -7,6 +7,7 @@ import { supabase } from './lib/supabaseClient'
 import AppShell, { useAppSession } from './components/AppShell'
 import PostCard from './components/PostCard'
 import AnnouncementBanner from './components/AnnouncementBanner'
+import StoriesTray from './components/stories/StoriesTray'
 import PostImages from './components/PostImages'
 import MentionField, { type MentionFieldHandle } from './components/MentionField'
 import { AtIcon, ImageIcon } from './components/icons'
@@ -335,6 +336,9 @@ function Feed() {
   return (
     <div className="max-w-xl mx-auto py-6 px-4">
       <AnnouncementBanner />
+
+      {/* Historias de 24 h (v1.2.0): solo personas que sigues, amigos primero */}
+      <StoriesTray />
 
       {username && (
         <form ref={composerRef} onSubmit={handlePost} className="surface-card rounded-2xl p-3 sm:p-4 mb-4 sm:mb-6">

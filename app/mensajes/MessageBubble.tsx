@@ -1,5 +1,6 @@
 'use client'
 
+import StoryReplyCard from './StoryReplyCard'
 import { useEffect, useRef, useState } from 'react'
 import { CheckIcon, CloseIcon, CopyIcon, EditIcon, FlagIcon, MoreIcon, ReplyIcon, SmileIcon, TrashIcon } from '../components/icons'
 import DmImage from './DmImage'
@@ -204,6 +205,7 @@ export default function MessageBubble({
     >
       <div className={`flex items-center gap-1 max-w-[86%] md:max-w-[72%] ${mine ? 'flex-row-reverse' : 'flex-row'}`}>
         <div className="min-w-0 flex flex-col">
+          {message.story_id && !deleted && <StoryReplyCard storyId={message.story_id} mine={mine} ownerName={otherName} />}
           {message.reply_to_id && !deleted && (
             <button
               type="button"

@@ -7,7 +7,8 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabaseClient'
 import { stripFormatting } from '../lib/hashtags'
 import AppShell, { useAppSession } from '../components/AppShell'
-import { NOTIFICATION_SELECT } from '../lib/queries'
+import { NOTIFICATION_SELECT, NOTIFICATION_SELECT_BASE } from '../lib/queries'
+import { bgToCss, signedStoryUrls, type StoryBg } from '../lib/stories'
 import type { NotificationItem, NotificationType } from '../lib/types'
 import { AtIcon, BellIcon, ClubsIcon, RepostIcon, CloseIcon, CommentIcon, HeartIcon, ReplyIcon, UsersIcon, WhisperIcon } from '../components/icons'
 import AnonAvatar from '../susurros/AnonAvatar'
@@ -45,6 +46,7 @@ const ACTION_TEXT: Record<NotificationType, string> = {
   reply: 'respondió tu comentario',
   follow: 'empezó a seguirte',
   like_note: 'le dio like a tu nota',
+  like_story: 'le dio like a tu historia',
   whisper_comment: 'comentó tu confesión en el Muro',
   whisper_reply: 'respondió tu comentario en el Muro',
   mention_post: 'te etiquetó en su publicación',
@@ -65,7 +67,7 @@ function TypeIcon({ type }: { type: NotificationType }) {
   const cls = 'w-3 h-3'
   if (type === 'mention_post' || type === 'mention_comment' || type === 'whisper_mention' || type === 'whisper_comment_mention')
     return <AtIcon className={cls} />
-  if (type === 'like_post' || type === 'like_comment' || type === 'like_note') return <HeartIcon filled className={cls} />
+  if (type === 'like_post' || type === 'like_comment' || type === 'like_note' || type === 'like_story') return <HeartIcon filled className={cls} />
   if (type === 'club_approved' || type === 'club_declined' || type === 'club_join_request' || type === 'club_join_accepted')
     return <ClubsIcon className={cls} />
   if (type === 'repost') return <RepostIcon className={cls} />
@@ -75,7 +77,12 @@ function TypeIcon({ type }: { type: NotificationType }) {
   return <UsersIcon className={cls} />
 }
 
-function hrefFor(n: NotificationItem): string {
+function storyAlive(n: NotificationItem): boolean {
+  return !!n.story && !n.story.deleted_at && new Date(n.story.expires_at).getTime() > Date.now()
+}
+
+function hrefFor(n: NotificationItem, me: string | null): string {
+  if (n.type === 'like_story') return storyAlive(n) && me ? `/historias/${me}?s=${n.story_id}&vistas=1` : me ? `/perfil/${me}?historia=vencida` : '/'
   if (n.type === 'club_approved') return n.club_request_id ? `/clubes/configurar/${n.club_request_id}` : '/clubes'
   if (n.type === 'club_declined') return '/clubes'
   if (n.type === 'club_join_request' || n.type === 'club_join_accepted') return n.club?.slug ? `/clubes/${n.club.slug}` : '/clubes'
@@ -120,12 +127,14 @@ const PLURAL_ACTION: Partial<Record<NotificationType, string>> = {
   like_post: 'le dieron like a tu publicación',
   like_comment: 'le dieron like a tu comentario',
   like_note: 'le dieron like a tu nota',
+  like_story: 'le dieron like a tu historia',
 }
 
 function groupKey(n: NotificationItem): string {
   if (n.type === 'like_post' && n.post_id) return `lp:${n.post_id}`
   if (n.type === 'like_comment' && n.comment_id) return `lc:${n.comment_id}`
   if (n.type === 'like_note' && n.note_id) return `ln:${n.note_id}`
+  if (n.type === 'like_story' && n.story_id) return `ls:${n.story_id}`
   return `one:${n.id}`
 }
 
@@ -160,7 +169,8 @@ export default function NotificacionesPage() {
 }
 
 function NotificacionesContent() {
-  const { userId, loading: sessionLoading, notificationsVersion, refreshNotifications } = useAppSession()
+  const { userId, username, loading: sessionLoading, notificationsVersion, refreshNotifications } = useAppSession()
+  const [thumbs, setThumbs] = useState<Record<string, string>>({})
   const router = useRouter()
 
   const [items, setItems] = useState<NotificationItem[]>([])
@@ -181,12 +191,23 @@ function NotificacionesContent() {
     if (!userId) return
     const id = userId
     async function run() {
-      const { data, error: err } = await supabase
+      let { data, error: err } = await supabase
         .from('notifications')
         .select(NOTIFICATION_SELECT)
         .eq('recipient_id', id)
         .order('created_at', { ascending: false })
         .limit(PAGE_SIZE)
+      if (err) {
+        // todavía sin el SQL de la v1.2.0: se carga sin las historias
+        const retry = await supabase
+          .from('notifications')
+          .select(NOTIFICATION_SELECT_BASE)
+          .eq('recipient_id', id)
+          .order('created_at', { ascending: false })
+          .limit(PAGE_SIZE)
+        data = retry.data as typeof data
+        err = retry.error
+      }
       if (err) {
         setError('No se pudieron cargar tus notificaciones. Revisa que hayas corrido el SQL de la v0.11.0 en Supabase.')
         setLoading(false)
@@ -209,6 +230,19 @@ function NotificacionesContent() {
     }
     run()
   }, [userId, notificationsVersion])
+
+  // miniaturas de las historias que siguen vivas (enlaces firmados en lote)
+  useEffect(() => {
+    const paths = items.filter((n) => n.type === 'like_story' && storyAlive(n) && n.story?.media_path).map((n) => n.story!.media_path as string)
+    if (paths.length === 0) return
+    let alive = true
+    signedStoryUrls(paths).then((m) => {
+      if (alive) setThumbs((prev) => ({ ...prev, ...m }))
+    })
+    return () => {
+      alive = false
+    }
+  }, [items])
 
   const loadMore = async () => {
     if (!userId || loadingMore || items.length === 0) return
@@ -336,7 +370,7 @@ function NotificacionesContent() {
             return (
               <li key={g.key} className="relative group">
                 <Link
-                  href={hrefFor(n)}
+                  href={hrefFor(n, username)}
                   onClick={() => markGroupRead(g)}
                   className={`flex items-start gap-3 rounded-2xl p-3.5 pr-10 transition border ${
                     !unread
@@ -378,10 +412,25 @@ function NotificacionesContent() {
                         {snippet}
                       </p>
                     )}
+                    {n.type === 'like_story' && !storyAlive(n) && <p className="mt-1 text-xs text-neutral-500">Esa historia ya venció</p>}
                     <p className="mt-1 text-[11px] text-neutral-600" title={fullDate(n.created_at)}>
                       {timeAgo(n.created_at)}
                     </p>
                   </div>
+
+                  {n.type === 'like_story' && (
+                    <span
+                      className="w-11 h-14 rounded-lg overflow-hidden bg-ink-700 shrink-0 flex items-center justify-center text-garnet-400"
+                      style={storyAlive(n) && n.story?.kind === 'text' ? { background: bgToCss(n.story.bg as StoryBg) } : undefined}
+                    >
+                      {storyAlive(n) && n.story?.media_path && thumbs[n.story.media_path] ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={thumbs[n.story.media_path as string]} alt="" draggable={false} className="w-full h-full object-cover" />
+                      ) : !storyAlive(n) ? (
+                        <HeartIcon filled className="w-5 h-5" />
+                      ) : null}
+                    </span>
+                  )}
 
                   {unread && <span className="mt-1.5 w-2.5 h-2.5 rounded-full bg-garnet-500 shrink-0" aria-label="Sin leer" />}
                 </Link>
