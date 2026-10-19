@@ -193,12 +193,16 @@ export default function StoriesTray() {
               aria-label={mine.length ? 'Ver tu historia' : 'Crear una historia'}
               className="rounded-full touch-manipulation focus-visible:ring-2 focus-visible:ring-garnet-400 outline-none"
             >
-              <StoryRing avatarSize={64} segments={mineSegments} uid="mine" className="md:hidden">
+              <span className="md:hidden">
+                    <StoryRing avatarSize={64} segments={mineSegments} uid="mine">
                 <Avatar url={avatarUrl} username={username} size={64} />
               </StoryRing>
-              <StoryRing avatarSize={72} segments={mineSegments} uid="mine-d" className="hidden md:inline-flex">
+                  </span>
+              <span className="hidden md:inline-flex">
+                    <StoryRing avatarSize={72} segments={mineSegments} uid="mine-d">
                 <Avatar url={avatarUrl} username={username} size={72} />
               </StoryRing>
+                  </span>
             </button>
             <button
               type="button"
@@ -238,12 +242,16 @@ export default function StoriesTray() {
                 className={`story-tray-in shrink-0 flex flex-col items-center w-[78px] md:w-[88px] touch-manipulation outline-none focus-visible:ring-2 focus-visible:ring-garnet-400 rounded-xl ${u.is_muted ? 'opacity-55' : ''}`}
               >
                 <span className="relative">
-                  <StoryRing avatarSize={64} segments={segs} pulse={pulseIds.has(u.user_id)} uid={`t${i}`} className="md:hidden">
+                  <span className="md:hidden">
+                    <StoryRing avatarSize={64} segments={segs} pulse={pulseIds.has(u.user_id)} uid={`t${i}`}>
                     <Avatar url={u.avatar_url} username={u.username} size={64} />
                   </StoryRing>
-                  <StoryRing avatarSize={72} segments={segs} pulse={pulseIds.has(u.user_id)} uid={`td${i}`} className="hidden md:inline-flex">
+                  </span>
+                  <span className="hidden md:inline-flex">
+                    <StoryRing avatarSize={72} segments={segs} pulse={pulseIds.has(u.user_id)} uid={`td${i}`}>
                     <Avatar url={u.avatar_url} username={u.username} size={72} />
                   </StoryRing>
+                  </span>
                   {u.all_friends_only && (
                     <span className="absolute -bottom-0.5 right-0 rounded-full bg-emerald-600 text-white text-[9.5px] font-semibold leading-none px-1.5 py-[3px] border-2 border-ink-950">
                       Amigos
