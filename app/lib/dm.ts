@@ -18,6 +18,7 @@ export type InboxItem = {
   other_username: string
   other_id_student: string | null
   other_avatar_url: string | null
+  other_name_color?: string | null
   nickname: string | null
   last_message_at: string
   last_content: string | null
@@ -34,6 +35,7 @@ export type ChatInfo = {
   other_username: string
   other_id_student: string | null
   other_avatar_url: string | null
+  other_name_color?: string | null
   nickname: string | null
   hidden_at: string | null
   other_read_at: string | null

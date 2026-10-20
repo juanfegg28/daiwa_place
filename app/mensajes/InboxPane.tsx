@@ -1,5 +1,6 @@
 'use client'
 
+import NameText from '../components/cosmetics/NameText'
 import { useState } from 'react'
 import Link from 'next/link'
 import UserAvatar from '../components/UserAvatar'
@@ -185,7 +186,7 @@ export default function InboxPane({
                       <UserAvatar username={c.other_username} avatarUrl={c.other_avatar_url} size="w-[52px] h-[52px]" online={online} textSize="text-lg" />
                     </AvatarWithRing>
                     <div className="min-w-0 flex-1 leading-tight">
-                      <p className={`text-[15px] truncate ${unread ? 'font-bold text-neutral-50' : 'text-neutral-100'}`}>{name}</p>
+                      <p className={`text-[15px] truncate ${unread ? 'font-bold text-neutral-50' : 'text-neutral-100'}`}>{c.nickname ? name : <NameText name={name} color={c.other_name_color} />}</p>
                       <p className={`text-[13px] truncate ${unread ? 'font-semibold text-neutral-200' : 'text-neutral-500'} ${c.last_deleted ? 'italic' : ''}`}>
                         {preview}
                         <span className="text-neutral-600 font-normal"> · {inboxTime(c.last_message_at)}</span>

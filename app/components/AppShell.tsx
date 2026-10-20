@@ -1,8 +1,9 @@
 'use client'
 
+import WalletChip from './WalletChip'
+import Avatar from './cosmetics/Avatar'
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import Link from 'next/link'
-import AvatarPhoto from './AvatarPhoto'
 import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabaseClient'
 import { applyTheme, type ThemeMode } from '../lib/theme'
@@ -23,6 +24,8 @@ import {
   LoginIcon,
   MenuIcon,
   ClubsIcon,
+  TargetIcon,
+  StoreIcon,
   CloseIcon,
   type IconProps,
 } from './icons'
@@ -418,6 +421,18 @@ export default function AppShell({
             match: (p: string) => p.startsWith('/clubes'),
           },
           {
+            href: '/misiones',
+            label: 'Misiones',
+            icon: TargetIcon,
+            match: (p: string) => p.startsWith('/misiones') || p.startsWith('/monedas'),
+          },
+          {
+            href: '/tienda',
+            label: 'Tienda',
+            icon: StoreIcon,
+            match: (p: string) => p.startsWith('/tienda') || p.startsWith('/personalizar'),
+          },
+          {
             href: '/susurros',
             label: 'Susurros',
             icon: GhostNavIcon,
@@ -572,6 +587,12 @@ export default function AppShell({
             </div>
           )}
 
+          {userId && (
+            <div className="mb-4">
+              <WalletChip userId={userId} />
+            </div>
+          )}
+
           <nav className="flex-1 space-y-1">{navItems.map((item) => renderNavLink(item, 'desktop'))}</nav>
 
           {username && (
@@ -606,15 +627,7 @@ export default function AppShell({
                   href={`/perfil/${username}`}
                   className="flex items-center gap-3 px-2 py-1.5 rounded-xl hover:bg-ink-800 transition group"
                 >
-                  <div className="relative w-9 h-9 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center shrink-0">
-                    {avatarUrl ? (
-                      <AvatarPhoto src={avatarUrl} username={username ?? '?'} sizes="48px" />
-                    ) : (
-                      <span className="text-sm font-semibold text-garnet-400">
-                        {(username ?? '?').charAt(0).toUpperCase()}
-                      </span>
-                    )}
-                  </div>
+                  <Avatar username={username ?? '?'} avatarUrl={avatarUrl} size="w-9 h-9" textSize="text-sm" sizes="48px" />
                   <div className="min-w-0 flex-1 leading-tight">
                     <p className="text-sm font-bold text-neutral-100 truncate group-hover:text-garnet-400 transition">
                       {displayLabel}
@@ -662,6 +675,10 @@ export default function AppShell({
             <Link href="/login" className="text-xs font-medium text-garnet-400 px-2 w-10 text-right">
               Entrar
             </Link>
+          ) : userId ? (
+            <span className="min-w-10 flex justify-end">
+              <WalletChip userId={userId} compact />
+            </span>
           ) : (
             <span className="w-10" aria-hidden="true" />
           )}
@@ -717,13 +734,7 @@ export default function AppShell({
                   href={`/perfil/${username}`}
                   className="flex items-center gap-3 px-2 py-2.5 mb-3 rounded-2xl bg-ink-800 hover:bg-ink-700 transition"
                 >
-                  <div className="relative w-11 h-11 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center shrink-0">
-                    {avatarUrl ? (
-                      <AvatarPhoto src={avatarUrl} username={username ?? '?'} sizes="48px" />
-                    ) : (
-                      <span className="text-base font-semibold text-garnet-400">{(username ?? '?').charAt(0).toUpperCase()}</span>
-                    )}
-                  </div>
+                  <Avatar username={username ?? '?'} avatarUrl={avatarUrl} size="w-11 h-11" textSize="text-base" sizes="48px" />
                   <div className="min-w-0 flex-1 leading-tight">
                     <p className="text-[15px] font-bold text-neutral-50 truncate">{displayLabel}</p>
                     <p className="text-xs text-neutral-500 truncate">@{username} · Ver mi perfil</p>

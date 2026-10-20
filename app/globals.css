@@ -455,3 +455,48 @@ select optgroup {
 .story-range::-moz-range-thumb { width: 12px; height: 12px; border: 0; border-radius: 50%; background: #fff; }
 .story-stage-wrap { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: max(100vw, calc(100dvh * 9 / 16)); }
 @media (min-width: 768px) { .story-stage-wrap { width: 100%; } }
+
+
+/* ───────── v1.3.0: color de nombre y color de perfil ───────── */
+.name-colored { color: var(--nc-d); }
+:root[data-theme='light'] .name-colored { color: var(--nc-l); }
+
+/* El color del perfil (público) solo pinta DENTRO del contenedor del perfil: ahí redefine garnet-300…700.
+   No toca el color de acento personal de nadie ni el resto de la app. */
+.profile-theme {
+  --pf-300: var(--pf-d-300, var(--color-garnet-300)); --pf-400: var(--pf-d-400, var(--color-garnet-400));
+  --pf-500: var(--pf-d-500, var(--color-garnet-500)); --pf-600: var(--pf-d-600, var(--color-garnet-600));
+  --pf-700: var(--pf-d-700, var(--color-garnet-700));
+  --color-garnet-300: var(--pf-300); --color-garnet-400: var(--pf-400); --color-garnet-500: var(--pf-500);
+  --color-garnet-600: var(--pf-600); --color-garnet-700: var(--pf-700);
+}
+:root[data-theme='light'] .profile-theme {
+  --pf-300: var(--pf-l-300, var(--color-garnet-300)); --pf-400: var(--pf-l-400, var(--color-garnet-400));
+  --pf-500: var(--pf-l-500, var(--color-garnet-500)); --pf-600: var(--pf-l-600, var(--color-garnet-600));
+  --pf-700: var(--pf-l-700, var(--color-garnet-700));
+}
+
+/* ───────── v1.3.0: Lunas y misiones ───────── */
+@keyframes moon-rain { 0% { transform: translateY(-20px) rotate(0deg); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(160px) rotate(260deg); opacity: 0; } }
+.moon-drop { position: absolute; top: 0; animation: moon-rain 1.1s ease-in forwards; pointer-events: none; }
+@keyframes chest-pop { 0% { transform: scale(0.8) rotate(-6deg); } 40% { transform: scale(1.18) rotate(5deg); } 100% { transform: scale(1) rotate(0); } }
+.chest-pop { animation: chest-pop 0.7s ease-out; }
+@keyframes bal-bump { 0% { transform: scale(1); } 40% { transform: scale(1.18); } 100% { transform: scale(1); } }
+.bal-bump { animation: bal-bump 0.6s ease-out; }
+
+/* ───────── v1.3.0: sellos animados de las identidades especiales ───────── */
+@keyframes seal-breathe { 0%,100% { transform: scale(1); opacity: .85; } 50% { transform: scale(1.12); opacity: 1; } }
+@keyframes seal-rise { 0% { transform: translateY(6px); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(-14px); opacity: 0; } }
+@keyframes seal-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes seal-fall { 0% { transform: translateY(-8px) rotate(-10deg); opacity: 0; } 20% { opacity: .9; } 100% { transform: translateY(16px) rotate(20deg); opacity: 0; } }
+@keyframes seal-spin { to { transform: rotate(360deg); } }
+@keyframes seal-twinkle { 0%,100% { transform: scale(.7); opacity: .4; } 50% { transform: scale(1.15); opacity: 1; } }
+@keyframes seal-sweep { 0% { transform: translateX(-120%); } 60%,100% { transform: translateX(220%); } }
+@keyframes seal-glitch { 0%,92%,100% { transform: translate(0); } 94% { transform: translate(-2px,1px); } 96% { transform: translate(2px,-1px); } 98% { transform: translate(-1px,0); } }
+@keyframes seal-blink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }
+@keyframes seal-wave { 0% { transform: scale(.3); opacity: .7; } 100% { transform: scale(1.6); opacity: 0; } }
+@keyframes seal-drip { 0% { transform: translateY(-4px); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(14px); opacity: 0; } }
+.seal-anim { animation-duration: 3.2s; animation-iteration-count: infinite; animation-timing-function: ease-in-out; }
+@media (prefers-reduced-motion: reduce) {
+  .seal-anim, .moon-drop, .chest-pop, .bal-bump { animation: none !important; }
+}

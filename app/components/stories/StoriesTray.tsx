@@ -1,9 +1,9 @@
 'use client'
 
+import Avatar from '../cosmetics/Avatar'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAppSession } from '../AppShell'
-import AvatarPhoto from '../AvatarPhoto'
 import { ChevronLeftIcon, ChevronRightIcon, LockIcon, PlusIcon } from '../icons'
 import StoryRing, { rememberOrigin } from './StoryRing'
 import {
@@ -19,14 +19,10 @@ import {
   type TrayEntry,
 } from '../../lib/stories'
 
-function Avatar({ url, username, size }: { url: string | null; username: string; size: number }) {
+function TrayAvatar({ url, username, size }: { url: string | null; username: string; size: number }) {
   return (
-    <span className="relative block w-full h-full rounded-full overflow-hidden bg-ink-700 flex items-center justify-center" style={{ fontSize: size / 3 }}>
-      {url ? (
-        <AvatarPhoto src={url} username={username} sizes="96px" textClass="text-xl" />
-      ) : (
-        <span className="font-semibold text-garnet-400">{username.charAt(0).toUpperCase()}</span>
-      )}
+    <span className="block w-full h-full" style={{ fontSize: size / 3 }}>
+      <Avatar username={username} avatarUrl={url} size="w-full h-full" textSize="text-xl" sizes="96px" />
     </span>
   )
 }
@@ -195,12 +191,12 @@ export default function StoriesTray() {
             >
               <span className="md:hidden">
                     <StoryRing avatarSize={64} segments={mineSegments} uid="mine">
-                <Avatar url={avatarUrl} username={username} size={64} />
+                <TrayAvatar url={avatarUrl} username={username} size={64} />
               </StoryRing>
                   </span>
               <span className="hidden md:inline-flex">
                     <StoryRing avatarSize={72} segments={mineSegments} uid="mine-d">
-                <Avatar url={avatarUrl} username={username} size={72} />
+                <TrayAvatar url={avatarUrl} username={username} size={72} />
               </StoryRing>
                   </span>
             </button>
@@ -244,12 +240,12 @@ export default function StoriesTray() {
                 <span className="relative">
                   <span className="md:hidden">
                     <StoryRing avatarSize={64} segments={segs} pulse={pulseIds.has(u.user_id)} uid={`t${i}`}>
-                    <Avatar url={u.avatar_url} username={u.username} size={64} />
+                    <TrayAvatar url={u.avatar_url} username={u.username} size={64} />
                   </StoryRing>
                   </span>
                   <span className="hidden md:inline-flex">
                     <StoryRing avatarSize={72} segments={segs} pulse={pulseIds.has(u.user_id)} uid={`td${i}`}>
-                    <Avatar url={u.avatar_url} username={u.username} size={72} />
+                    <TrayAvatar url={u.avatar_url} username={u.username} size={72} />
                   </StoryRing>
                   </span>
                   {u.all_friends_only && (

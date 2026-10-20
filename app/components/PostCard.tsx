@@ -1,5 +1,7 @@
 'use client'
 
+import Avatar from './cosmetics/Avatar'
+import NameText from './cosmetics/NameText'
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -27,7 +29,6 @@ import KebabMenu, { type MenuItem } from './KebabMenu'
 import ConfirmDialog from './ConfirmDialog'
 import ReportDialog from './ReportDialog'
 import PostImages from './PostImages'
-import AvatarPhoto from './AvatarPhoto'
 import { AvatarWithRing } from './stories/StoryRing'
 import MentionField, { type MentionFieldHandle } from './MentionField'
 import FormatToolbar from './FormatToolbar'
@@ -122,15 +123,7 @@ function MiniAvatar({
   avatarUrl: string | null
   size?: string
 }) {
-  return (
-    <div className={`relative ${size} rounded-full overflow-hidden bg-ink-700 flex items-center justify-center shrink-0`}>
-      {avatarUrl ? (
-        <AvatarPhoto src={avatarUrl} username={username} sizes="48px" textClass="text-xs" />
-      ) : (
-        <span className="text-xs font-semibold text-garnet-400">{username.charAt(0).toUpperCase()}</span>
-      )}
-    </div>
-  )
+  return <Avatar username={username} avatarUrl={avatarUrl} size={size} textSize="text-xs" sizes="48px" />
 }
 
 function countDescendants(id: string, map: Map<string, Comment[]>): number {
@@ -305,7 +298,7 @@ function CommentThread({ comment, depth }: { comment: Comment; depth: number }) 
                 <div className="min-w-0 leading-tight">
                   {commentAuthor ? (
                     <Link href={`/perfil/${commentAuthor.username}`} className="group/name inline-flex items-baseline gap-1.5 max-w-full">
-                      <span className="text-[13px] font-bold text-neutral-50 group-hover/name:text-garnet-400 truncate">{displayName}</span>
+                      <NameText name={displayName} color={commentAuthor.name_color} className="text-[13px] font-bold text-neutral-50 group-hover/name:text-garnet-400 truncate" />
                       <span className="text-[11px] text-neutral-500 truncate">@{commentAuthor.username}</span>
                     </Link>
                   ) : (
@@ -806,10 +799,10 @@ export default function PostCard({
     <div className="leading-tight min-w-0">
       <div className="flex items-center gap-1.5 flex-wrap">
         {onProfilePage ? (
-          <span className="text-[15px] font-bold text-neutral-50 truncate">{author.id_student || author.username}</span>
+          <NameText name={author.id_student || author.username} color={author.name_color} density="lite" className="text-[15px] font-bold text-neutral-50 truncate" />
         ) : (
           <Link href={`/perfil/${author.username}`} className="text-[15px] font-bold text-neutral-50 hover:text-garnet-400 truncate">
-            {author.id_student || author.username}
+            <NameText name={author.id_student || author.username} color={author.name_color} density="lite" />
           </Link>
         )}
         <RoleBadges

@@ -1,6 +1,6 @@
 'use client'
 
-import AvatarPhoto from '../components/AvatarPhoto'
+import Avatar from '../components/cosmetics/Avatar'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '../lib/supabaseClient'
@@ -38,13 +38,7 @@ function MiniProfileRow({
       href={`/perfil/${profile.username}`}
       className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-ink-700/60 transition"
     >
-      <div className="relative w-10 h-10 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center shrink-0">
-        {profile.avatar_url ? (
-          <AvatarPhoto src={profile.avatar_url} username={profile.username} sizes="48px" />
-        ) : (
-          <span className="text-sm font-semibold text-garnet-400">{profile.username.charAt(0).toUpperCase()}</span>
-        )}
-      </div>
+      <Avatar username={profile.username} avatarUrl={profile.avatar_url} size="w-10 h-10" textSize="text-sm" sizes="48px" />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-neutral-100 truncate">{profile.id_student || profile.username}</p>
         <p className="text-xs text-neutral-600 truncate">@{profile.username}</p>

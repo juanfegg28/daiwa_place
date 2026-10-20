@@ -1,6 +1,6 @@
 'use client'
 
-import AvatarPhoto from './components/AvatarPhoto'
+import Avatar from './components/cosmetics/Avatar'
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from './lib/supabaseClient'
@@ -343,15 +343,7 @@ function Feed() {
       {username && (
         <form ref={composerRef} onSubmit={handlePost} className="surface-card rounded-2xl p-3 sm:p-4 mb-4 sm:mb-6">
           <div className="flex gap-3">
-            <div className="relative w-10 h-10 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center shrink-0">
-              {avatarUrl ? (
-                <AvatarPhoto src={avatarUrl} username={username} sizes="48px" />
-              ) : (
-                <span className="text-sm font-semibold text-garnet-400">
-                  {username.charAt(0).toUpperCase()}
-                </span>
-              )}
-            </div>
+            <Avatar username={username} avatarUrl={avatarUrl} size="w-10 h-10" textSize="text-sm" sizes="48px" />
             <MentionField
               ref={mentionRef}
               multiline

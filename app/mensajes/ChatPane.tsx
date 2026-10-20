@@ -1,5 +1,6 @@
 'use client'
 
+import NameText from '../components/cosmetics/NameText'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -672,7 +673,7 @@ export default function ChatPane({ convId, me, friendIds }: Props) {
         <Link href={`/perfil/${info.other_username}`} className="flex items-center gap-3 min-w-0 flex-1">
           <UserAvatar username={info.other_username} avatarUrl={info.other_avatar_url} size="w-10 h-10" online={online} />
           <div className="min-w-0 leading-tight">
-            <p className="text-[15px] font-semibold text-neutral-50 truncate">{name}</p>
+            <p className="text-[15px] font-semibold text-neutral-50 truncate">{info.nickname ? name : <NameText name={name} color={info.other_name_color} />}</p>
             <p className={`text-xs truncate ${online ? 'text-emerald-400' : 'text-neutral-500'}`}>
               {online ? 'Conectado' : info.nickname ? `${info.other_id_student || info.other_username} · @${info.other_username}` : `@${info.other_username}`}
               {isFriend && !online ? ' · Amigos' : ''}

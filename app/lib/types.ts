@@ -8,6 +8,8 @@ export type AuthorProfile = {
   username: string
   avatar_url: string | null
   id_student: string | null
+  /** Color del nombre que eligió la persona (v1.3.0) */
+  name_color?: string | null
   is_frozen: boolean
   badge_color?: string | null
   user_roles?: RoleBadgeInfo[]

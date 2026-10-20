@@ -1,12 +1,12 @@
 'use client'
 
+import Avatar from '../../components/cosmetics/Avatar'
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { supabase } from '../../lib/supabaseClient'
 import AppShell, { useAppSession } from '../../components/AppShell'
 import ResilientImage from '../../components/ResilientImage'
-import AvatarPhoto from '../../components/AvatarPhoto'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import ClubFeed from '../ClubFeed'
 import ClubManage, { type JoinRequestRow } from './ClubManage'
@@ -341,12 +341,8 @@ function ClubContent() {
             const isLead = m.user_id === club.leader_id
             return (
               <li key={m.user_id} className="surface-card rounded-2xl p-3 flex items-center gap-3">
-                <Link href={`/perfil/${m.profiles?.username ?? ''}`} className="relative w-10 h-10 rounded-full overflow-hidden bg-ink-700 shrink-0 flex items-center justify-center">
-                  {m.profiles?.avatar_url ? (
-                    <AvatarPhoto src={m.profiles.avatar_url} username={m.profiles.username} sizes="48px" />
-                  ) : (
-                    <span className="text-sm font-semibold text-garnet-400">{(m.profiles?.username ?? '?').charAt(0).toUpperCase()}</span>
-                  )}
+                <Link href={`/perfil/${m.profiles?.username ?? ''}`} className="shrink-0">
+                  <Avatar username={m.profiles?.username ?? '?'} avatarUrl={m.profiles?.avatar_url} size="w-10 h-10" textSize="text-sm" sizes="48px" />
                 </Link>
                 <div className="min-w-0 flex-1 leading-tight">
                   <Link href={`/perfil/${m.profiles?.username ?? ''}`} className="block text-sm font-bold text-neutral-50 truncate hover:text-garnet-400 transition">

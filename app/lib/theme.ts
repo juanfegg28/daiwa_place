@@ -23,7 +23,7 @@ export function isValidHex(hex: string): boolean {
   return /^#[0-9a-fA-F]{6}$/.test(hex)
 }
 
-function hexToHsl(hex: string) {
+export function hexToHsl(hex: string) {
   const clean = hex.replace('#', '')
   const full = clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean
   const bigint = parseInt(full, 16)
@@ -53,7 +53,7 @@ function hexToHsl(hex: string) {
   return { h: h * 360, s: s * 100, l: l * 100 }
 }
 
-function hslToHex(h: number, s: number, l: number): string {
+export function hslToHex(h: number, s: number, l: number): string {
   const S = Math.min(100, Math.max(0, s)) / 100
   const L = Math.min(100, Math.max(0, l)) / 100
   const c = (1 - Math.abs(2 * L - 1)) * S

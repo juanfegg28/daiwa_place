@@ -1,6 +1,6 @@
 'use client'
 
-import AvatarPhoto from '../components/AvatarPhoto'
+import Avatar from '../components/cosmetics/Avatar'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '../lib/supabaseClient'
@@ -113,13 +113,7 @@ export default function FeedTab({ profile, onUpdate }: { profile: ConfigProfile;
           <ul className="space-y-2">
             {muted.map((p) => (
               <li key={p.id} className="flex items-center gap-3 rounded-xl bg-ink-700/60 p-2.5">
-                <div className="relative w-9 h-9 rounded-full overflow-hidden bg-ink-700 shrink-0 flex items-center justify-center">
-                  {p.avatar_url ? (
-                    <AvatarPhoto src={p.avatar_url} username={p.username} sizes="48px" />
-                  ) : (
-                    <span className="text-sm font-semibold text-garnet-400">{p.username.charAt(0).toUpperCase()}</span>
-                  )}
-                </div>
+                <Avatar username={p.username} avatarUrl={p.avatar_url} size="w-9 h-9" textSize="text-sm" sizes="48px" />
                 <Link href={`/perfil/${p.username}`} className="min-w-0 flex-1 leading-tight">
                   <p className="text-sm font-semibold text-neutral-50 truncate">{p.id_student || p.username}</p>
                   <p className="text-xs text-neutral-500 truncate">@{p.username}</p>

@@ -1,6 +1,6 @@
 'use client'
 
-import AvatarPhoto from '../components/AvatarPhoto'
+import Avatar from '../components/cosmetics/Avatar'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -386,15 +386,7 @@ function NotificacionesContent() {
                         <ClubsIcon filled className="w-5 h-5" />
                       </div>
                     ) : (
-                      <div className="relative w-10 h-10 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center">
-                        {n.actor?.avatar_url ? (
-                          <AvatarPhoto src={n.actor.avatar_url} username={n.actor.username} sizes="48px" />
-                        ) : (
-                          <span className="text-sm font-semibold text-garnet-400">
-                            {(n.actor?.username ?? '?').charAt(0).toUpperCase()}
-                          </span>
-                        )}
-                      </div>
+                      <Avatar username={n.actor?.username ?? '?'} avatarUrl={n.actor?.avatar_url} size="w-10 h-10" textSize="text-sm" sizes="48px" />
                     )}
                     <span className="absolute -bottom-1 -right-1 w-[22px] h-[22px] rounded-full bg-garnet-600 text-white border-2 border-ink-800 flex items-center justify-center">
                       <TypeIcon type={n.type} />

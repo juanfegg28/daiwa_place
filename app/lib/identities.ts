@@ -8,6 +8,20 @@ export const IDENTITIES = [
 
 export type Identity = (typeof IDENTITIES)[number]
 
+// Identidades «comunes»: se muestran como un chip más (solo el nombre). Las demás son especiales y llevan tarjeta + sello.
+export const COMMON_IDENTITIES: readonly string[] = ['Hombre', 'Mujer', 'No binario', 'Género fluido', 'Agénero', 'Andrógino']
+
+export function isCommonIdentity(identity: string | null | undefined): boolean {
+  return !!identity && COMMON_IDENTITIES.includes(identity)
+}
+
+export type IdentityVisibility = 'todos' | 'seguidores' | 'nadie'
+export const IDENTITY_VISIBILITY_OPTIONS: { id: IdentityVisibility; label: string }[] = [
+  { id: 'todos', label: 'Todas las personas' },
+  { id: 'seguidores', label: 'Solo mis seguidores' },
+  { id: 'nadie', label: 'Nadie (solo yo)' },
+]
+
 export type IdentityField = {
   label: string
   type: 'text' | 'number' | 'date' | 'select'

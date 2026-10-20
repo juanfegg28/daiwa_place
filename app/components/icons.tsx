@@ -971,3 +971,50 @@ export function GripIcon({ className = base }: IconProps) {
     </svg>
   )
 }
+
+/** Luna creciente dorada dentro de un círculo: el ícono de las Lunas ☾ */
+export function MoonCoinIcon({ className = 'w-5 h-5' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <circle cx="12" cy="12" r="10" fill="#d4a017" fillOpacity="0.18" stroke="#d4a017" strokeWidth="1.4" />
+      <path d="M14.8 6.3a6 6 0 1 0 2.9 8.6 5 5 0 0 1-2.9-8.6Z" fill="#f5c542" stroke="#d4a017" strokeWidth="0.8" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+export function TargetIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.8" />
+      <circle cx="12" cy="12" r="4.5" stroke="currentColor" strokeWidth="1.8" />
+      <circle cx="12" cy="12" r="1.2" fill="currentColor" />
+    </svg>
+  )
+}
+
+export function StoreIcon({ className = base, filled = false }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M5 9.5h14l-1 9.2a1 1 0 0 1-1 .8H7a1 1 0 0 1-1-.8L5 9.5Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" fill={filled ? 'currentColor' : 'none'} fillOpacity={filled ? 0.15 : 0} />
+      <path d="M8.5 9.5V8a3.5 3.5 0 0 1 7 0v1.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+export function GiftIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <rect x="4" y="9" width="16" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M3 9h18v3H3zM12 9v11M12 9c-1-3-5-3.5-5-1.2 0 1.4 2.5 1.2 5 1.2Zm0 0c1-3 5-3.5 5-1.2 0 1.4-2.5 1.2-5 1.2Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+export function FlameIcon({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M12 3c1 3.2 4.5 4.8 4.5 9a4.5 4.5 0 0 1-9 0c0-1.7.8-2.7 1.6-3.6.2 1.2.9 1.9 1.6 2 .4-2.8-.2-5 1.3-7.4Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+    </svg>
+  )
+}
+

@@ -1,8 +1,8 @@
 'use client'
 
+import Avatar from '../cosmetics/Avatar'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import AvatarPhoto from '../AvatarPhoto'
 import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, CopyIcon, EyeIcon, FlagIcon, MoreIcon, PauseIcon, PlayIcon, StarIcon, TrashIcon, ArchiveIcon, HeartIcon, BlockIcon } from '../icons'
 import { supabase } from '../../lib/supabaseClient'
 import { useStoryAudio } from '../../lib/useStoryAudio'
@@ -764,9 +764,7 @@ export default function StoryViewer({
             <StoryCanvas bg={first.bg} mediaUrl={url} elements={first.elements} track={null} animate={false} />
           ) : (
             <span className="w-full h-full flex items-center justify-center">
-              <span className="relative w-16 h-16 rounded-full overflow-hidden bg-[#24242b] flex items-center justify-center">
-                {g.owner.avatar_url ? <AvatarPhoto src={g.owner.avatar_url} username={g.owner.username} sizes="64px" /> : <span className="text-garnet-400 text-xl font-semibold">{g.owner.username.charAt(0).toUpperCase()}</span>}
-              </span>
+              <Avatar username={g.owner.username} avatarUrl={g.owner.avatar_url} size="w-16 h-16" textSize="text-xl" sizes="64px" />
             </span>
           )}
         </span>
@@ -902,9 +900,7 @@ export default function StoryViewer({
               <div className="px-2.5 pt-2.5 pb-10">
                 <ProgressBars count={stories.length} index={si} progress={progress} />
                 <div className="mt-2.5 flex items-center gap-2.5">
-                  <span className="relative w-[34px] h-[34px] rounded-full overflow-hidden bg-[#24242b] flex items-center justify-center shrink-0 ring-2" style={{ ['--tw-ring-color' as string]: hasUnseenMore ? 'var(--color-garnet-400)' : 'rgba(255,255,255,.3)' }}>
-                    {group.owner.avatar_url ? <AvatarPhoto src={group.owner.avatar_url} username={group.owner.username} sizes="40px" /> : <span className="text-garnet-400 text-sm font-semibold">{group.owner.username.charAt(0).toUpperCase()}</span>}
-                  </span>
+                  <Avatar username={group.owner.username} avatarUrl={group.owner.avatar_url} size="w-[34px] h-[34px]" textSize="text-sm" sizes="40px" photoClassName="ring-2" className={hasUnseenMore ? '[--tw-ring-color:var(--color-garnet-400)]' : '[--tw-ring-color:rgba(255,255,255,.3)]'} />
                   <div className="min-w-0 flex-1 leading-tight pointer-events-auto">
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="text-[14px] font-bold truncate">{isMine ? 'Tu historia' : label}</span>

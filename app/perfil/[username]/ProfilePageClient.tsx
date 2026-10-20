@@ -1,10 +1,14 @@
 'use client'
 
 import Image from 'next/image'
-import AvatarPhoto from '../../components/AvatarPhoto'
+import Avatar from '../../components/cosmetics/Avatar'
+import NameText from '../../components/cosmetics/NameText'
+import ProfileCard from '../../components/cosmetics/ProfileCard'
+import IdentitySeal from '../../components/IdentitySeal'
+import { profileThemeVars } from '../../lib/color'
 import HighlightsRow from '../../components/stories/HighlightsRow'
 import { RingOverlay, rememberOrigin, useRingStatus } from '../../components/stories/StoryRing'
-import { ArchiveIcon, PlusIcon } from '../../components/icons'
+import { ArchiveIcon, PlusIcon, PaletteIcon } from '../../components/icons'
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -27,7 +31,7 @@ import type { ClubMembershipTag } from '../../lib/clubs'
 import MusicChip from '../../components/MusicChip'
 import { normalizeTrack } from '../../lib/music'
 import { PROFILE_POST_SELECT, fetchFeedItems } from '../../lib/queries'
-import { formatIdentityDetail, identityField } from '../../lib/identities'
+import { formatIdentityDetail, identityField, isCommonIdentity } from '../../lib/identities'
 import { SparklesIcon } from '../../components/icons'
 import type { AuthorProfile, FeedItem, Post, RoleBadgeInfo } from '../../lib/types'
 
@@ -47,6 +51,11 @@ type Profile = {
   posts_visibility: 'public' | 'followers'
   pinned_post_id?: string | null
   created_at: string
+  // v1.3.0: personalización gratis
+  profile_color?: string | null
+  name_color?: string | null
+  card_color?: string | null
+  card_mode?: string | null
 }
 
 // Lista clásica (sin compartidos): solo se usa si todavía no se corrió el SQL de la v1.1.10
@@ -173,7 +182,7 @@ function ProfileContent() {
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select(
-        'id, username, id_student, bio, music, avatar_url, banner_url, birthday, grado, estado_personal, badge_color, is_frozen, posts_visibility, pinned_post_id, created_at'
+        'id, username, id_student, bio, music, avatar_url, banner_url, birthday, grado, estado_personal, badge_color, is_frozen, posts_visibility, pinned_post_id, created_at, profile_color, name_color, card_color, card_mode'
       )
       .eq('username', usernameParam.toLowerCase())
       .maybeSingle()
@@ -203,10 +212,12 @@ function ProfileContent() {
     }
     // Identidad: se pide aparte, así el perfil carga igual aunque falte el SQL de la v1.1.10
     const loadIdentity = async () => {
-      const { data } = await supabase.from('profiles').select('identity, identity_detail').eq('id', profileData.id).maybeSingle()
-      const row = data as { identity: string | null; identity_detail: string | null } | null
+      const { data } = await supabase.rpc('profile_identity', { p_user: profileData.id })
+      const row = (Array.isArray(data) ? data[0] : data) as { identity: string | null; identity_detail: string | null } | null
       setIdentity({ identity: row?.identity ?? null, detail: row?.identity_detail ?? null })
     }
+    // v1.3.0: cuenta como «visita» para las misiones (la base de datos ignora las propias y limita el total)
+    if (userId && userId !== profileData.id) supabase.rpc('track_profile_visit', { p_user: profileData.id }).then(() => {})
     postsLimit.current = 15
     await Promise.all([loadPosts(profileData.id, profileData.pinned_post_id ?? null), loadFollowState(profileData.id), loadRoles(), loadClubTags(), loadIdentity()])
     setLoading(false)
@@ -310,6 +321,7 @@ function ProfileContent() {
     username: profile.username,
     avatar_url: profile.avatar_url,
     id_student: profile.id_student,
+    name_color: profile.name_color,
     is_frozen: profile.is_frozen,
     badge_color: profile.badge_color,
     user_roles: roles,
@@ -321,8 +333,10 @@ function ProfileContent() {
   const isPrivateForMe =
     !isMyProfile && !isBlockedEitherWay && profile.posts_visibility === 'followers' && !isFollowing
 
+  const themeVars = profileThemeVars(profile.profile_color)
+
   return (
-    <div className="pb-10">
+    <div className={`pb-10 ${themeVars ? 'profile-theme' : ''}`} style={themeVars}>
       <div
         className="w-full max-h-64 bg-gradient-to-r from-garnet-700 via-garnet-600 to-ink-900 relative"
         style={{ aspectRatio: '3 / 1' }}
@@ -345,15 +359,15 @@ function ProfileContent() {
               aria-label={ringStatus?.has_story ? `Ver las historias de @${profile.username}` : 'Foto de perfil'}
               className={`block w-full h-full rounded-full ${ringStatus?.has_story ? 'cursor-pointer' : 'cursor-default'}`}
             >
-          <div className="relative w-full h-full rounded-full border-4 border-ink-950 bg-ink-700 overflow-hidden flex items-center justify-center shadow-[0_0_0_2px] shadow-garnet-500/45">
-            {profile.avatar_url ? (
-              <AvatarPhoto src={profile.avatar_url} username={profile.username} sizes="128px" priority textClass="text-3xl" />
-            ) : (
-              <span className="text-3xl font-semibold text-garnet-400">
-                {profile.username.charAt(0).toUpperCase()}
-              </span>
-            )}
-          </div>
+          <Avatar
+            username={profile.username}
+            avatarUrl={profile.avatar_url}
+            size="w-full h-full"
+            sizes="128px"
+            priority
+            textSize="text-3xl"
+            photoClassName="border-4 border-ink-950 shadow-[0_0_0_2px] shadow-garnet-500/45"
+          />
             </button>
             <RingOverlay status={ringStatus} uid={profile.id} />
             {isMyProfile && (
@@ -376,6 +390,14 @@ function ProfileContent() {
                 className="flex items-center justify-center w-9 h-9 border border-ink-600 text-neutral-300 rounded-full hover:bg-ink-800 transition"
               >
                 <ArchiveIcon className="w-[18px] h-[18px]" />
+              </Link>
+              <Link
+                href="/personalizar"
+                aria-label="Personalizar mi perfil"
+                title="Personalizar mi perfil"
+                className="flex items-center justify-center w-9 h-9 border border-ink-600 text-neutral-300 rounded-full hover:bg-ink-800 transition"
+              >
+                <PaletteIcon className="w-[18px] h-[18px]" />
               </Link>
               <Link
                 href="/editar-perfil"
@@ -405,7 +427,7 @@ function ProfileContent() {
 
         <div className="mb-4">
           <h1 className="text-xl font-semibold text-neutral-50 flex items-center gap-2 flex-wrap">
-            {profile.id_student || profile.username}
+            <NameText name={profile.id_student || profile.username} color={profile.name_color} density="full" />
             <RoleBadges username={profile.username} roles={roles} badgeColorOverride={profile.badge_color} />
             <ClubTags memberships={clubTags} max={4} />
             {profile.is_frozen && (
@@ -452,71 +474,80 @@ function ProfileContent() {
           </div>
         ) : (
           <>
-            {profile.bio && (
-              <p className="text-sm text-neutral-200 mb-3 leading-relaxed whitespace-pre-wrap">{profile.bio}</p>
-            )}
-            {!!normalizeTrack(profile.music) && (
-              <div className="mb-3">
-                <MusicChip track={profile.music} variant="card" />
-              </div>
-            )}
+            <ProfileCard color={profile.card_color} mode={profile.card_mode}>
+              {profile.bio && (
+                <p className="text-sm text-neutral-200 mb-3 leading-relaxed whitespace-pre-wrap">{profile.bio}</p>
+              )}
+              {!!normalizeTrack(profile.music) && (
+                <div className="mb-3">
+                  <MusicChip track={profile.music} variant="card" />
+                </div>
+              )}
 
-            {/* Identidad + su campo especial: bien visible en la cabecera */}
-            {identity.identity && (
-              <div className="mb-3 rounded-2xl border border-garnet-500/30 bg-gradient-to-br from-garnet-600/15 via-garnet-600/5 to-transparent px-4 py-3">
-                <p className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-garnet-300">
-                  <SparklesIcon className="w-3.5 h-3.5" />
-                  Identidad
-                </p>
-                <p className="text-lg font-display font-semibold text-neutral-50 leading-tight mt-0.5">{identity.identity}</p>
-                {identity.detail && identityField(identity.identity) && (
-                  <p className="text-sm text-neutral-300 mt-1.5">
-                    <span className="text-neutral-500">{identityField(identity.identity)?.label}: </span>
-                    <span className="font-medium text-neutral-100">{formatIdentityDetail(identity.identity, identity.detail)}</span>
+              {/* Identidad ESPECIAL: tarjeta con su sello animado y su campo especial */}
+              {identity.identity && !isCommonIdentity(identity.identity) && (
+                <div className="relative overflow-hidden mb-3 rounded-2xl border border-garnet-500/30 bg-gradient-to-br from-garnet-600/15 via-garnet-600/5 to-transparent px-4 py-3">
+                  <IdentitySeal identity={identity.identity} className="absolute right-1 top-1 w-[72px] h-[50px] text-garnet-300 opacity-90" />
+                  <p className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-garnet-300">
+                    <SparklesIcon className="w-3.5 h-3.5" />
+                    Identidad
                   </p>
-                )}
+                  <p className="text-lg font-display font-semibold text-neutral-50 leading-tight mt-0.5">{identity.identity}</p>
+                  {identity.detail && identityField(identity.identity) && (
+                    <p className="text-sm text-neutral-300 mt-1.5">
+                      <span className="text-neutral-500">{identityField(identity.identity)?.label}: </span>
+                      <span className="font-medium text-neutral-100">{formatIdentityDetail(identity.identity, identity.detail)}</span>
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Chips: identidad común (solo el nombre), grado, cumpleaños y estado */}
+              {((identity.identity && isCommonIdentity(identity.identity)) || profile.grado || profile.birthday || profile.estado_personal) && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {identity.identity && isCommonIdentity(identity.identity) && (
+                    <span className="inline-flex items-center gap-1.5 bg-ink-800/70 border border-ink-700 text-neutral-300 text-xs font-medium px-3 py-1.5 rounded-full">
+                      {identity.identity}
+                    </span>
+                  )}
+                  {profile.grado && (
+                    <span className="inline-flex items-center gap-1.5 bg-ink-800/70 border border-ink-700 text-neutral-300 text-xs font-medium px-3 py-1.5 rounded-full">
+                      <GraduationCapIcon className="w-3.5 h-3.5 text-garnet-400" />
+                      {profile.grado}
+                    </span>
+                  )}
+                  {profile.birthday && (
+                    <span className="inline-flex items-center gap-1.5 bg-ink-800/70 border border-ink-700 text-neutral-300 text-xs font-medium px-3 py-1.5 rounded-full">
+                      <CalendarIcon className="w-3.5 h-3.5 text-garnet-400" />
+                      {formatBirthday(profile.birthday)}
+                    </span>
+                  )}
+                  {profile.estado_personal && (
+                    <span className="inline-flex items-center gap-1.5 bg-ink-800/70 border border-ink-700 text-neutral-300 text-xs font-medium px-3 py-1.5 rounded-full">
+                      <HeartIcon className="w-3.5 h-3.5 text-garnet-400" />
+                      {profile.estado_personal}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              <p className="text-xs text-neutral-600 mb-4">Se unió en {formatJoinDate(profile.created_at)}</p>
+
+              <div className="flex gap-4 text-sm">
+                <span>
+                  <b className="text-neutral-100">{postsTotal}</b>{' '}
+                  <span className="text-neutral-500">publicaciones</span>
+                </span>
+                <Link href={`/perfil/${profile.username}/seguidores`} className="hover:text-garnet-400 transition">
+                  <b className="text-neutral-100">{followersCount}</b>{' '}
+                  <span className="text-neutral-500">seguidores</span>
+                </Link>
+                <Link href={`/perfil/${profile.username}/seguidores?tab=siguiendo`} className="hover:text-garnet-400 transition">
+                  <b className="text-neutral-100">{followingCount}</b>{' '}
+                  <span className="text-neutral-500">seguidos</span>
+                </Link>
               </div>
-            )}
-
-            {(profile.grado || profile.birthday || profile.estado_personal) && (
-              <div className="flex flex-wrap gap-1.5 mb-2">
-                {profile.grado && (
-                  <span className="inline-flex items-center gap-1.5 bg-ink-800/70 border border-ink-700 text-neutral-300 text-xs font-medium px-3 py-1.5 rounded-full">
-                    <GraduationCapIcon className="w-3.5 h-3.5 text-garnet-400" />
-                    {profile.grado}
-                  </span>
-                )}
-                {profile.birthday && (
-                  <span className="inline-flex items-center gap-1.5 bg-ink-800/70 border border-ink-700 text-neutral-300 text-xs font-medium px-3 py-1.5 rounded-full">
-                    <CalendarIcon className="w-3.5 h-3.5 text-garnet-400" />
-                    {formatBirthday(profile.birthday)}
-                  </span>
-                )}
-                {profile.estado_personal && (
-                  <span className="inline-flex items-center gap-1.5 bg-ink-800/70 border border-ink-700 text-neutral-300 text-xs font-medium px-3 py-1.5 rounded-full">
-                    <HeartIcon className="w-3.5 h-3.5 text-garnet-400" />
-                    {profile.estado_personal}
-                  </span>
-                )}
-              </div>
-            )}
-
-            <p className="text-xs text-neutral-600 mb-4">Se unió en {formatJoinDate(profile.created_at)}</p>
-
-            <div className="flex gap-4 text-sm mb-6 pb-4 border-b border-ink-800">
-              <span>
-                <b className="text-neutral-100">{postsTotal}</b>{' '}
-                <span className="text-neutral-500">publicaciones</span>
-              </span>
-              <Link href={`/perfil/${profile.username}/seguidores`} className="hover:text-garnet-400 transition">
-                <b className="text-neutral-100">{followersCount}</b>{' '}
-                <span className="text-neutral-500">seguidores</span>
-              </Link>
-              <Link href={`/perfil/${profile.username}/seguidores?tab=siguiendo`} className="hover:text-garnet-400 transition">
-                <b className="text-neutral-100">{followingCount}</b>{' '}
-                <span className="text-neutral-500">seguidos</span>
-              </Link>
-            </div>
+            </ProfileCard>
 
             {/* Destacadas (v1.2.0) */}
             <HighlightsRow profileId={profile.id} username={profile.username} isOwn={isMyProfile} />

@@ -9,6 +9,7 @@ import ProfilePreviewCard from '../components/ProfilePreviewCard'
 import { useAvatarCropper, BANNER_CROP } from '../components/AvatarCropper'
 import { CameraIcon } from '../components/icons'
 import IdentityFields from '../components/IdentityFields'
+import { IDENTITY_VISIBILITY_OPTIONS, type IdentityVisibility } from '../lib/identities'
 import { ESTADOS_SENTIMENTALES } from '../lib/constants'
 import { checkStudentName, NAME_HELP, NAME_PLACEHOLDER } from '../lib/nameFilter'
 import MusicField from '../components/MusicField'
@@ -34,6 +35,7 @@ function EditProfileForm() {
   const [estadoPersonal, setEstadoPersonal] = useState('')
   const [identity, setIdentity] = useState('')
   const [identityDetail, setIdentityDetail] = useState('')
+  const [identityVisibility, setIdentityVisibility] = useState<IdentityVisibility>('todos')
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const [bannerPreview, setBannerPreview] = useState<string | null>(null)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
@@ -73,9 +75,11 @@ function EditProfileForm() {
       setBirthday(data.birthday ?? '')
       setEstadoPersonal(data.estado_personal ?? '')
       // Identidad (v1.1.10): se pide aparte para que Editar perfil cargue igual si todavía falta el SQL nuevo
-      const { data: idRow } = await supabase.from('profiles').select('identity, identity_detail').eq('id', userId).maybeSingle()
-      setIdentity((idRow as { identity: string | null } | null)?.identity ?? '')
-      setIdentityDetail((idRow as { identity_detail: string | null } | null)?.identity_detail ?? '')
+      const { data: idData } = await supabase.rpc('profile_identity', { p_user: userId })
+      const idRow = (Array.isArray(idData) ? idData[0] : idData) as { identity: string | null; identity_detail: string | null; identity_visibility: string | null } | null
+      setIdentity(idRow?.identity ?? '')
+      setIdentityDetail(idRow?.identity_detail ?? '')
+      setIdentityVisibility((idRow?.identity_visibility as IdentityVisibility) || 'todos')
       setAvatarPreview(data.avatar_url ?? null)
       setBannerPreview(data.banner_url ?? null)
     }
@@ -178,7 +182,7 @@ function EditProfileForm() {
 
     const { error: identityError } = await supabase
       .from('profiles')
-      .update({ identity: identity || null, identity_detail: identityDetail.trim() || null })
+      .update({ identity: identity || null, identity_detail: identityDetail.trim() || null, identity_visibility: identityVisibility })
       .eq('id', userId)
     if (identityError && !/identity|column|schema cache/i.test(identityError.message)) {
       setError(identityError.message)
@@ -330,6 +334,27 @@ function EditProfileForm() {
           labelClass="block mb-1 text-sm text-neutral-400"
           inputClass="w-full bg-ink-900 border border-ink-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-garnet-600"
         />
+
+        {identity && (
+          <div>
+            <label className="block mb-1 text-sm text-neutral-400">¿Quién puede ver tu identidad?</label>
+            <select
+              value={identityVisibility}
+              onChange={(e) => setIdentityVisibility(e.target.value as IdentityVisibility)}
+              className="w-full bg-ink-900 border border-ink-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-garnet-600"
+            >
+              {IDENTITY_VISIBILITY_OPTIONS.map((o) => (
+                <option key={o.id} value={o.id}>{o.label}</option>
+              ))}
+            </select>
+            <p className="text-xs text-neutral-600 mt-1">Es un dato personal: tú decides quién lo ve. Lo respeta la base de datos, no solo la pantalla.</p>
+          </div>
+        )}
+
+        <Link href="/personalizar" className="flex items-center justify-between rounded-xl border border-ink-700 bg-ink-900/60 px-4 py-3 text-sm text-neutral-200 hover:bg-ink-800 transition">
+          <span>🎨 Color de tu perfil, nombre y tarjeta</span>
+          <span className="text-garnet-400">Personalizar →</span>
+        </Link>
 
         {error && <p className="text-garnet-400 text-sm">{error}</p>}
         {success && <p className="text-emerald-500 text-sm">Perfil actualizado</p>}

@@ -1,12 +1,12 @@
 'use client'
 
+import Avatar from '../../components/cosmetics/Avatar'
 import { useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '../../lib/supabaseClient'
 import { useAvatarCropper, BANNER_CROP } from '../../components/AvatarCropper'
 import { ClubAvatar } from '../../components/ClubCard'
 import { ClubTag } from '../../components/ClubTag'
-import AvatarPhoto from '../../components/AvatarPhoto'
 import { CameraIcon, CheckIcon, CloseIcon, EditIcon, PlusIcon, TrashIcon } from '../../components/icons'
 import {
   CLUB_DESC_MAX,
@@ -182,13 +182,7 @@ export default function ClubManage({
           <ul className="space-y-2">
             {requests.map((r) => (
               <li key={r.id} className="flex items-center gap-3 rounded-xl bg-ink-700/60 p-2.5">
-                <div className="relative w-9 h-9 rounded-full overflow-hidden bg-ink-700 shrink-0 flex items-center justify-center">
-                  {r.profiles?.avatar_url ? (
-                    <AvatarPhoto src={r.profiles.avatar_url} username={r.profiles.username} sizes="48px" />
-                  ) : (
-                    <span className="text-sm font-semibold text-garnet-400">{(r.profiles?.username ?? '?').charAt(0).toUpperCase()}</span>
-                  )}
-                </div>
+                <Avatar username={r.profiles?.username ?? '?'} avatarUrl={r.profiles?.avatar_url} size="w-9 h-9" textSize="text-sm" sizes="48px" />
                 <Link href={`/perfil/${r.profiles?.username ?? ''}`} className="min-w-0 flex-1 leading-tight">
                   <p className="text-sm font-semibold text-neutral-50 truncate">{r.profiles?.id_student || r.profiles?.username}</p>
                   <p className="text-xs text-neutral-500 truncate">@{r.profiles?.username}</p>

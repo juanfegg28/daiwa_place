@@ -1,6 +1,6 @@
 'use client'
 
-import AvatarPhoto from '../components/AvatarPhoto'
+import Avatar from '../components/cosmetics/Avatar'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '../lib/supabaseClient'
@@ -61,15 +61,7 @@ export default function BloqueadosTab({ currentUserId }: { currentUserId: string
                 href={`/perfil/${p.username}`}
                 className="flex items-center gap-3 flex-1 min-w-0 hover:opacity-80 transition"
               >
-                <div className="relative w-9 h-9 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center shrink-0">
-                  {p.avatar_url ? (
-                    <AvatarPhoto src={p.avatar_url} username={p.username} sizes="48px" textClass="text-xs" />
-                  ) : (
-                    <span className="text-xs font-semibold text-garnet-400">
-                      {p.username.charAt(0).toUpperCase()}
-                    </span>
-                  )}
-                </div>
+                <Avatar username={p.username} avatarUrl={p.avatar_url} size="w-9 h-9" textSize="text-xs" sizes="48px" />
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-neutral-100 truncate">{p.id_student || p.username}</p>
                   <p className="text-xs text-neutral-600 truncate">@{p.username}</p>

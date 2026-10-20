@@ -1,8 +1,8 @@
 'use client'
 
+import Avatar from '../../cosmetics/Avatar'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import AvatarPhoto from '../../AvatarPhoto'
 import { HeartIcon, SearchIcon, StarIcon, TrashIcon } from '../../icons'
 import Sheet from '../Sheet'
 import { fetchActivityCounts, fetchViewers, storyAgo, ownerLabel, type Viewer } from '../../../lib/stories'
@@ -10,9 +10,7 @@ import { fetchActivityCounts, fetchViewers, storyAgo, ownerLabel, type Viewer } 
 function Row({ v, liked }: { v: Viewer; liked: boolean }) {
   return (
     <Link href={`/perfil/${v.username}`} className="flex items-center gap-3 py-2 px-1 rounded-xl hover:bg-white/5">
-      <span className="relative w-11 h-11 rounded-full overflow-hidden bg-[#24242b] flex items-center justify-center shrink-0">
-        {v.avatar_url ? <AvatarPhoto src={v.avatar_url} username={v.username} sizes="48px" /> : <span className="text-garnet-400 font-semibold">{v.username.charAt(0).toUpperCase()}</span>}
-      </span>
+      <Avatar username={v.username} avatarUrl={v.avatar_url} size="w-11 h-11" textSize="text-base" sizes="48px" />
       <span className="min-w-0 flex-1 leading-tight">
         <span className="block text-[14px] font-semibold text-neutral-50 truncate">{ownerLabel(v)}</span>
         <span className="block text-[12px] text-neutral-400 truncate">

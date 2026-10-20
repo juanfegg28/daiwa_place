@@ -15,6 +15,52 @@ export const RELEASE_STAGE: 'beta' | 'stable' = 'stable'
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.3.0',
+    date: '2026-10-20',
+    title: 'Personalización Parte 1: Lunas y Misiones',
+    sections: [
+      {
+        heading: 'Las Lunas ☾',
+        items: [
+          'Nueva moneda de DaiwaPlace: las Lunas ☾. Se ganan con misiones, rachas y logros; no se compran ni se regalan.',
+          'Chip con tu saldo en el menú (y en la cabecera del celular) y un historial de movimientos en Mi saldo.',
+          'Bienvenida de 150 ☾ para todas las cuentas y Pack Fundador (+300 ☾) para quienes llegaron durante la beta.',
+        ],
+      },
+      {
+        heading: 'Misiones',
+        items: [
+          '3 misiones diarias (fácil, media y difícil) y 4 semanales, con bono por completar las 3 del día y cofre semanal.',
+          'Misiones de bienvenida y logros, racha diaria con premios a los 3, 7, 14 y 30 días, y la opción de cambiar una misión del día.',
+          'El progreso lo cuenta el servidor con lo que haces de verdad: no se puede completar a mano ni repitiendo seguir y dejar de seguir.',
+        ],
+      },
+      {
+        heading: 'Personaliza tu perfil (gratis)',
+        items: [
+          'Color del perfil: lo ven todas las personas al entrar a tu perfil (24 colores o uno libre). No cambia el color de tu propia app.',
+          'Color de tu nombre en publicaciones, comentarios y mensajes, y color de tu tarjeta (sólida, degradado o vidrio).',
+          'Nuevo Estudio de personalización con vista previa en vivo. El texto siempre se lee, elijas el color que elijas.',
+        ],
+      },
+      {
+        heading: 'Identidad',
+        items: [
+          'Las identidades comunes (Hombre, Mujer, No binario, Género fluido, Agénero y Andrógino) ahora salen como un chip más, solo con el nombre.',
+          'Las identidades especiales conservan su tarjeta y estrenan un sello animado propio.',
+          'Nuevo: tú decides quién ve tu identidad (todos, solo seguidores o nadie).',
+        ],
+      },
+      {
+        heading: 'Tienda y códigos',
+        items: [
+          'Nueva Tienda (el catálogo llega muy pronto) con la sección Canjear código para los códigos que reparte el equipo.',
+          'Centro de Mando: nueva pestaña Tienda y Lunas con códigos (en lote y CSV), misiones editables, economía, ajuste manual y ajustes.',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.2.0',
     date: '2026-10-18',
     title: 'Historias',
@@ -585,4 +631,4 @@ export const CHANGELOG: Release[] = [
 
 export const LATEST_RELEASE = CHANGELOG[0]
 // Versión que se muestra en la app. Si un parche pequeño (1.0.x) no lleva notas en el changelog, igual se sube este número a mano.
-export const APP_VERSION = '1.2.0'
+export const APP_VERSION = '1.3.0'
