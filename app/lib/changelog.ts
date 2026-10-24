@@ -16,7 +16,7 @@ export const RELEASE_STAGE: 'beta' | 'stable' = 'stable'
 export const CHANGELOG: Release[] = [
   {
     version: '1.4.0',
-    date: '2026-10-22',
+    date: '2026-10-23',
     title: 'Tienda y Estilo',
     sections: [
       {
