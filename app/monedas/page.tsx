@@ -27,7 +27,7 @@ function MonedasContent() {
   const [busy, setBusy] = useState(false)
   const [rain, setRain] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
-  const [founder, setFounder] = useState<{ eligible: boolean; claimed: boolean; coins: number } | null>(null)
+  const [founder, setFounder] = useState<{ eligible: boolean; claimed: boolean; coins: number; coins_claimed?: boolean; items_claimed?: boolean } | null>(null)
 
   const load = useCallback(async (before?: string) => {
     const { data } = await supabase.rpc('coins_history', { p_limit: 30, p_before: before ?? null })
@@ -84,7 +84,7 @@ function MonedasContent() {
         <div className="rounded-2xl border border-garnet-500/30 bg-garnet-600/10 p-4 mb-5 flex items-center gap-4">
           <div className="flex-1">
             <p className="font-display font-semibold text-neutral-50">Pack Fundador</p>
-            <p className="text-sm text-neutral-400">Para las cuentas de la beta, por estar desde el principio. +{formatLunas(founder.coins)} (los cosméticos exclusivos llegan con la tienda).</p>
+            <p className="text-sm text-neutral-400">Para las cuentas de la beta, por estar desde el principio. {founder.coins_claimed ? 'Ya cobraste tus Lunas; te falta reclamar tus cosméticos exclusivos: ' : `+${formatLunas(founder.coins)} y `}Marco Fundador, insignia, título «Fundador de Daiwa» y el efecto Oro foil en paleta Fundador.</p>
           </div>
           {founder.claimed ? (
             <span className="text-sm text-emerald-400 font-medium">Reclamado ✓</span>

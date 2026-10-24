@@ -15,9 +15,44 @@ export const RELEASE_STAGE: 'beta' | 'stable' = 'stable'
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.4.0',
+    date: '2026-10-22',
+    title: 'Tienda y Estilo',
+    sections: [
+      {
+        heading: 'La tienda abre ✨',
+        items: [
+          'Ya puedes gastar tus Lunas ☾: decoraciones de avatar animadas, tarjetas de perfil, efectos de entrada, efectos de nombre, fuentes, fondos y títulos.',
+          'Cada cosmético se ve sobre TU foto y TU nombre antes de comprarlo. Elige entre las paletas que trae, y los Legendarios admiten color libre.',
+          'Colecciones con pack (−20 %): al completar una colección ganas su insignia, un título exclusivo y 400 ☾.',
+          'Pack Bienvenida gratis (elige 3 decoraciones, 3 fuentes y 3 títulos comunes) y, para las cuentas de la beta, el Pack Fundador ahora trae también su Marco Fundador, insignia, título y Oro foil.',
+        ],
+      },
+      {
+        heading: 'Tu perfil con estilo',
+        items: [
+          'Estudio de personalización con vista previa en vivo y probador: toca lo que no es tuyo para probarlo gratis y cómpralo desde la barra de abajo.',
+          'Tu inventario en la tienda: equipa y quita cosas con un toque.',
+          'Las tarjetas de la tienda reemplazan el encabezado del perfil (tu banner va dentro) y debajo quedan tus botones, roles y clubes. Los fondos y los efectos de entrada se ven al abrir tu perfil.',
+          'Las decoraciones y los efectos de nombre también aparecen en tus publicaciones y comentarios.',
+          'Nuevo en Configuración → Apariencia: animaciones de perfiles (todas / solo en perfiles / ninguna) y efectos de nombre (completa / ligera / plana). Respetamos «reducir movimiento» de tu teléfono.',
+        ],
+      },
+      {
+        heading: 'Misiones y Lunas más claras',
+        items: [
+          'Tu racha ahora se entiende de un vistazo: días seguidos, si hoy ya cuenta, tus últimos 7 días y cuánto falta para el siguiente premio.',
+          'Tu saldo se ve más destacado en el menú, en el celular y en Misiones.',
+          'Cuando completes una misión aparece un puntito dorado en todos los íconos de Misiones hasta que reclames el premio.',
+          'Nuevos logros: «5 cosméticos en tu colección» y «Primera colección completa».',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.3.0',
     date: '2026-10-20',
-    title: 'Personalización Parte 1: Lunas y Misiones',
+    title: 'Lunas y Misiones',
     sections: [
       {
         heading: 'Las Lunas ☾',
@@ -631,4 +666,4 @@ export const CHANGELOG: Release[] = [
 
 export const LATEST_RELEASE = CHANGELOG[0]
 // Versión que se muestra en la app. Si un parche pequeño (1.0.x) no lleva notas en el changelog, igual se sube este número a mano.
-export const APP_VERSION = '1.3.0'
+export const APP_VERSION = '1.4.0'

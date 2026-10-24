@@ -10,6 +10,9 @@ export type AuthorProfile = {
   id_student: string | null
   /** Color del nombre que eligió la persona (v1.3.0) */
   name_color?: string | null
+  /** v1.4.0: lo que lleva puesto de la tienda (viaja en la misma consulta que el avatar) */
+  avatar_deco?: import('./cosmetics').Equip | null
+  name_style?: import('./cosmetics').NameStyle | null
   is_frozen: boolean
   badge_color?: string | null
   user_roles?: RoleBadgeInfo[]

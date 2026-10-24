@@ -7,6 +7,7 @@ import { HeartIcon, CommentIcon, MusicIcon } from '../components/icons'
 import { readMusicDisabled, setMusicDisabled } from '../components/MusicProvider'
 import RoleBadges from '../components/RoleBadge'
 import type { ConfigProfile } from './types'
+import { useCosmeticPrefs, writePrefs, type AnimPref, type NameFxPref } from '../lib/cosmetics'
 
 export default function AparienciaTab({
   profile,
@@ -250,6 +251,9 @@ export default function AparienciaTab({
         </div>
       </section>
 
+      {/* v1.4.0: movimiento de los cosméticos. Se guarda en ESTE dispositivo y se aplica al instante. */}
+      <CosmeticMotionSettings />
+
       <div className="flex items-center gap-3">
         <button
           type="button"
@@ -262,5 +266,41 @@ export default function AparienciaTab({
         {saved && <span className="text-sm text-emerald-500">Guardado</span>}
       </div>
     </div>
+  )
+}
+
+function Choice<T extends string>({ value, options, onPick, label }: { value: T; options: { id: T; label: string; hint: string }[]; onPick: (v: T) => void; label: string }) {
+  return (
+    <div role="radiogroup" aria-label={label} className="grid gap-2 sm:grid-cols-3">
+      {options.map((o) => (
+        <button key={o.id} type="button" role="radio" aria-checked={value === o.id} onClick={() => onPick(o.id)}
+          className={`rounded-xl border px-3 py-2.5 text-left transition ${value === o.id ? 'border-garnet-400 bg-garnet-600/15' : 'border-ink-700 hover:bg-ink-800/60'}`}>
+          <p className="text-sm font-medium text-neutral-100">{o.label}</p>
+          <p className="text-[11px] text-neutral-500">{o.hint}</p>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function CosmeticMotionSettings() {
+  const prefs = useCosmeticPrefs()
+  return (
+    <section className="rounded-2xl border border-ink-700 bg-ink-900/40 p-4 mb-5">
+      <h3 className="text-sm font-semibold text-neutral-100">Animaciones de perfiles</h3>
+      <p className="text-xs text-neutral-500 mt-0.5 mb-3">Decoraciones de avatar, tarjetas y fondos de la tienda. Si tu teléfono pide «reducir movimiento» o ahorro de datos, todo se queda quieto automáticamente.</p>
+      <Choice<AnimPref> label="Animaciones de perfiles" value={prefs.anim} onPick={(v) => writePrefs({ anim: v })} options={[
+        { id: 'todas', label: 'Todas', hint: 'En el feed y en los perfiles' },
+        { id: 'perfiles', label: 'Solo en perfiles', hint: 'El feed y los chats quietos' },
+        { id: 'ninguna', label: 'Ninguna', hint: 'Todo estático' },
+      ]} />
+      <h3 className="text-sm font-semibold text-neutral-100 mt-5">Efectos de nombre</h3>
+      <p className="text-xs text-neutral-500 mt-0.5 mb-3">Qué tanto se dibujan los efectos de los nombres de otras personas.</p>
+      <Choice<NameFxPref> label="Efectos de nombre" value={prefs.nameFx} onPick={(v) => writePrefs({ nameFx: v })} options={[
+        { id: 'full', label: 'Completa', hint: 'Con animación' },
+        { id: 'lite', label: 'Ligera', hint: 'Color y brillo, sin animar' },
+        { id: 'plain', label: 'Plana', hint: 'Solo el nombre con su color' },
+      ]} />
+    </section>
   )
 }

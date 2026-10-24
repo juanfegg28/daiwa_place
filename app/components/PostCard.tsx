@@ -2,6 +2,7 @@
 
 import Avatar from './cosmetics/Avatar'
 import NameText from './cosmetics/NameText'
+import type { Equip } from '../lib/cosmetics'
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -118,12 +119,14 @@ function MiniAvatar({
   username,
   avatarUrl,
   size = 'w-8 h-8',
+  deco = null,
 }: {
   username: string
   avatarUrl: string | null
   size?: string
+  deco?: Equip | null
 }) {
-  return <Avatar username={username} avatarUrl={avatarUrl} size={size} textSize="text-xs" sizes="48px" />
+  return <Avatar username={username} avatarUrl={avatarUrl} size={size} textSize="text-xs" sizes="48px" deco={deco} />
 }
 
 function countDescendants(id: string, map: Map<string, Comment[]>): number {
@@ -253,6 +256,7 @@ function CommentThread({ comment, depth }: { comment: Comment; depth: number }) 
         <MiniAvatar
           username={commentAuthor?.username ?? 'usuario'}
           avatarUrl={commentAuthor?.avatar_url ?? null}
+          deco={commentAuthor?.avatar_deco ?? null}
           size={depth > 0 ? 'w-7 h-7' : 'w-8 h-8'}
         />
         <div className="flex-1 min-w-0">
@@ -298,7 +302,7 @@ function CommentThread({ comment, depth }: { comment: Comment; depth: number }) 
                 <div className="min-w-0 leading-tight">
                   {commentAuthor ? (
                     <Link href={`/perfil/${commentAuthor.username}`} className="group/name inline-flex items-baseline gap-1.5 max-w-full">
-                      <NameText name={displayName} color={commentAuthor.name_color} className="text-[13px] font-bold text-neutral-50 group-hover/name:text-garnet-400 truncate" />
+                      <NameText name={displayName} color={commentAuthor.name_color} nameStyle={commentAuthor.name_style} density="plain" className="text-[13px] font-bold text-neutral-50 group-hover/name:text-garnet-400 truncate" />
                       <span className="text-[11px] text-neutral-500 truncate">@{commentAuthor.username}</span>
                     </Link>
                   ) : (
@@ -799,10 +803,10 @@ export default function PostCard({
     <div className="leading-tight min-w-0">
       <div className="flex items-center gap-1.5 flex-wrap">
         {onProfilePage ? (
-          <NameText name={author.id_student || author.username} color={author.name_color} density="lite" className="text-[15px] font-bold text-neutral-50 truncate" />
+          <NameText name={author.id_student || author.username} color={author.name_color} nameStyle={author.name_style} density="lite" className="text-[15px] font-bold text-neutral-50 truncate" />
         ) : (
           <Link href={`/perfil/${author.username}`} className="text-[15px] font-bold text-neutral-50 hover:text-garnet-400 truncate">
-            <NameText name={author.id_student || author.username} color={author.name_color} density="lite" />
+            <NameText name={author.id_student || author.username} color={author.name_color} nameStyle={author.name_style} density="lite" />
           </Link>
         )}
         <RoleBadges
@@ -860,7 +864,7 @@ export default function PostCard({
                 aria-label={author ? `Ver perfil de @${author.username}` : 'Ver perfil'}
               >
                 <AvatarWithRing userId={post.user_id}>
-                  <MiniAvatar username={author?.username ?? 'usuario'} avatarUrl={author?.avatar_url ?? null} />
+                  <MiniAvatar username={author?.username ?? 'usuario'} avatarUrl={author?.avatar_url ?? null} deco={author?.avatar_deco ?? null} />
                 </AvatarWithRing>
               </button>
               {nameBlock}

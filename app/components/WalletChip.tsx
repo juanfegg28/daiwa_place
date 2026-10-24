@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { MoonCoinIcon } from './icons'
+import { ClaimDot } from './economy/ClaimDot'
 import { formatNumber, refreshWallet, subscribeWallet, type WalletSummary } from '../lib/economy'
 
 /** Chip de saldo (☾ 1 250). Lleva a la tienda; con puntito si hay misiones por reclamar. */
@@ -24,7 +25,7 @@ export default function WalletChip({ userId, compact = false }: { userId: string
     refreshWallet()
     const onFocus = () => refreshWallet()
     window.addEventListener('focus', onFocus)
-    const iv = setInterval(() => document.visibilityState === 'visible' && refreshWallet(true), 120000)
+    const iv = setInterval(() => document.visibilityState === 'visible' && refreshWallet(true), 60000)
     return () => {
       unsub()
       window.removeEventListener('focus', onFocus)
@@ -34,18 +35,45 @@ export default function WalletChip({ userId, compact = false }: { userId: string
 
   if (!userId || !w) return null
   const dot = w.claimable > 0 || w.founder_available
+  const label = `${formatNumber(w.balance)} ${w.currency}${dot ? ' · tienes cosas por reclamar' : ''}`
+  if (compact) {
+    // Celular (barra de arriba): píldora dorada con brillo, bien visible
+    return (
+      <Link
+        href="/monedas"
+        aria-label={`Mi saldo: ${label}`}
+        className="press relative inline-flex items-center gap-1.5 rounded-full border border-amber-400/70 bg-gradient-to-b from-amber-400/25 to-amber-600/15 text-amber-100 px-3 py-1.5 text-[14px] shadow-[0_0_14px_-2px] shadow-amber-400/50 hover:from-amber-400/35 transition"
+      >
+        <MoonCoinIcon className="w-5 h-5" />
+        <span className={`font-bold tabular-nums ${bump ? 'bal-bump' : ''}`}>{formatNumber(w.balance)}</span>
+        {dot && <ClaimDot className="-top-1 -right-1 w-3 h-3" label="Tienes cosas por reclamar" />}
+      </Link>
+    )
+  }
+  // Menú de escritorio: tarjeta con el saldo grande y el rótulo «Mi saldo»
   return (
     <Link
-      href="/tienda"
-      aria-label={`${formatNumber(w.balance)} ${w.currency}${dot ? ' · tienes cosas por reclamar' : ''}`}
-      className={`press relative inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20 transition ${
-        compact ? 'px-2.5 py-1.5 text-[13px]' : 'px-3 py-2 text-sm w-full justify-center'
-      }`}
+      href="/monedas"
+      aria-label={`Mi saldo: ${label}`}
+      className="press group relative block w-full rounded-2xl border border-amber-400/60 bg-gradient-to-br from-amber-400/20 via-amber-500/10 to-transparent px-4 py-3 shadow-[0_0_22px_-6px] shadow-amber-400/50 hover:border-amber-300 hover:from-amber-400/30 transition"
     >
-      <MoonCoinIcon className="w-[18px] h-[18px]" />
-      <span className={`font-semibold tabular-nums ${bump ? 'bal-bump' : ''}`}>{formatNumber(w.balance)}</span>
-      {!compact && <span className="text-amber-200/70 text-xs">{w.currency}</span>}
-      {dot && <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-garnet-500 border-2 border-ink-900" />}
+      <span className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.16em] text-amber-300">
+        Mi saldo
+        <span className="normal-case tracking-normal text-amber-200/80 group-hover:text-amber-100 transition">Ver →</span>
+      </span>
+      <span className="mt-0.5 flex items-center gap-2">
+        <MoonCoinIcon className="w-7 h-7 text-amber-300" />
+        <span className={`font-display text-[26px] leading-none font-bold text-amber-100 tabular-nums ${bump ? 'bal-bump' : ''}`}>{formatNumber(w.balance)}</span>
+        <span className="text-xs text-amber-200/70 self-end pb-0.5">{w.currency}</span>
+      </span>
+      {dot && (
+        <span className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-amber-200">
+          <span className="relative inline-block w-2.5 h-2.5">
+            <ClaimDot className="inset-0 w-2.5 h-2.5" label="Tienes cosas por reclamar" />
+          </span>
+          Tienes premios por reclamar
+        </span>
+      )}
     </Link>
   )
 }

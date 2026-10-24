@@ -500,3 +500,21 @@ select optgroup {
 @media (prefers-reduced-motion: reduce) {
   .seal-anim, .moon-drop, .chest-pop, .bal-bump { animation: none !important; }
 }
+
+/* ───────── v1.4.0 · Bloques del perfil DENTRO de una tarjeta de la tienda ─────────
+   La tarjeta (.sk) define sus propios tokens y los bloques reales del perfil los usan; sin tarjeta equipada nada de esto aplica.
+   --sk-ink texto · --sk-mute texto secundario · --sk-panel caja · --sk-line borde · --sk-chip chips · --sk-accent acento.
+   Va fuera de las capas de Tailwind a propósito: así gana sobre las utilidades (text-neutral-*, bg-ink-*, border-ink-*). */
+.sk-in{font-size:clamp(13px,1.8cqw,16px);line-height:1.45}
+.sk-in .pf-box{margin-bottom:.9rem;border:1px solid var(--sk-line);background:var(--sk-panel);border-radius:clamp(16px,2.6cqw,24px);padding:clamp(14px,2.6cqw,22px);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.sk-in .pf-box>:last-child{margin-bottom:0}
+.sk-in .pf-id{background:var(--sk-panel);border-color:var(--sk-line);background-image:none}
+.sk-in .pf-chip{background:var(--sk-chip);border-color:var(--sk-line);color:var(--sk-ink)}
+.sk-in .text-neutral-50,.sk-in .text-neutral-100,.sk-in .text-neutral-200,.sk-in .text-neutral-300{color:var(--sk-ink)}
+.sk-in .text-neutral-400,.sk-in .text-neutral-500,.sk-in .text-neutral-600{color:var(--sk-mute)}
+.sk-in .text-garnet-300,.sk-in .text-garnet-400{color:var(--sk-accent,currentColor)}
+.sk-in .border-ink-600,.sk-in .border-ink-700{border-color:var(--sk-line)}
+.sk-in .hover\:bg-ink-800:hover{background:var(--sk-panel-2)}
+.sk-in .bg-ink-800\/70{background:var(--sk-chip)}
+/* un fondo de perfil de la tienda no debe ser tapado por el contenido: el avatar sube sobre el banner, por eso nada recorta */
+.sk,.sk-in{overflow:visible}

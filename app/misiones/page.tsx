@@ -203,41 +203,18 @@ function MisionesContent() {
 
       <div className="flex items-center justify-between mb-4">
         <h1 className="font-display text-2xl font-semibold text-neutral-50">Misiones</h1>
-        <Link href="/monedas" className="text-sm text-neutral-400 hover:text-neutral-100 transition">Mi saldo →</Link>
+        <Link
+          href="/monedas"
+          className="inline-flex items-center gap-2 rounded-full border border-amber-400/70 bg-gradient-to-b from-amber-400/25 to-amber-600/15 text-amber-100 pl-3 pr-3.5 py-2 text-sm font-semibold shadow-[0_0_14px_-2px] shadow-amber-400/50 hover:from-amber-400/35 transition"
+        >
+          <MoonCoinIcon className="w-5 h-5" />
+          Ver mi saldo
+          <span aria-hidden="true">→</span>
+        </Link>
       </div>
 
-      {/* Racha */}
-      {streak && (
-        <div className="rounded-2xl border border-ink-700 bg-ink-900/60 p-4 mb-4">
-          <div className="flex items-center gap-2 mb-3">
-            <FlameIcon className={`w-5 h-5 ${streak.current > 0 ? 'text-orange-400' : 'text-neutral-600'}`} />
-            <p className="text-sm text-neutral-100 font-semibold">Racha de {streak.current} {streak.current === 1 ? 'día' : 'días'}</p>
-            <span className="text-xs text-neutral-500">· mejor: {streak.best}</span>
-          </div>
-          <div className="flex items-center gap-1.5 mb-3" aria-label="Últimos 7 días de la racha">
-            {Array.from({ length: 7 }).map((_, i) => {
-              const filledFrom = streak.current > 0 ? Math.max(0, 7 - Math.min(7, streak.current)) : 7
-              const on = i >= filledFrom
-              return <span key={i} className={`flex-1 h-2.5 rounded-full ${on ? 'bg-orange-400' : 'bg-ink-700'}`} />
-            })}
-          </div>
-          <div className="grid grid-cols-4 gap-2">
-            {streak.milestones.map((ms) => (
-              <button
-                key={ms.day}
-                disabled={busy || !ms.reached || ms.claimed}
-                onClick={() => claimStreak(ms.day)}
-                className={`rounded-xl border px-2 py-2 text-center transition ${
-                  ms.claimed ? 'border-ink-800 text-neutral-600' : ms.reached ? 'border-amber-500/50 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20' : 'border-ink-700 text-neutral-500'
-                }`}
-              >
-                <p className="text-xs font-semibold">Día {ms.day}</p>
-                <p className="text-[11px] tabular-nums">{ms.claimed ? '✓' : `+${ms.amount} ☾`}</p>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Racha (v1.4.0: más clara) */}
+      {streak && <StreakCard streak={streak} busy={busy} onClaim={claimStreak} />}
 
       <div className="flex gap-2 mb-4 overflow-x-auto">
         {tabs.map((t) => (
@@ -319,5 +296,109 @@ function MisionesContent() {
       {!day && !error && <p className="text-sm text-neutral-500">Cargando misiones…</p>}
       <p className="text-xs text-neutral-600 text-center mt-6">Las misiones se cuentan solas con lo que haces en DaiwaPlace. Nada se puede completar a mano.</p>
     </div>
+  )
+}
+
+
+/** Racha: días seguidos, la semana en orden de calendario (Dom → Sáb) y cuánto falta para el siguiente premio. */
+function StreakCard({ streak, busy, onClaim }: { streak: StreakState; busy: boolean; onClaim: (day: number) => void }) {
+  const cur = streak.current
+  const todayDone = streak.today_done !== false
+  const next = streak.milestones.find((m) => !m.reached)
+  const prevDay = [...streak.milestones].reverse().find((m) => m.reached)?.day ?? 0
+  const readyNow = streak.milestones.filter((m) => m.reached && !m.claimed)
+  const span = next ? Math.max(1, next.day - prevDay) : 1
+  const pct = next ? Math.max(4, Math.min(100, Math.round(((streak.cycle_day - prevDay) / span) * 100))) : 100
+  const left = next ? Math.max(1, next.day - streak.cycle_day) : 0
+
+  // Semana de calendario en orden: domingo, lunes, martes, miércoles, jueves, viernes, sábado
+  const NAMES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
+  const now = new Date()
+  const todayIdx = now.getDay() // 0 = domingo
+  const week = NAMES.map((name, idx) => {
+    const offset = idx - todayIdx // negativo = ya pasó esta semana, 0 = hoy, positivo = falta
+    const date = new Date(now)
+    date.setDate(now.getDate() + offset)
+    // un día cuenta si cae dentro de la racha (que termina hoy si hoy ya cuenta, o ayer si no)
+    const daysAgo = -offset
+    const done = offset === 0 ? todayDone : offset < 0 && (todayDone ? daysAgo < cur : daysAgo <= cur)
+    return { name, day: date.getDate(), done, isToday: offset === 0, future: offset > 0 }
+  })
+
+  return (
+    <section className="rounded-2xl border border-orange-500/30 bg-gradient-to-br from-orange-500/10 via-ink-900/70 to-ink-900/60 p-4 sm:p-5 mb-4" aria-label="Tu racha">
+      <div className="flex items-center gap-3">
+        <span className={`flex items-center justify-center w-14 h-14 rounded-2xl shrink-0 ${cur > 0 ? 'bg-gradient-to-b from-orange-400 to-red-500 shadow-[0_0_20px_-4px] shadow-orange-500/70' : 'bg-ink-800'}`}>
+          <FlameIcon className={`w-8 h-8 ${cur > 0 ? 'text-white' : 'text-neutral-600'}`} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-300/90">Tu racha</p>
+          <p className="font-display text-2xl font-bold text-neutral-50 leading-tight">{cur} {cur === 1 ? 'día seguido' : 'días seguidos'}</p>
+          <p className="text-xs text-neutral-400">Tu mejor racha: {streak.best} {streak.best === 1 ? 'día' : 'días'}</p>
+        </div>
+      </div>
+
+      <p className="text-sm text-neutral-300 mt-3">
+        Entra a DaiwaPlace <b className="text-neutral-100">cada día</b> para sumar. Si te saltas un día, empiezas de nuevo.
+        {!todayDone && <b className="text-orange-300"> Hoy todavía no cuenta.</b>}
+      </p>
+
+      {/* La semana, en orden: Dom Lun Mar Mié Jue Vie Sáb */}
+      <div className="grid grid-cols-7 gap-1.5 mt-4" aria-label="Esta semana">
+        {week.map((d) => (
+          <div key={d.name} className="flex flex-col items-center gap-1">
+            <span className={`text-[11px] font-semibold ${d.isToday ? 'text-orange-300' : 'text-neutral-500'}`}>{d.name}</span>
+            <span
+              className={`w-full max-w-[44px] aspect-square rounded-full flex items-center justify-center text-sm font-bold border-2 ${
+                d.done ? 'bg-orange-400 border-orange-300 text-ink-950' : d.isToday ? 'border-dashed border-orange-400 text-orange-300' : d.future ? 'border-ink-800 text-neutral-700' : 'border-ink-700 text-neutral-500'
+              }`}
+              aria-label={`${d.name} ${d.day}: ${d.done ? 'sumó a la racha' : d.future ? 'todavía no llega' : d.isToday ? 'hoy, aún no cuenta' : 'no sumó'}`}
+            >
+              {d.done ? <CheckIcon className="w-5 h-5" /> : d.day}
+            </span>
+            <span className="text-[10px] text-neutral-600 h-3">{d.isToday ? 'hoy' : ''}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Siguiente premio */}
+      <div className="mt-3 rounded-xl border border-ink-700 bg-ink-950/50 p-3">
+        {readyNow.length > 0 ? (
+          <p className="text-sm text-amber-200 font-semibold">🎉 ¡Tienes {readyNow.length === 1 ? 'un premio de racha listo' : `${readyNow.length} premios de racha listos`}! Reclámalo abajo.</p>
+        ) : next ? (
+          <>
+            <div className="flex items-baseline justify-between gap-2 mb-1.5">
+              <p className="text-sm text-neutral-200">Siguiente premio: <b className="text-amber-300">día {next.day} · +{next.amount} ☾</b></p>
+              <p className="text-xs text-neutral-400 tabular-nums">te {left === 1 ? 'falta' : 'faltan'} {left} {left === 1 ? 'día' : 'días'}</p>
+            </div>
+            <div className="h-2.5 rounded-full bg-ink-700 overflow-hidden" role="progressbar" aria-valuenow={streak.cycle_day} aria-valuemin={prevDay} aria-valuemax={next.day} aria-label="Progreso al siguiente premio">
+              <div className="h-full rounded-full bg-gradient-to-r from-orange-400 to-amber-300" style={{ width: `${pct}%` }} />
+            </div>
+          </>
+        ) : (
+          <p className="text-sm text-neutral-200">¡Completaste todo el ciclo de 30 días! 🔥 Sigue entrando: el ciclo vuelve a empezar.</p>
+        )}
+      </div>
+
+      <div className="grid grid-cols-4 gap-2 mt-3">
+        {streak.milestones.map((ms) => {
+          const ready = ms.reached && !ms.claimed
+          return (
+            <button
+              key={ms.day}
+              disabled={busy || !ready}
+              onClick={() => onClaim(ms.day)}
+              aria-label={ms.claimed ? `Premio del día ${ms.day} reclamado` : ready ? `Reclamar premio del día ${ms.day}: ${ms.amount} Lunas` : `Premio del día ${ms.day}: ${ms.amount} Lunas, todavía no`}
+              className={`rounded-xl border px-1.5 py-2 text-center transition ${
+                ms.claimed ? 'border-emerald-700/40 bg-emerald-500/5 text-emerald-400/80' : ready ? 'border-amber-400 bg-amber-400/15 text-amber-100 shadow-[0_0_14px_-3px] shadow-amber-400/60 hover:bg-amber-400/25' : 'border-ink-700 text-neutral-500'
+              }`}
+            >
+              <p className="text-xs font-semibold">Día {ms.day}</p>
+              <p className="text-[11px] tabular-nums font-medium">{ms.claimed ? '✓ Reclamado' : ready ? `¡Reclamar +${ms.amount}!` : `+${ms.amount} ☾`}</p>
+            </button>
+          )
+        })}
+      </div>
+    </section>
   )
 }

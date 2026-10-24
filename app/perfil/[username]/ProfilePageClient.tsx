@@ -1,39 +1,34 @@
 'use client'
 
-import Image from 'next/image'
-import Avatar from '../../components/cosmetics/Avatar'
-import NameText from '../../components/cosmetics/NameText'
+import dynamic from 'next/dynamic'
+import ProfileHero from './ProfileHero'
 import ProfileCard from '../../components/cosmetics/ProfileCard'
 import IdentitySeal from '../../components/IdentitySeal'
 import { profileThemeVars } from '../../lib/color'
 import HighlightsRow from '../../components/stories/HighlightsRow'
-import { RingOverlay, rememberOrigin, useRingStatus } from '../../components/stories/StoryRing'
-import { ArchiveIcon, PlusIcon, PaletteIcon } from '../../components/icons'
+import { useRingStatus } from '../../components/stories/StoryRing'
 import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '../../lib/supabaseClient'
 import AppShell, { useAppSession } from '../../components/AppShell'
 import PostCard from '../../components/PostCard'
-import ProfileActions from '../../components/ProfileActions'
-import {
-  EditIcon,
-  GraduationCapIcon,
-  CalendarIcon,
-  HeartIcon,
-  SnowflakeIcon,
-  BlockIcon,
-  UsersIcon,
-} from '../../components/icons'
-import RoleBadges from '../../components/RoleBadge'
-import ClubTags from '../../components/ClubTag'
+import { GraduationCapIcon, CalendarIcon, HeartIcon, BlockIcon } from '../../components/icons'
 import type { ClubMembershipTag } from '../../lib/clubs'
 import MusicChip from '../../components/MusicChip'
 import { normalizeTrack } from '../../lib/music'
-import { PROFILE_POST_SELECT, fetchFeedItems } from '../../lib/queries'
+import { PROFILE_POST_SELECT, attachCosmetics, fetchFeedItems } from '../../lib/queries'
 import { formatIdentityDetail, identityField, isCommonIdentity } from '../../lib/identities'
 import { SparklesIcon } from '../../components/icons'
 import type { AuthorProfile, FeedItem, Post, RoleBadgeInfo } from '../../lib/types'
+import {
+  COSMETIC_PROFILE_COLS, COSMETIC_MINI_COLS, normalizeEquip, normalizeNameStyle, profileBadges,
+  type Equip,
+} from '../../lib/cosmetics'
+
+// El kit de diseños solo se descarga si la persona lleva fondo o efecto de entrada
+const ProfileBackground = dynamic(() => import('../../components/cosmetics/cosmetics').then((m) => m.ProfileBackground), { ssr: false })
+const EntryEffect = dynamic(() => import('../../components/cosmetics/cosmetics').then((m) => m.EntryEffect), { ssr: false })
 
 type Profile = {
   id: string
@@ -56,6 +51,42 @@ type Profile = {
   name_color?: string | null
   card_color?: string | null
   card_mode?: string | null
+  // v1.4.0: lo que lleva puesto de la tienda (columnas que solo escribe cosmetic_save_look)
+  avatar_deco?: unknown
+  name_style?: unknown
+  title_style?: unknown
+  card_style?: unknown
+  entry_effect?: unknown
+  profile_bg?: unknown
+}
+
+/** Efecto de entrada: una vez por visita (≈4 s), no tapa ni bloquea nada. Los visitantes pueden repetirlo. */
+function EntryOverlay({ effect, allowReplay }: { effect: Equip; allowReplay: boolean }) {
+  const [run, setRun] = useState(1)
+  const [fading, setFading] = useState(false)
+  const [on, setOn] = useState(true)
+  useEffect(() => {
+    const t1 = setTimeout(() => setFading(true), 3800)
+    const t2 = setTimeout(() => setOn(false), 4500)
+    return () => {
+      clearTimeout(t1)
+      clearTimeout(t2)
+    }
+  }, [run])
+  return (
+    <>
+      {on && (
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 z-20 h-[44vh] max-h-[420px] overflow-hidden transition-opacity duration-700" style={{ opacity: fading ? 0 : 1 }}>
+          <EntryEffect key={run} effect={effect} loop={false} className="w-full h-full" />
+        </div>
+      )}
+      {allowReplay && !on && (
+        <button type="button" onClick={() => { setOn(true); setFading(false); setRun((n) => n + 1) }} className="absolute right-3 top-3 z-20 rounded-full border border-ink-600 bg-ink-900/80 backdrop-blur px-3 py-1 text-xs text-neutral-300 hover:bg-ink-800 transition">
+          ↻ Repetir efecto
+        </button>
+      )}
+    </>
+  )
 }
 
 // Lista clásica (sin compartidos): solo se usa si todavía no se corrió el SQL de la v1.1.10
@@ -104,6 +135,7 @@ function ProfileContent() {
   // Se cargan de 15 en 15 ("Ver más"); el total sale aparte para que el contador del perfil sea el real
   const postsLimit = useRef(15)
   const [postsTotal, setPostsTotal] = useState(0)
+  const [badges, setBadges] = useState<{ slug: string; name: string }[]>([])
   const [loadingMorePosts, setLoadingMorePosts] = useState(false)
 
   // `pinned` = id de la publicación fijada del perfil (por defecto, la que ya tiene cargada el perfil)
@@ -118,6 +150,7 @@ function ProfileContent() {
         : Promise.resolve({ data: null }),
     ])
     const pinnedPostRow = (pinnedData as unknown as Post | null) ?? null
+    if (pinnedPostRow) await attachCosmetics([pinnedPostRow])
     setPinnedPost(pinnedPostRow)
     // la fijada va aparte, arriba de todo, así que no se repite en la lista
     setItems(feed.items.filter((it) => !(it.repostedBy === null && it.post.id === pinnedPostRow?.id)))
@@ -179,13 +212,13 @@ function ProfileContent() {
     setLoading(true)
     setNotFound(false)
 
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select(
-        'id, username, id_student, bio, music, avatar_url, banner_url, birthday, grado, estado_personal, badge_color, is_frozen, posts_visibility, pinned_post_id, created_at, profile_color, name_color, card_color, card_mode'
-      )
-      .eq('username', usernameParam.toLowerCase())
-      .maybeSingle()
+    // v1.4.0: las columnas de la tienda se piden junto con el perfil; si todavía no se corrió el SQL de la 1.4.0, se reintenta sin ellas
+    const BASE_COLS = 'id, username, id_student, bio, music, avatar_url, banner_url, birthday, grado, estado_personal, badge_color, is_frozen, posts_visibility, pinned_post_id, created_at, profile_color, name_color, card_color, card_mode'
+    const COS_COLS = `${COSMETIC_MINI_COLS}, ${COSMETIC_PROFILE_COLS}`
+    let res = await supabase.from('profiles').select(`${BASE_COLS}, ${COS_COLS}`).eq('username', usernameParam.toLowerCase()).maybeSingle()
+    if (res.error) res = await supabase.from('profiles').select(BASE_COLS).eq('username', usernameParam.toLowerCase()).maybeSingle()
+    const profileData = res.data as unknown as Profile | null
+    const profileError = res.error
 
     if (profileError || !profileData) {
       setNotFound(true)
@@ -216,10 +249,15 @@ function ProfileContent() {
       const row = (Array.isArray(data) ? data[0] : data) as { identity: string | null; identity_detail: string | null } | null
       setIdentity({ identity: row?.identity ?? null, detail: row?.identity_detail ?? null })
     }
+    // v1.4.0: insignias de colección (trofeos públicos)
+    const loadCosmeticExtras = async () => {
+      const { data } = await profileBadges(profileData.id)
+      setBadges(Array.isArray(data) ? data : [])
+    }
     // v1.3.0: cuenta como «visita» para las misiones (la base de datos ignora las propias y limita el total)
     if (userId && userId !== profileData.id) supabase.rpc('track_profile_visit', { p_user: profileData.id }).then(() => {})
     postsLimit.current = 15
-    await Promise.all([loadPosts(profileData.id, profileData.pinned_post_id ?? null), loadFollowState(profileData.id), loadRoles(), loadClubTags(), loadIdentity()])
+    await Promise.all([loadPosts(profileData.id, profileData.pinned_post_id ?? null), loadFollowState(profileData.id), loadRoles(), loadClubTags(), loadIdentity(), loadCosmeticExtras()])
     setLoading(false)
   }
 
@@ -322,6 +360,8 @@ function ProfileContent() {
     avatar_url: profile.avatar_url,
     id_student: profile.id_student,
     name_color: profile.name_color,
+    avatar_deco: normalizeEquip(profile.avatar_deco),
+    name_style: normalizeNameStyle(profile.name_style),
     is_frozen: profile.is_frozen,
     badge_color: profile.badge_color,
     user_roles: roles,
@@ -334,126 +374,131 @@ function ProfileContent() {
     !isMyProfile && !isBlockedEitherWay && profile.posts_visibility === 'followers' && !isFollowing
 
   const themeVars = profileThemeVars(profile.profile_color)
+  // Lo de la tienda, validado (nunca se confía en el JSON tal cual) y SOLO si se puede ver el contenido de este perfil
+  const cos = {
+    deco: normalizeEquip(profile.avatar_deco),
+    nameStyle: normalizeNameStyle(profile.name_style),
+    title: normalizeEquip(profile.title_style),
+    card: normalizeEquip(profile.card_style),
+    entry: normalizeEquip(profile.entry_effect),
+    bg: normalizeEquip(profile.profile_bg),
+  }
+  const canSeeCosmetics = !isBlockedEitherWay
+  const heroCos = { deco: cos.deco, nameStyle: cos.nameStyle, title: cos.title, card: canSeeCosmetics ? cos.card : null }
+  const cardMode = !!heroCos.card
 
-  return (
-    <div className={`pb-10 ${themeVars ? 'profile-theme' : ''}`} style={themeVars}>
-      <div
-        className="w-full max-h-64 bg-gradient-to-r from-garnet-700 via-garnet-600 to-ink-900 relative"
-        style={{ aspectRatio: '3 / 1' }}
-      >
-        {profile.banner_url && (
-          <Image src={profile.banner_url} alt="Banner" fill sizes="(max-width: 768px) 100vw, 1024px" priority className="object-cover" />
-        )}
-      </div>
 
-      <div className="max-w-2xl mx-auto px-4 sm:px-6">
-        <div className="relative z-10 -mt-14 sm:-mt-16 mb-4 flex justify-between items-end">
-          <div className="relative shrink-0 w-28 h-28 sm:w-32 sm:h-32">
-            <button
-              type="button"
-              disabled={!ringStatus?.has_story}
-              onClick={(e) => {
-                rememberOrigin(e.currentTarget)
-                router.push(`/historias/${profile.username}`)
-              }}
-              aria-label={ringStatus?.has_story ? `Ver las historias de @${profile.username}` : 'Foto de perfil'}
-              className={`block w-full h-full rounded-full ${ringStatus?.has_story ? 'cursor-pointer' : 'cursor-default'}`}
-            >
-          <Avatar
-            username={profile.username}
-            avatarUrl={profile.avatar_url}
-            size="w-full h-full"
-            sizes="128px"
-            priority
-            textSize="text-3xl"
-            photoClassName="border-4 border-ink-950 shadow-[0_0_0_2px] shadow-garnet-500/45"
-          />
-            </button>
-            <RingOverlay status={ringStatus} uid={profile.id} />
-            {isMyProfile && (
-              <Link
-                href="/historias/nueva"
-                aria-label="Crear una historia"
-                className="absolute bottom-1 right-1 w-7 h-7 rounded-full bg-garnet-600 hover:bg-garnet-500 text-white border-[3px] border-ink-950 flex items-center justify-center"
-              >
-                <PlusIcon className="w-3.5 h-3.5" />
-              </Link>
-            )}
-          </div>
-
-          {isMyProfile ? (
-            <div className="mb-2 flex items-center gap-2">
-              <Link
-                href="/historias/archivo"
-                aria-label="Archivo de historias"
-                title="Archivo de historias"
-                className="flex items-center justify-center w-9 h-9 border border-ink-600 text-neutral-300 rounded-full hover:bg-ink-800 transition"
-              >
-                <ArchiveIcon className="w-[18px] h-[18px]" />
-              </Link>
-              <Link
-                href="/personalizar"
-                aria-label="Personalizar mi perfil"
-                title="Personalizar mi perfil"
-                className="flex items-center justify-center w-9 h-9 border border-ink-600 text-neutral-300 rounded-full hover:bg-ink-800 transition"
-              >
-                <PaletteIcon className="w-[18px] h-[18px]" />
-              </Link>
-              <Link
-                href="/editar-perfil"
-                className="flex items-center gap-1.5 text-sm border border-ink-600 text-neutral-300 rounded-full px-4 py-1.5 hover:bg-ink-800 transition"
-              >
-                <EditIcon className="w-4 h-4" />
-                Editar perfil
-              </Link>
-            </div>
-          ) : (
-            <div className="mb-2">
-              <ProfileActions
-                currentUserId={userId}
-                targetUserId={profile.id}
-                targetUsername={profile.username}
-                isFollowing={isFollowing}
-                isBlockedByMe={iBlockedThem}
-                onFollowChange={(f) => {
-                  setIsFollowing(f)
-                  setFollowersCount((c) => Math.max(0, c + (f ? 1 : -1)))
-                }}
-                onBlockChange={(b) => setIBlockedThem(b)}
-              />
+  // Bloques del perfil: sin tarjeta de la tienda van en la tarjeta de color de siempre; con tarjeta, DENTRO de ella
+  const profileBlocks = (
+    <>
+          {/* Biografía y canción: dentro de una caja con los tokens de la tarjeta (sin tarjeta no cambia nada) */}
+          {(profile.bio || !!normalizeTrack(profile.music)) && (
+            <div className="pf-box">
+              {profile.bio && <p className="text-sm text-neutral-200 mb-3 leading-relaxed whitespace-pre-wrap">{profile.bio}</p>}
+              {!!normalizeTrack(profile.music) && (
+                <div className="mb-3">
+                  <MusicChip track={profile.music} variant="card" />
+                </div>
+              )}
             </div>
           )}
-        </div>
 
-        <div className="mb-4">
-          <h1 className="text-xl font-semibold text-neutral-50 flex items-center gap-2 flex-wrap">
-            <NameText name={profile.id_student || profile.username} color={profile.name_color} density="full" />
-            <RoleBadges username={profile.username} roles={roles} badgeColorOverride={profile.badge_color} />
-            <ClubTags memberships={clubTags} max={4} />
-            {profile.is_frozen && (
-              <span
-                title="Cuenta congelada"
-                className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide bg-ink-800 text-neutral-400 rounded-full px-2 py-0.5"
-              >
-                <SnowflakeIcon className="w-3 h-3" />
-                Congelada
-              </span>
-            )}
-          </h1>
-          <p className="text-neutral-500 text-sm flex items-center gap-2 flex-wrap">
-            {'@' + profile.username}
-            {!isMyProfile && isFollowing && followsMe && (
-              <span
-                title="Se siguen mutuamente"
-                className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide bg-garnet-700/20 text-garnet-300 rounded-full px-2 py-0.5"
-              >
-                <UsersIcon className="w-3 h-3" />
-                Amigos
-              </span>
-            )}
-          </p>
-        </div>
+          {/* Identidad ESPECIAL: tarjeta con su sello animado y su campo especial */}
+          {identity.identity && !isCommonIdentity(identity.identity) && (
+            <div className="pf-id relative overflow-hidden mb-3 rounded-2xl border border-garnet-500/30 bg-gradient-to-br from-garnet-600/15 via-garnet-600/5 to-transparent px-4 py-3">
+              <IdentitySeal identity={identity.identity} className="absolute right-1 top-1 w-[72px] h-[50px] text-garnet-300 opacity-90" />
+              <p className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-garnet-300">
+                <SparklesIcon className="w-3.5 h-3.5" />
+                Identidad
+              </p>
+              <p className="text-lg font-display font-semibold text-neutral-50 leading-tight mt-0.5">{identity.identity}</p>
+              {identity.detail && identityField(identity.identity) && (
+                <p className="text-sm text-neutral-300 mt-1.5">
+                  <span className="text-neutral-500">{identityField(identity.identity)?.label}: </span>
+                  <span className="font-medium text-neutral-100">{formatIdentityDetail(identity.identity, identity.detail)}</span>
+                </p>
+              )}
+            </div>
+          )}
 
+          {/* Chips: identidad común (solo el nombre), grado, cumpleaños y estado */}
+          {((identity.identity && isCommonIdentity(identity.identity)) || profile.grado || profile.birthday || profile.estado_personal) && (
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {identity.identity && isCommonIdentity(identity.identity) && (
+                <span className="pf-chip inline-flex items-center gap-1.5 bg-ink-800/70 border border-ink-700 text-neutral-300 text-xs font-medium px-3 py-1.5 rounded-full">
+                  {identity.identity}
+                </span>
+              )}
+              {profile.grado && (
+                <span className="pf-chip inline-flex items-center gap-1.5 bg-ink-800/70 border border-ink-700 text-neutral-300 text-xs font-medium px-3 py-1.5 rounded-full">
+                  <GraduationCapIcon className="w-3.5 h-3.5 text-garnet-400" />
+                  {profile.grado}
+                </span>
+              )}
+              {profile.birthday && (
+                <span className="pf-chip inline-flex items-center gap-1.5 bg-ink-800/70 border border-ink-700 text-neutral-300 text-xs font-medium px-3 py-1.5 rounded-full">
+                  <CalendarIcon className="w-3.5 h-3.5 text-garnet-400" />
+                  {formatBirthday(profile.birthday)}
+                </span>
+              )}
+              {profile.estado_personal && (
+                <span className="pf-chip inline-flex items-center gap-1.5 bg-ink-800/70 border border-ink-700 text-neutral-300 text-xs font-medium px-3 py-1.5 rounded-full">
+                  <HeartIcon className="w-3.5 h-3.5 text-garnet-400" />
+                  {profile.estado_personal}
+                </span>
+              )}
+            </div>
+          )}
+
+          <p className="text-xs text-neutral-600 mb-4">Se unió en {formatJoinDate(profile.created_at)}</p>
+
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm [&>*]:whitespace-nowrap">
+            <span>
+              <b className="text-neutral-100">{postsTotal}</b>{' '}
+              <span className="text-neutral-500">publicaciones</span>
+            </span>
+            <Link href={`/perfil/${profile.username}/seguidores`} className="hover:text-garnet-400 transition">
+              <b className="text-neutral-100">{followersCount}</b>{' '}
+              <span className="text-neutral-500">seguidores</span>
+            </Link>
+            <Link href={`/perfil/${profile.username}/seguidores?tab=siguiendo`} className="hover:text-garnet-400 transition">
+              <b className="text-neutral-100">{followingCount}</b>{' '}
+              <span className="text-neutral-500">seguidos</span>
+            </Link>
+          </div>
+    </>
+  )
+
+  return (
+    <div className={`relative isolate pb-10 ${themeVars ? 'profile-theme' : ''}`} style={themeVars}>
+      {/* Fondo prediseñado de la tienda (detrás de todo; con velo oscuro para que las publicaciones se lean) */}
+      {canSeeCosmetics && cos.bg && <ProfileBackground background={cos.bg} />}
+      {/* Efecto de entrada: una vez por visita, encima del tercio superior, sin bloquear toques */}
+      {canSeeCosmetics && cos.entry && <EntryOverlay key={profile.id} effect={cos.entry} allowReplay={!isMyProfile} />}
+
+      <div className="relative z-10">
+        <ProfileHero
+          profile={profile}
+          cos={heroCos}
+          isMyProfile={isMyProfile}
+          roles={roles}
+          clubTags={clubTags}
+          ringStatus={ringStatus}
+          userId={userId}
+          isFollowing={isFollowing}
+          followsMe={followsMe}
+          iBlockedThem={iBlockedThem}
+          onFollowChange={(f) => {
+            setIsFollowing(f)
+            setFollowersCount((c) => Math.max(0, c + (f ? 1 : -1)))
+          }}
+          onBlockChange={(b) => setIBlockedThem(b)}
+          badges={canSeeCosmetics ? badges : []}
+        >
+          {cardMode && !isBlockedEitherWay ? profileBlocks : null}
+        </ProfileHero>
+
+      <div className={`max-w-2xl mx-auto px-4 sm:px-6 ${cardMode ? 'mt-4' : ''}`}>
         {isBlockedEitherWay ? (
           <div className="surface-card rounded-2xl p-6 text-center my-6">
             <BlockIcon className="w-6 h-6 mx-auto mb-2 text-neutral-500" />
@@ -474,80 +519,11 @@ function ProfileContent() {
           </div>
         ) : (
           <>
-            <ProfileCard color={profile.card_color} mode={profile.card_mode}>
-              {profile.bio && (
-                <p className="text-sm text-neutral-200 mb-3 leading-relaxed whitespace-pre-wrap">{profile.bio}</p>
-              )}
-              {!!normalizeTrack(profile.music) && (
-                <div className="mb-3">
-                  <MusicChip track={profile.music} variant="card" />
-                </div>
-              )}
-
-              {/* Identidad ESPECIAL: tarjeta con su sello animado y su campo especial */}
-              {identity.identity && !isCommonIdentity(identity.identity) && (
-                <div className="relative overflow-hidden mb-3 rounded-2xl border border-garnet-500/30 bg-gradient-to-br from-garnet-600/15 via-garnet-600/5 to-transparent px-4 py-3">
-                  <IdentitySeal identity={identity.identity} className="absolute right-1 top-1 w-[72px] h-[50px] text-garnet-300 opacity-90" />
-                  <p className="flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-garnet-300">
-                    <SparklesIcon className="w-3.5 h-3.5" />
-                    Identidad
-                  </p>
-                  <p className="text-lg font-display font-semibold text-neutral-50 leading-tight mt-0.5">{identity.identity}</p>
-                  {identity.detail && identityField(identity.identity) && (
-                    <p className="text-sm text-neutral-300 mt-1.5">
-                      <span className="text-neutral-500">{identityField(identity.identity)?.label}: </span>
-                      <span className="font-medium text-neutral-100">{formatIdentityDetail(identity.identity, identity.detail)}</span>
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Chips: identidad común (solo el nombre), grado, cumpleaños y estado */}
-              {((identity.identity && isCommonIdentity(identity.identity)) || profile.grado || profile.birthday || profile.estado_personal) && (
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {identity.identity && isCommonIdentity(identity.identity) && (
-                    <span className="inline-flex items-center gap-1.5 bg-ink-800/70 border border-ink-700 text-neutral-300 text-xs font-medium px-3 py-1.5 rounded-full">
-                      {identity.identity}
-                    </span>
-                  )}
-                  {profile.grado && (
-                    <span className="inline-flex items-center gap-1.5 bg-ink-800/70 border border-ink-700 text-neutral-300 text-xs font-medium px-3 py-1.5 rounded-full">
-                      <GraduationCapIcon className="w-3.5 h-3.5 text-garnet-400" />
-                      {profile.grado}
-                    </span>
-                  )}
-                  {profile.birthday && (
-                    <span className="inline-flex items-center gap-1.5 bg-ink-800/70 border border-ink-700 text-neutral-300 text-xs font-medium px-3 py-1.5 rounded-full">
-                      <CalendarIcon className="w-3.5 h-3.5 text-garnet-400" />
-                      {formatBirthday(profile.birthday)}
-                    </span>
-                  )}
-                  {profile.estado_personal && (
-                    <span className="inline-flex items-center gap-1.5 bg-ink-800/70 border border-ink-700 text-neutral-300 text-xs font-medium px-3 py-1.5 rounded-full">
-                      <HeartIcon className="w-3.5 h-3.5 text-garnet-400" />
-                      {profile.estado_personal}
-                    </span>
-                  )}
-                </div>
-              )}
-
-              <p className="text-xs text-neutral-600 mb-4">Se unió en {formatJoinDate(profile.created_at)}</p>
-
-              <div className="flex gap-4 text-sm">
-                <span>
-                  <b className="text-neutral-100">{postsTotal}</b>{' '}
-                  <span className="text-neutral-500">publicaciones</span>
-                </span>
-                <Link href={`/perfil/${profile.username}/seguidores`} className="hover:text-garnet-400 transition">
-                  <b className="text-neutral-100">{followersCount}</b>{' '}
-                  <span className="text-neutral-500">seguidores</span>
-                </Link>
-                <Link href={`/perfil/${profile.username}/seguidores?tab=siguiendo`} className="hover:text-garnet-400 transition">
-                  <b className="text-neutral-100">{followingCount}</b>{' '}
-                  <span className="text-neutral-500">seguidos</span>
-                </Link>
-              </div>
-            </ProfileCard>
+            {!cardMode && (
+              <ProfileCard color={profile.card_color} mode={profile.card_mode} solid={!!cos.bg}>
+                {profileBlocks}
+              </ProfileCard>
+            )}
 
             {/* Destacadas (v1.2.0) */}
             <HighlightsRow profileId={profile.id} username={profile.username} isOwn={isMyProfile} />
@@ -605,6 +581,7 @@ function ProfileContent() {
             )}
           </>
         )}
+      </div>
       </div>
     </div>
   )

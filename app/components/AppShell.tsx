@@ -1,6 +1,7 @@
 'use client'
 
 import WalletChip from './WalletChip'
+import { ClaimDot, useClaimable, useWalletRefreshOnNavigate } from './economy/ClaimDot'
 import Avatar from './cosmetics/Avatar'
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import Link from 'next/link'
@@ -96,6 +97,8 @@ type NavItem = {
   match: (pathname: string) => boolean
   /** Numerito rojo (ej. notificaciones sin leer). 0 o undefined = no se muestra */
   badge?: number
+  /** Puntito dorado (algo por reclamar, p. ej. una misión completada) */
+  dot?: boolean
 }
 
 function formatBadge(n: number) {
@@ -393,6 +396,9 @@ export default function AppShell({
     router.push('/login')
   }
 
+  // puntito dorado en todos los iconos de Misiones mientras haya algo por reclamar (v1.4.0)
+  const { dot: missionDot } = useClaimable(userId)
+  useWalletRefreshOnNavigate(userId, pathname)
   const isSupreme = isSupremeAdmin(username)
   const canSeeAdmin = isSupreme || hasAnyRole
 
@@ -425,6 +431,7 @@ export default function AppShell({
             label: 'Misiones',
             icon: TargetIcon,
             match: (p: string) => p.startsWith('/misiones') || p.startsWith('/monedas'),
+            dot: missionDot,
           },
           {
             href: '/tienda',
@@ -522,8 +529,12 @@ export default function AppShell({
             : 'text-neutral-300 hover:bg-ink-800'
         }`}
       >
-        <Icon filled={active} className="w-5 h-5" />
+        <span className="relative">
+          <Icon filled={active} className="w-5 h-5" />
+          {item.dot && <ClaimDot className="-top-1 -right-1 w-2.5 h-2.5" label={`${item.label}: tienes premios por reclamar`} />}
+        </span>
         {item.label}
+        {item.dot && <span className="ml-auto text-[10px] font-semibold uppercase tracking-wide text-amber-300">Reclamar</span>}
       </Link>
     )
   }
@@ -666,6 +677,7 @@ export default function AppShell({
           >
             <MenuIcon className="w-6 h-6" />
             <CountBubble count={menuBadge} className="absolute top-0.5 right-0" />
+            {missionDot && menuBadge === 0 && <ClaimDot className="top-1 right-1 w-3 h-3" label="Tienes misiones por reclamar" />}
           </button>
           <Link href="/" aria-label="Inicio">
             <Logo size="sm" />

@@ -1,6 +1,7 @@
 // Consultas compartidas de Supabase (feed, perfil y vista individual de publicación)
 import { supabase } from './supabaseClient'
 import type { FeedItem, Post } from './types'
+import { COSMETIC_MINI_COLS, normalizeEquip, normalizeNameStyle } from './cosmetics'
 
 const COMMENTS_SELECT =
   'comments(id, user_id, content, created_at, edited_at, parent_comment_id, profiles!comments_user_id_fkey(username, avatar_url, id_student, name_color), comment_likes(user_id))'
@@ -38,6 +39,33 @@ export const NOTIFICATION_SELECT =
 
 // ───────── Feed con compartidos (v1.1.10) ─────────
 
+/**
+ * v1.4.0: añade a los autores (de publicaciones y comentarios) lo que llevan puesto de la tienda: decoración de avatar y
+ * fuente/efecto del nombre. Va en UNA consulta aparte y en lote; si todavía no se corrió el SQL de la 1.4.0 (o falla),
+ * se ignora en silencio y el feed se ve exactamente como antes.
+ */
+export async function attachCosmetics(posts: Post[]): Promise<void> {
+  const names = new Set<string>()
+  for (const p of posts) {
+    if (p.profiles?.username) names.add(p.profiles.username)
+    for (const c of p.comments ?? []) if (c.profiles?.username) names.add(c.profiles.username)
+  }
+  if (names.size === 0) return
+  const { data, error } = await supabase.from('profiles').select(`username, ${COSMETIC_MINI_COLS}`).in('username', Array.from(names).slice(0, 150))
+  if (error || !data) return
+  const byName = new Map((data as unknown as { username: string; avatar_deco: unknown; name_style: unknown }[]).map((r) => [r.username, r]))
+  const apply = (a: Post['profiles']) => {
+    const r = a ? byName.get(a.username) : null
+    if (!a || !r) return
+    a.avatar_deco = normalizeEquip(r.avatar_deco)
+    a.name_style = normalizeNameStyle(r.name_style)
+  }
+  for (const p of posts) {
+    apply(p.profiles)
+    for (const c of p.comments ?? []) apply(c.profiles)
+  }
+}
+
 /** Trae publicaciones completas por id. Si falta el SQL nuevo (tabla reposts), reintenta sin ella para no romper el feed. */
 export async function fetchPostsByIds(ids: string[], profileView = false): Promise<{ posts: Post[]; error: string }> {
   if (ids.length === 0) return { posts: [], error: '' }
@@ -46,7 +74,9 @@ export async function fetchPostsByIds(ids: string[], profileView = false): Promi
   if (res.error && /reposts|posts_visibility|relationship|schema cache|permission denied/i.test(res.error.message)) {
     res = await run(profileView ? PROFILE_POST_BASE : POST_BASE.replace('posts_visibility, ', ''))
   }
-  return { posts: (res.data as unknown as Post[]) ?? [], error: res.error?.message ?? '' }
+  const posts = (res.data as unknown as Post[]) ?? []
+  await attachCosmetics(posts)
+  return { posts, error: res.error?.message ?? '' }
 }
 
 type FeedRow = { kind: 'post' | 'repost'; post_id: string; reposter_id: string | null; sort_at: string }

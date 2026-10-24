@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // El kit de diseños se copia SIN modificar (JavaScript puro de otra sesión): no se linta
+    "app/components/cosmetics/_kit/**",
+    "tools/**",
   ]),
 ]);
 

@@ -13,16 +13,19 @@ export default function ProfileCard({
   mode,
   children,
   className = '',
+  solid = false,
 }: {
   color?: string | null
   mode?: string | null
   children: ReactNode
   className?: string
+  /** hay un fondo de la tienda detrás: la tarjeta lleva su propio fondo para que el texto siempre se lea */
+  solid?: boolean
 }) {
   const style = cardStyle(color, mode)
   return (
     <div
-      className={`relative rounded-2xl px-4 py-4 mb-5 ${style ? 'border' : ''} ${className}`}
+      className={`relative rounded-2xl px-4 py-4 mb-5 ${style || solid ? 'border' : ''} ${solid && !style ? 'border-ink-700/70 bg-ink-950/75 backdrop-blur-sm' : ''} ${className}`}
       style={style}
     >
       {/* capa interior: garantiza que el texto siempre se lea, sea cual sea el color elegido */}

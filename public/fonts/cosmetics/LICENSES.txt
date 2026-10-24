@@ -1,0 +1,53 @@
+Fuentes de DaiwaPlace (tienda de cosméticos, v1.4.0) - licencias y procedencia
+=========================================================================
+
+Los archivos .woff2 de esta carpeta vienen de los paquetes oficiales @fontsource/* de npm (que empaquetan las fuentes de Google Fonts),
+recortados al subconjunto Latin (A-Z, acentos, ñ, ¿ ¡, puntuación) para que pesen menos. Es la misma fuente, sin modificar sus formas.
+
+  · SIL Open Font License 1.1 (OFL-1.1): permite usar, copiar y redistribuir con la app, incluso comercialmente, sin vender la fuente suelta.
+    Texto completo: https://openfontlicense.org
+  · Apache License 2.0: Chewy y Special Elite. Permite uso comercial y redistribución conservando este aviso.
+    Texto completo: https://www.apache.org/licenses/LICENSE-2.0
+
+slug | familia | licencia | paquete
+pirata-one | Pirata One | OFL-1.1 | @fontsource/pirata-one
+new-rocker | New Rocker | OFL-1.1 | @fontsource/new-rocker
+medievalsharp | MedievalSharp | OFL-1.1 | @fontsource/medievalsharp
+metal-mania | Metal Mania | OFL-1.1 | @fontsource/metal-mania
+grenze-gotisch | Grenze Gotisch | OFL-1.1 | @fontsource/grenze-gotisch
+jim-nightshade | Jim Nightshade | OFL-1.1 | @fontsource/jim-nightshade
+jacquard-24 | Jacquard 24 | OFL-1.1 | @fontsource/jacquard-24
+playfair-display | Playfair Display | OFL-1.1 | @fontsource/playfair-display
+cormorant-garamond | Cormorant Garamond | OFL-1.1 | @fontsource/cormorant-garamond
+italiana | Italiana | OFL-1.1 | @fontsource/italiana
+cinzel-decorative | Cinzel Decorative | OFL-1.1 | @fontsource/cinzel-decorative
+bodoni-moda | Bodoni Moda | OFL-1.1 | @fontsource/bodoni-moda
+gloock | Gloock | OFL-1.1 | @fontsource/gloock
+dancing-script | Dancing Script | OFL-1.1 | @fontsource/dancing-script
+pacifico | Pacifico | OFL-1.1 | @fontsource/pacifico
+great-vibes | Great Vibes | OFL-1.1 | @fontsource/great-vibes
+parisienne | Parisienne | OFL-1.1 | @fontsource/parisienne
+sacramento | Sacramento | OFL-1.1 | @fontsource/sacramento
+allura | Allura | OFL-1.1 | @fontsource/allura
+fredoka | Fredoka | OFL-1.1 | @fontsource/fredoka
+yomogi | Yomogi | OFL-1.1 | @fontsource/yomogi
+chewy | Chewy | Apache-2.0 | @fontsource/chewy
+mochiy-pop-one | Mochiy Pop One | OFL-1.1 | @fontsource/mochiy-pop-one
+hachi-maru-pop | Hachi Maru Pop | OFL-1.1 | @fontsource/hachi-maru-pop
+dotgothic16 | DotGothic16 | OFL-1.1 | @fontsource/dotgothic16
+yuji-syuku | Yuji Syuku | OFL-1.1 | @fontsource/yuji-syuku
+zen-antique | Zen Antique | OFL-1.1 | @fontsource/zen-antique
+reggae-one | Reggae One | OFL-1.1 | @fontsource/reggae-one
+dela-gothic-one | Dela Gothic One | OFL-1.1 | @fontsource/dela-gothic-one
+share-tech-mono | Share Tech Mono | OFL-1.1 | @fontsource/share-tech-mono
+orbitron | Orbitron | OFL-1.1 | @fontsource/orbitron
+audiowide | Audiowide | OFL-1.1 | @fontsource/audiowide
+silkscreen | Silkscreen | OFL-1.1 | @fontsource/silkscreen
+press-start-2p | Press Start 2P | OFL-1.1 | @fontsource/press-start-2p
+monoton | Monoton | OFL-1.1 | @fontsource/monoton
+bungee-shade | Bungee Shade | OFL-1.1 | @fontsource/bungee-shade
+rubik-glitch | Rubik Glitch | OFL-1.1 | @fontsource/rubik-glitch
+special-elite | Special Elite | Apache-2.0 | @fontsource/special-elite
+creepster | Creepster | OFL-1.1 | @fontsource/creepster
+eater | Eater | OFL-1.1 | @fontsource/eater
+cinzel | Cinzel | OFL-1.1 | @fontsource/cinzel

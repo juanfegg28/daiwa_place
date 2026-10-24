@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Cinzel } from "next/font/google";
 import "./globals.css";
 import { THEME_INIT_SCRIPT } from "./lib/theme";
 import MusicProvider from './components/MusicProvider'
+import CosmeticsStyles from './components/cosmetics/CosmeticsStyles'
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, DEFAULT_OG_IMAGE } from './lib/og'
 
 const geistSans = Geist({
@@ -54,6 +55,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         {/* Aplica el modo claro/oscuro y el acento guardados ANTES de pintar, para no parpadear */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        {/* v1.4.0: animaciones de decoraciones, tarjetas y fondos de la tienda (solo lo lanzado) */}
+        <CosmeticsStyles />
       </head>
       <body className="min-h-full flex flex-col bg-ink-950 text-neutral-100" suppressHydrationWarning>
         <MusicProvider>{children}</MusicProvider>
