@@ -1,7 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import AvatarPhoto from '../AvatarPhoto'
 import type { Equip } from '../../lib/cosmetics'
 
@@ -55,11 +55,13 @@ export default function Avatar({
 }) {
   const initial = (username || '?').charAt(0).toUpperCase()
   const boxRef = useRef<HTMLSpanElement>(null)
+  const slotKey = useId() // atrás y adelante comparten el mismo cupo de animación
   const [px, setPx] = useState(0)
   useLayoutEffect(() => {
     const el = boxRef.current
     if (!deco || !el) return
-    const read = () => setPx(el.getBoundingClientRect().width)
+    // offsetWidth ignora transform: scale() (vistas previas escaladas)
+    const read = () => setPx(el.offsetWidth)
     read()
     if (typeof ResizeObserver === 'undefined') return
     const ro = new ResizeObserver(read)
@@ -69,7 +71,7 @@ export default function Avatar({
 
   return (
     <span ref={boxRef} className={`relative inline-block shrink-0 align-middle ${size} ${className}`}>
-      {deco && px > 0 && <DecoLayer deco={deco} part="back" px={px} context={decoContext} />}
+      {deco && px > 0 && <DecoLayer deco={deco} part="back" px={px} context={decoContext} slotKey={slotKey} />}
       <span
         className={`relative w-full h-full rounded-full overflow-hidden bg-ink-700 flex items-center justify-center ${
           ring ? 'ring-2 ring-garnet-500/70' : ''
@@ -82,7 +84,7 @@ export default function Avatar({
         )}
       </span>
       {children}
-      {deco && px > 0 && <DecoLayer deco={deco} part="front" px={px} context={decoContext} />}
+      {deco && px > 0 && <DecoLayer deco={deco} part="front" px={px} context={decoContext} slotKey={slotKey} />}
       {online && (
         <span
           title="Conectado"

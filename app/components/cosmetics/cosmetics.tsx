@@ -8,15 +8,18 @@
  *   · El banner del perfil es del usuario: las tarjetas no dibujan sobre él (ver kit.ts).
  * dangerouslySetInnerHTML se usa SOLO en este archivo: el texto sale de nuestro propio código y lo del usuario se escapa en el kit.
  */
-import { useEffect, useInsertionEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useContext, useEffect, useInsertionEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import {
-  backgroundBySlug, backgroundOut, badgeOut, decoLayers, entryBySlug, nameFx, skinPartsFor, startEntryFx, titleOut,
+  backgroundBySlug, backgroundOut, badgeOut, decoLayers, drawEntryStill, entryBySlug, nameFx, skinPartsFor, startEntryFx, titleOut,
 } from './kit'
 import { prefersReducedMotion, saveDataOn, useCosmeticPrefs, type Equip, type NameFxPref } from '../../lib/cosmetics'
+import { useAnimSlot } from '../../lib/animBudget'
+import { PlayCtx } from './usePlay'
 
 export { UPCOMING_CSS, RELEASED_CSS } from './kit'
 
 // ───────── utilidades ─────────
+
 const injected = new Set<string>()
 /** Inyecta un bloque de CSS una sola vez (por identificador) en <head> */
 function useStyle(id: string | null, css: string | null | undefined) {
@@ -50,7 +53,8 @@ export function useBoxPx(ref: React.RefObject<Element | null>, enabled: boolean)
   useLayoutEffect(() => {
     const el = ref.current
     if (!enabled || !el) return
-    const read = () => setPx(el.getBoundingClientRect().width)
+    // offsetWidth ignora transform: scale() (las vistas previas se escalan para caber y el avatar no debe «encogerse» de golpe)
+    const read = () => setPx((el as HTMLElement).offsetWidth)
     read()
     if (typeof ResizeObserver === 'undefined') return
     const ro = new ResizeObserver(read)
@@ -74,10 +78,14 @@ export function useAnimateAllowed(context: 'feed' | 'profile' = 'feed'): boolean
 
 // ───────── Decoración de avatar (una capa: «back» detrás de la foto, «front» delante) ─────────
 // Caja de la decoración = 1.2973 × el avatar (288/222), centrada: left/top = -14.865 %.
-export function DecoLayer({ deco, part, px, context = 'feed' }: { deco: Equip; part: 'back' | 'front'; px: number; context?: 'feed' | 'profile' }) {
+export function DecoLayer({ deco, part, px, context = 'feed', slotKey }: { deco: Equip; part: 'back' | 'front'; px: number; context?: 'feed' | 'profile'; slotKey?: string }) {
   const L = useMemo(() => decoLayers(deco.id, deco.palette, deco.hue ?? 0), [deco.id, deco.palette, deco.hue])
-  const animate = useAnimateAllowed(context)
+  const allowed = useAnimateAllowed(context)
+  const gate = useContext(PlayCtx) // null = no es una miniatura; false = miniatura en reposo; true = miniatura con el cursor encima
   const [ref, vis] = useVisible<HTMLSpanElement>()
+  const wants = allowed && gate !== false && vis && px >= 40
+  // tope de animaciones simultáneas (las miniaturas «activas» van primero: solo hay una a la vez)
+  const slot = useAnimSlot(slotKey ?? `${deco.id}-${part}`, wants, gate === true ? -1 : context === 'profile' ? 0 : 1)
   if (!L || px < L.min) return null // por debajo del tamaño mínimo se ve solo la foto
   const html = part === 'back' ? L.back : L.front
   if (!html) return null
@@ -86,7 +94,7 @@ export function DecoLayer({ deco, part, px, context = 'feed' }: { deco: Equip; p
       ref={ref}
       className="dpw pointer-events-none absolute"
       data-live={vis ? '1' : '0'}
-      data-static={!animate || px < 40 ? '1' : '0'}
+      data-static={slot ? '0' : '1'}
       aria-hidden="true"
       style={{ left: '-14.865%', top: '-14.865%', width: '129.73%', height: '129.73%', zIndex: part === 'back' ? 0 : 3 }}
     >
@@ -98,7 +106,8 @@ export function DecoLayer({ deco, part, px, context = 'feed' }: { deco: Equip; p
 // ───────── Nombre con efecto ─────────
 export function NameFx({ effect, text, density, fontFamily, className = '' }: { effect: Equip; text: string; density?: NameFxPref; fontFamily?: string; className?: string }) {
   const prefs = useCosmeticPrefs()
-  const animate = useAnimateAllowed('profile')
+  const gate = useContext(PlayCtx)
+  const animate = useAnimateAllowed('profile') && gate !== false
   // la persona manda: «Efectos de nombre» completa / ligera / plana; sin movimiento → ligera
   let mode: NameFxPref = density ?? 'full'
   if (prefs.nameFx === 'plain') mode = 'plain'
@@ -125,6 +134,30 @@ export function CollectionBadge({ collection, size = 24, title }: { collection: 
   return <span title={title} className="inline-flex shrink-0" aria-label={title} role={title ? 'img' : undefined} dangerouslySetInnerHTML={{ __html: html }} />
 }
 
+/** v1.4.5: mientras la pantalla se desplaza, las animaciones pesadas del perfil (fondo y tarjeta) se pausan y siguen al soltar.
+ *  El navegador usa todo su esfuerzo en deslizar con fluidez; al detenerte, vuelven solas (≈0,15 s). */
+let scrollUsers = 0
+let scrollTimer: ReturnType<typeof setTimeout> | undefined
+function onScrollPause() {
+  const root = document.documentElement
+  root.dataset.scrolling = '1'
+  clearTimeout(scrollTimer)
+  scrollTimer = setTimeout(() => { delete root.dataset.scrolling }, 160)
+}
+export function usePauseWhileScrolling(on: boolean) {
+  useEffect(() => {
+    if (!on || typeof window === 'undefined') return
+    if (scrollUsers++ === 0) window.addEventListener('scroll', onScrollPause, { passive: true, capture: true })
+    return () => {
+      if (--scrollUsers === 0) {
+        window.removeEventListener('scroll', onScrollPause, { capture: true } as EventListenerOptions)
+        clearTimeout(scrollTimer)
+        delete document.documentElement.dataset.scrolling
+      }
+    }
+  }, [on])
+}
+
 // ───────── Fondo de perfil ─────────
 /** Va dentro de un contenedor «relative». Se queda fijo en la pantalla mientras se desplaza el perfil (sticky) y
  *  lleva encima un velo oscuro para que las publicaciones siempre se lean. */
@@ -133,6 +166,7 @@ export function ProfileBackground({ background, veil = 0.58 }: { background: Equ
   const html = useMemo(() => (b ? backgroundOut(background.id, { palette: background.palette, hue: background.hue ?? 0 }) : ''), [b, background.id, background.palette, background.hue])
   const animate = useAnimateAllowed('profile')
   const [ref, vis] = useVisible<HTMLDivElement>()
+  usePauseWhileScrolling(!!b && animate)
   if (!b) return null
   return (
     <div ref={ref} aria-hidden="true" className="absolute inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 0 }}>
@@ -145,16 +179,24 @@ export function ProfileBackground({ background, veil = 0.58 }: { background: Equ
 }
 
 // ───────── Efecto de entrada (una vez por visita) ─────────
-export function EntryEffect({ effect, loop = false, className = '' }: { effect: Equip; loop?: boolean; className?: string }) {
+export function EntryEffect({ effect, loop = false, still = false, className = '' }: { effect: Equip; loop?: boolean; /** un solo fotograma, sin animar (miniaturas en reposo) */ still?: boolean; className?: string }) {
   const ref = useRef<HTMLCanvasElement>(null)
   const animate = useAnimateAllowed('profile')
   useEffect(() => {
     const fx = entryBySlug(effect.id)
     const cv = ref.current
     if (!fx || !cv) return
+    if (still) {
+      // el contenedor puede no tener medida todavía (primer pintado): se dibuja cuando la tenga
+      let ro: ResizeObserver | undefined
+      const draw = () => { if (cv.clientWidth > 0) drawEntryStill(fx, cv, { paletteId: effect.palette, hue: effect.hue ?? 0 }) }
+      draw()
+      if (typeof ResizeObserver !== 'undefined') { ro = new ResizeObserver(draw); ro.observe(cv) }
+      return () => ro?.disconnect()
+    }
     const h = startEntryFx(fx, cv, { paletteId: effect.palette, hue: effect.hue ?? 0, loop, reduced: !animate })
     return () => h.stop()
-  }, [effect.id, effect.palette, effect.hue, loop, animate])
+  }, [effect.id, effect.palette, effect.hue, loop, animate, still])
   return <canvas ref={ref} aria-hidden="true" className={`pointer-events-none ${className}`} style={{ width: '100%', height: '100%' }} />
 }
 
@@ -171,9 +213,13 @@ export function EntryEffect({ effect, loop = false, className = '' }: { effect: 
 export function SkinCard({ card, seam = 'attached', anim, children, className = '' }: { card: Equip; seam?: 'attached' | 'float'; anim?: boolean; children: React.ReactNode; className?: string }) {
   const parts = useMemo(() => skinPartsFor(card.id, card.palette, card.hue ?? 0), [card.id, card.palette, card.hue])
   const allowed = useAnimateAllowed('profile')
+  const gate = useContext(PlayCtx)
   const [ref, vis] = useVisible<HTMLDivElement>()
+  usePauseWhileScrolling(gate === null && !!parts && allowed)
+  const wants = (anim ?? true) && allowed && gate !== false && vis
+  const slot = useAnimSlot(`skin-${card.id}-${card.palette ?? ''}`, wants, gate === true ? -1 : 0)
   if (!parts) return <>{children}</>
-  const on = (anim ?? true) && allowed && vis
+  const on = wants && slot
   return (
     <div
       ref={ref}
@@ -192,10 +238,10 @@ export function SkinCard({ card, seam = 'attached', anim, children, className = 
 }
 
 /** Miniatura de una tarjeta para la tienda, el inventario y el estudio: la tarjeta suelta (4 esquinas) con un perfil de muestra */
-export function SkinThumb({ card, name, photoUrl, width = 230 }: { card: Equip; name: string; photoUrl?: string | null; width?: number }) {
+export function SkinThumb({ card, name, photoUrl, width = 230, anim }: { card: Equip; name: string; photoUrl?: string | null; width?: number; anim?: boolean }) {
   return (
     <div style={{ width, maxWidth: '100%', margin: '0 auto' }}>
-      <SkinCard card={card} seam="float">
+      <SkinCard card={card} seam="float" anim={anim}>
         <div style={{ ['--av' as string]: 'clamp(40px,16cqw,56px)', paddingTop: 'clamp(14px,6cqw,22px)', paddingBottom: 6 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ width: 'var(--av)', height: 'var(--av)', borderRadius: '50%', overflow: 'hidden', flex: 'none', background: 'var(--sk-panel-2)', display: 'block' }}>

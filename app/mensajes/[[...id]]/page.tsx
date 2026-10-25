@@ -10,6 +10,7 @@ import ChatPane from '../ChatPane'
 import NoteModal from '../NoteModal'
 import NewChatModal from '../NewChatModal'
 import { NOTE_SELECT, friendlyDmError, type InboxItem, type NoteItem } from '../../lib/dm'
+import { useKeyboardFit } from '../../lib/useKeyboardFit'
 
 export default function MensajesPage() {
   // /mensajes → la bandeja. /mensajes/<id> → esa conversación (en celular ocupa toda la pantalla)
@@ -36,6 +37,9 @@ function MensajesContent({ convId }: { convId: string | null }) {
   const [notes, setNotes] = useState<NoteItem[]>([])
   const [viewing, setViewing] = useState<{ id: string | null; mine: boolean } | null>(null)
   const [showNewChat, setShowNewChat] = useState(false)
+
+  // Chat abierto en celular: mide lo que el teclado deja libre (arregla que la pestaña se iba hacia arriba al abrir el teclado)
+  useKeyboardFit(!!convId)
 
   useEffect(() => {
     if (!sessionLoading && !userId) router.push('/login')
@@ -191,7 +195,7 @@ function MensajesContent({ convId }: { convId: string | null }) {
         />
       </aside>
 
-      <section className={`${convId ? 'flex' : 'hidden md:flex'} flex-1 min-w-0 flex-col h-[100dvh] md:h-full`}>
+      <section className={`${convId ? 'flex max-md:fixed max-md:inset-x-0 max-md:top-0 max-md:z-40 max-md:bg-ink-950 max-md:h-[var(--vvh,100dvh)] max-md:translate-y-[var(--vvt,0px)]' : 'hidden md:flex'} flex-1 min-w-0 flex-col h-[100dvh] md:h-full`}>
         {convId ? (
           <ChatPane key={convId} convId={convId} me={userId} friendIds={friendIds} />
         ) : (

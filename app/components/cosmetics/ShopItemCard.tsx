@@ -2,21 +2,25 @@
 
 import { MoonCoinIcon } from '../icons'
 import ItemPreview, { type PreviewSubject } from './ItemPreview'
+import { useHoverPlay } from './usePlay'
 import { RARITY_LABEL, RARITY_STYLE, howToGet, type CatalogItem } from '../../lib/cosmetics'
 import { formatNumber } from '../../lib/economy'
 
 /** Tarjeta de un cosmético en la tienda: se ve sobre TU foto y TU nombre */
 export default function ShopItemCard({ item, me, onOpen, canAfford, equipped }: { item: CatalogItem; me: PreviewSubject; onOpen: () => void; canAfford: boolean; equipped?: boolean }) {
   const forSale = item.obtainable === 'tienda' && item.price > 0
+  // v1.4.5: la miniatura está quieta; se anima solo con el cursor encima (PC). En el celular el toque abre la hoja de detalle, que sí se anima.
+  const { playing, bind } = useHoverPlay()
   return (
     <button
       type="button"
       onClick={onOpen}
+      {...bind}
       aria-label={`${item.name}, ${RARITY_LABEL[item.rarity]}${item.owned ? ', ya lo tienes' : forSale ? `, ${item.price} Lunas` : ''}`}
       className={`press group relative flex flex-col text-left rounded-2xl border bg-ink-900/60 hover:bg-ink-900 overflow-hidden transition ${RARITY_STYLE[item.rarity].split(' ')[0]} ${item.rarity === 'legendario' || item.rarity === 'mitico' ? 'shadow-[0_0_18px_-6px] shadow-amber-400/40' : ''}`}
     >
       <div className="relative bg-ink-950/60 min-h-[150px]">
-        <ItemPreview type={item.type} slug={item.slug} me={me} compact />
+        <ItemPreview type={item.type} slug={item.slug} me={me} compact lazy playing={playing} />
         {item.owned && (
           <span className="absolute top-2 right-2 rounded-full bg-emerald-500/90 text-ink-950 text-[10px] font-bold px-2 py-0.5">
             {equipped ? 'Puesto' : '✓ Tuyo'}

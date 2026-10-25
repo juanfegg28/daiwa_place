@@ -243,6 +243,18 @@ export default function ChatPane({ convId, me, friendIds }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lastKey, state])
 
+  // Al abrir/cerrar el teclado el alto del chat cambia: si estabas al final, te quedas al final
+  useEffect(() => {
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null
+    if (!vv) return
+    const keep = () => {
+      const el = scrollRef.current
+      if (el && stickToBottom.current) el.scrollTop = el.scrollHeight
+    }
+    vv.addEventListener('resize', keep)
+    return () => vv.removeEventListener('resize', keep)
+  }, [])
+
   const onScroll = () => {
     const el = scrollRef.current
     if (!el) return
@@ -859,7 +871,7 @@ export default function ChatPane({ convId, me, friendIds }: Props) {
               }}
               rows={1}
               placeholder="Escribe un mensaje..."
-              className="flex-1 bg-ink-800 border border-ink-700 rounded-2xl px-4 py-2.5 text-[15px] resize-none focus:outline-none focus:border-garnet-600 max-h-[130px]"
+              className="flex-1 bg-ink-800 border border-ink-700 rounded-2xl px-4 py-2.5 text-base md:text-[15px] resize-none focus:outline-none focus:border-garnet-600 max-h-[130px]"
             />
             <button
               type="button"

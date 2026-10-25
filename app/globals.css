@@ -518,3 +518,17 @@ select optgroup {
 .sk-in .bg-ink-800\/70{background:var(--sk-chip)}
 /* un fondo de perfil de la tienda no debe ser tapado por el contenido: el avatar sube sobre el banner, por eso nada recorta */
 .sk,.sk-in{overflow:visible}
+
+
+/* ───────── v1.4.5 · rendimiento de cosméticos ───────── */
+/* Miniaturas en reposo (tienda, inventario, clóset): nada se anima hasta que las señalas o las eliges */
+.pv-idle *, .pv-idle *::before, .pv-idle *::after { animation: none !important; }
+/* Mientras la pantalla se desplaza, el fondo y la tarjeta animados del perfil se pausan (vuelven solos al soltar) */
+html[data-scrolling="1"] .bgl *, html[data-scrolling="1"] .sk-bg *, html[data-scrolling="1"] .sk-fg * { animation-play-state: paused !important; }
+/* El ▶ de «toca para ver la animación» solo se muestra donde no hay cursor (celulares y tablets) */
+@media (hover: hover) { .play-hint { display: none; } }
+
+/* v1.4.5 · chat abierto en celular: la página no se desplaza (el chat mide lo que deja libre el teclado) */
+@media (max-width: 767px) {
+  html.chat-lock, html.chat-lock body { overflow: hidden; overscroll-behavior: none; }
+}

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import AppShell, { useAppSession } from '../../components/AppShell'
 import { ShopHeader, ShopTabs } from '../../components/economy/ShopChrome'
 import ItemPreview from '../../components/cosmetics/ItemPreview'
+import { useHoverPlay } from '../../components/cosmetics/usePlay'
 import { useShopData } from '../../components/cosmetics/useShopData'
 import { refreshWallet, subscribeWallet, type WalletSummary } from '../../lib/economy'
 import { setAllowNextKits } from '../../lib/cosmeticsRelease'
@@ -82,20 +83,7 @@ function Content() {
               {g.items.map((i) => {
                 const on = isOn(i)
                 const equippable = !!lookPatch(i.type, { id: i.slug })
-                return (
-                  <article key={i.id} className={`rounded-2xl border bg-ink-900/60 overflow-hidden ${on ? 'border-emerald-400/70' : RARITY_STYLE[i.rarity].split(' ')[0]}`}>
-                    <div className="bg-ink-950/60 min-h-[140px]"><ItemPreview type={i.type} slug={i.slug} me={me} compact /></div>
-                    <div className="px-3 py-2.5 border-t border-ink-800">
-                      <p className="text-sm font-semibold text-neutral-100 truncate">{i.name}</p>
-                      <p className={`text-[10px] uppercase tracking-wide font-semibold ${RARITY_STYLE[i.rarity].split(' ')[1]}`}>{RARITY_LABEL[i.rarity]}</p>
-                      {equippable ? (
-                        <button type="button" disabled={busy === i.id} onClick={() => toggle(i)} className={`press mt-2 w-full rounded-lg py-1.5 text-sm font-medium transition ${on ? 'border border-ink-600 text-neutral-300 hover:bg-ink-800' : 'bg-garnet-600 hover:bg-garnet-500 text-white'}`}>
-                          {on ? 'Quitar' : 'Equipar'}
-                        </button>
-                      ) : <p className="mt-2 text-xs text-emerald-400">Se muestra en tu perfil</p>}
-                    </div>
-                  </article>
-                )
+                return <InvCard key={i.id} item={i} me={me} on={on} equippable={equippable} busy={busy === i.id} onToggle={() => toggle(i)} />
               })}
             </div>
           </section>
@@ -108,6 +96,30 @@ function Content() {
   )
 }
 
+
+/** Tarjeta del inventario: quieta; se anima con el cursor encima (PC) o al tocar la vista previa (celular) */
+function InvCard({ item: i, me, on, equippable, busy, onToggle }: { item: InventoryItem; me: ReturnType<typeof useShopData>['me']; on: boolean; equippable: boolean; busy: boolean; onToggle: () => void }) {
+  const [tapped, setTapped] = useState(false)
+  const { playing, bind } = useHoverPlay(tapped)
+  return (
+    <article {...bind} className={`rounded-2xl border bg-ink-900/60 overflow-hidden ${on ? 'border-emerald-400/70' : RARITY_STYLE[i.rarity].split(' ')[0]}`}>
+      <div className="relative bg-ink-950/60 min-h-[140px] cursor-pointer" onClick={() => setTapped((v) => !v)}>
+        <ItemPreview type={i.type} slug={i.slug} me={me} compact lazy playing={playing} />
+        {!playing && <span className="play-hint pointer-events-none absolute bottom-2 left-2 w-6 h-6 rounded-full bg-ink-950/70 border border-ink-600 text-[10px] text-neutral-300 flex items-center justify-center" aria-hidden="true">▶</span>}
+      </div>
+      <div className="px-3 py-2.5 border-t border-ink-800">
+        <p className="text-sm font-semibold text-neutral-100 truncate">{i.name}</p>
+        <p className={`text-[10px] uppercase tracking-wide font-semibold ${RARITY_STYLE[i.rarity].split(' ')[1]}`}>{RARITY_LABEL[i.rarity]}</p>
+        {equippable ? (
+          <button type="button" disabled={busy} onClick={onToggle} className={`press mt-2 w-full rounded-lg py-1.5 text-sm font-medium transition ${on ? 'border border-ink-600 text-neutral-300 hover:bg-ink-800' : 'bg-garnet-600 hover:bg-garnet-500 text-white'}`}>
+            {on ? 'Quitar' : 'Equipar'}
+          </button>
+        ) : <p className="mt-2 text-xs text-emerald-400">Se muestra en tu perfil</p>}
+      </div>
+    </article>
+  )
+}
+
 function UpcomingSection({ items, me }: { items: CatalogItem[]; me: ReturnType<typeof useShopData>['me'] }) {
   const shown = items.filter((i) => i.type !== 'badge' && i.type !== 'font')
   return (
@@ -117,7 +129,7 @@ function UpcomingSection({ items, me }: { items: CatalogItem[]; me: ReturnType<t
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {shown.slice(0, 12).map((i) => (
           <article key={i.id} className="rounded-xl border border-fuchsia-500/30 bg-ink-900/60 overflow-hidden">
-            <div className="bg-ink-950/60 min-h-[130px]"><ItemPreview type={i.type} slug={i.slug} me={me} compact /></div>
+            <div className="bg-ink-950/60 min-h-[130px]"><ItemPreview type={i.type} slug={i.slug} me={me} compact lazy playing={false} /></div>
             <p className="px-3 py-2 text-sm text-neutral-200 truncate">{i.name} <span className="text-[10px] text-fuchsia-300">· {i.release_version}</span></p>
           </article>
         ))}

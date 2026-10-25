@@ -15,8 +15,42 @@ export const RELEASE_STAGE: 'beta' | 'stable' = 'stable'
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.4.5',
+    date: '2026-10-24',
+    title: 'Mi clóset y arreglos',
+    sections: [
+      {
+        heading: 'Personalizar ahora es tu clóset 👗',
+        items: [
+          'Rediseñamos el estudio: elige un cajón (Color, Nombre, Avatar, Tarjeta, Entrada, Fondo, Título), mira lo que llevas puesto, cambia de paleta y guarda.',
+          'Pensado para el celular: la vista previa queda arriba y el clóset es un cajón que se abre y se cierra, con «Guardar» siempre a la vista.',
+          'Lo tuyo y lo que puedes probar van separados, con filtro por colección. Lo que llevas puesto se marca con «Puesto».',
+        ],
+      },
+      {
+        heading: 'Más rápido y sin lag ⚡',
+        items: [
+          'En la tienda, el inventario y el clóset nada se anima solo: se anima cuando pasas el cursor. En el celular, al tocar la prenda (o abrirla en la tienda).',
+          'Las miniaturas lejanas no se dibujan hasta que te acercas, y solo se animan unas pocas decoraciones a la vez en pantalla.',
+          'En los perfiles, el fondo y la tarjeta animados se pausan mientras deslizas para que todo vaya fluido.',
+        ],
+      },
+      {
+        heading: 'Arreglos',
+        items: [
+          'Mensajes en el celular: al abrir el teclado el chat ya no se va hacia arriba, y al cerrarlo todo vuelve a su lugar. El cuadro de texto tampoco hace zoom en iPhone.',
+          'Las alas (cuervo, plumas, estrellas, fénix…) ya se ven completas en la tienda, el inventario y el clóset.',
+          'Los efectos de entrada y los fondos ya no salen en blanco al elegirlos.',
+          'En el celular, personalizar ya no se sale por el lado derecho.',
+          'Las decoraciones ya no desaparecen cuando una vista previa se escala para caber.',
+          'El clóset ya no se reconstruye entero en cada toque (causaba parte del lag).',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.4.0',
-    date: '2026-10-23',
+    date: '2026-10-22',
     title: 'Tienda y Estilo',
     sections: [
       {
@@ -666,4 +700,4 @@ export const CHANGELOG: Release[] = [
 
 export const LATEST_RELEASE = CHANGELOG[0]
 // Versión que se muestra en la app. Si un parche pequeño (1.0.x) no lleva notas en el changelog, igual se sube este número a mano.
-export const APP_VERSION = '1.4.0'
+export const APP_VERSION = '1.4.5'

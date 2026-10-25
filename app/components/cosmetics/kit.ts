@@ -15,6 +15,8 @@ import { TITLES, COMPLETION_TITLES, titleHTML, badgeSVG, BADGE_IDS, PACK_EFFECT,
 import { FONTS } from './_kit/fonts/index.js'
 import { BASE_CSS } from './_kit/core/kit.js'
 import { NEXT_KIT_COLLECTIONS, isReleasedColl } from '../../lib/cosmeticsRelease'
+import { rng } from './_kit/core/util.js'
+import { makePalette } from './_kit/core/color.js'
 
 /** Arranca un efecto de entrada en un canvas. Devuelve {stop, seek} */
 export const startEntryFx = (effect: unknown, canvas: HTMLCanvasElement, opts: { paletteId?: string; hue?: number; loop?: boolean; seed?: number; reduced?: boolean }): { stop: () => void; seek: (s: number) => void } => startEntry(effect, canvas, opts)
@@ -81,6 +83,35 @@ const REDUCED = '@media (prefers-reduced-motion:reduce){.dpw *,.pcw *,.bgl *{ani
 export const RELEASED_CSS = BASE_CSS + '\n' + BASE_SKIN_CSS + '\n' + cssOf([RELEASED.decos, RELEASED.cards, RELEASED.backgrounds]) + '\n' + REDUCED
 /** CSS de lo que viene: solo se inyecta en el estudio del equipo */
 export const UPCOMING_CSS = cssOf([UPCOMING.decos, UPCOMING.cards, UPCOMING.backgrounds])
+
+
+/** Instante (s) que mejor representa a cada efecto en una miniatura quieta (el motor, en «reducido», dibuja el final y muchos quedan vacíos). */
+const STILL_AT: Record<string, number> = { 'confeti': 1.7, 'relampago-suave': 0.54, 'glitch-y-escaneo': 1.2, 'eclipse-total': 4.6, 'murcielagos': 1.8, 'rafaga-de-estrellas': 1.1 }
+/** Dibuja UN fotograma de un efecto de entrada (sin bucle de animación): para miniaturas en reposo. No toca el kit. */
+export function drawEntryStill(effect: any, canvas: HTMLCanvasElement, opts: { paletteId?: string; hue?: number; seed?: number } = {}): void {
+  const def = effect.palettes.find((p: any) => p.id === opts.paletteId) || effect.palettes[0]
+  const P = makePalette(def, opts.hue ?? 0)
+  const dpr = Math.min(2, (typeof devicePixelRatio !== 'undefined' && devicePixelRatio) || 1)
+  const W = canvas.clientWidth || canvas.width, H = canvas.clientHeight || canvas.height
+  if (!W || !H) return
+  canvas.width = W * dpr
+  canvas.height = H * dpr
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  const sim = effect.create({ W, H, P, R: rng(opts.seed ?? 7) })
+  const to = STILL_AT[effect.slug] ?? 2.4
+  const st = 1 / 60
+  for (let t = 0; t < to; t += st) sim.update(st, t)
+  ctx.clearRect(0, 0, W, H)
+  sim.draw(ctx, to)
+}
+
+/** Tamaño mínimo y desborde (pad) de una decoración: para dibujarla completa en las vistas previas (alas, llamas, anillos) */
+export function decoGeometry(slug: string): { min: number; pad: number } | null {
+  const d = decoBySlug(slug)
+  return d ? { min: d.min || 0, pad: d.pad || 0 } : null
+}
 
 // ───────── Ayudantes de renderizado ─────────
 const hashStr = (s) => {
