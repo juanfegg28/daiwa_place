@@ -86,6 +86,8 @@ export function DecoLayer({ deco, part, px, context = 'feed', slotKey }: { deco:
   const wants = allowed && gate !== false && vis && px >= 40
   // tope de animaciones simultáneas (las miniaturas «activas» van primero: solo hay una a la vez)
   const slot = useAnimSlot(slotKey ?? `${deco.id}-${part}`, wants, gate === true ? -1 : context === 'profile' ? 0 : 1)
+  // v1.5.8 · las decoraciones de avatar también se pausan mientras se desplaza la pantalla (feed y perfiles con varias a la vez)
+  usePauseWhileScrolling(wants && slot && gate === null)
   if (!L || px < L.min) return null // por debajo del tamaño mínimo se ve solo la foto
   const html = part === 'back' ? L.back : L.front
   if (!html) return null

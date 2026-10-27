@@ -940,15 +940,15 @@ export default function StoryEditor() {
   }
 
   // ───────── editor ─────────
-  const iconBtn = 'w-10 h-10 rounded-full bg-black/40 backdrop-blur flex items-center justify-center text-white disabled:opacity-35 active:scale-95 transition'
+  const iconBtn = 'shrink-0 w-11 h-11 max-[380px]:w-9 max-[380px]:h-9 rounded-full bg-black/45 backdrop-blur flex items-center justify-center text-white disabled:opacity-35 active:scale-95 transition touch-manipulation'
   const tabs: [typeof tab, string][] = [['bg', 'Fondo'], ['text', 'Texto'], ['stickers', 'Stickers'], ['music', 'Música']]
 
   return (
     <div className="fixed inset-0 z-[100] bg-[#0c0c0f] text-white overflow-hidden" onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); void loadFile(e.dataTransfer.files?.[0]) }}>
       <div className="absolute inset-0 flex flex-col md:flex-row md:items-center md:justify-center md:gap-6 md:p-6">
         {/* escenario */}
-        <div className="relative flex-1 md:flex-none min-h-0 flex items-center justify-center" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-          <div className="relative h-full md:h-[min(86dvh,780px)] max-h-full" style={{ aspectRatio: '9 / 16' }}>
+        <div className="story-editor-area relative flex-1 md:flex-none min-h-0 flex items-center justify-center" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+          <div className="story-editor-stage relative h-full md:h-[min(86dvh,780px)] max-h-full" style={{ aspectRatio: '9 / 16' }}>
             <div
               ref={stageRef}
               className="absolute inset-0 touch-none md:rounded-[18px] overflow-hidden md:shadow-2xl"
@@ -1015,8 +1015,21 @@ export default function StoryEditor() {
               </StageFrame>
             </div>
 
-            {/* barra de herramientas del celular */}
-            <div className="md:hidden absolute top-2 inset-x-2 flex items-center gap-1.5 z-[85] pointer-events-none">
+            {/* herramientas del elemento seleccionado (celular) */}
+            {selected && !editing && (
+              <div className="md:hidden absolute left-1/2 -translate-x-1/2 bottom-[16%] z-[85] flex items-center gap-1 rounded-full bg-black/70 backdrop-blur px-2 py-1.5">
+                <button type="button" className="px-3 py-1.5 text-[12.5px]" onClick={() => setSheet('inspector')}>Ajustes</button>
+                {(selected.type === 'music' || selected.type === 'location' || selected.type === 'time') && <button type="button" className="px-3 py-1.5 text-[12.5px]" onClick={() => cycleStyle(selected)}>↻ Estilo</button>}
+                {selected.type === 'text' && <button type="button" className="px-3 py-1.5 text-[12.5px]" onClick={() => setEditingId(selected.id)}>Editar</button>}
+                <button type="button" aria-label="Borrar" className="px-2.5 py-1.5" onClick={() => removeEl(selected.id)}><TrashIcon className="w-4 h-4" /></button>
+              </div>
+            )}
+            {unsafe && !editing && <p className="absolute left-2 right-2 bottom-[15%] mx-auto w-max max-w-full rounded-full bg-amber-500/90 text-black text-[11px] px-3 py-1 z-[84] pointer-events-none md:static md:mt-2">Algo queda tapado por la cabecera o la barra de respuesta</p>}
+            {toast && <p role="status" className="absolute left-2 right-2 top-14 mx-auto w-max max-w-full rounded-full bg-white text-black text-[12.5px] px-4 py-2 z-[90] shadow-lg">{toast}</p>}
+          </div>
+
+        {/* barra de herramientas del celular (v1.5.8: anclada a la PANTALLA, ya no al escenario, que en celulares altos era más ancho que la pantalla y dejaba los íconos cortados) */}
+        <div className="md:hidden fixed inset-x-0 z-[85] flex items-center gap-1.5 px-3 pointer-events-none" style={{ top: 'calc(env(safe-area-inset-top, 0px) + 8px)' }}>
               <div className="flex items-center gap-1.5 pointer-events-auto">
                 <button type="button" onClick={exit} aria-label="Cerrar" className={iconBtn}><CloseIcon className="w-5 h-5" /></button>
                 <button type="button" onClick={undo} disabled={hist.u === 0} aria-label="Deshacer" className={iconBtn}><UndoIcon className="w-5 h-5" /></button>
@@ -1030,19 +1043,6 @@ export default function StoryEditor() {
                 <button type="button" onClick={() => setSheet('bg')} aria-label={doc.kind === 'text' ? 'Fondo' : 'Ajustar foto'} className={iconBtn}><PaletteIcon className="w-5 h-5" /></button>
               </div>
             </div>
-
-            {/* herramientas del elemento seleccionado (celular) */}
-            {selected && !editing && (
-              <div className="md:hidden absolute left-1/2 -translate-x-1/2 bottom-[16%] z-[85] flex items-center gap-1 rounded-full bg-black/70 backdrop-blur px-2 py-1.5">
-                <button type="button" className="px-3 py-1.5 text-[12.5px]" onClick={() => setSheet('inspector')}>Ajustes</button>
-                {(selected.type === 'music' || selected.type === 'location' || selected.type === 'time') && <button type="button" className="px-3 py-1.5 text-[12.5px]" onClick={() => cycleStyle(selected)}>↻ Estilo</button>}
-                {selected.type === 'text' && <button type="button" className="px-3 py-1.5 text-[12.5px]" onClick={() => setEditingId(selected.id)}>Editar</button>}
-                <button type="button" aria-label="Borrar" className="px-2.5 py-1.5" onClick={() => removeEl(selected.id)}><TrashIcon className="w-4 h-4" /></button>
-              </div>
-            )}
-            {unsafe && !editing && <p className="absolute left-2 right-2 bottom-[15%] mx-auto w-max max-w-full rounded-full bg-amber-500/90 text-black text-[11px] px-3 py-1 z-[84] pointer-events-none md:static md:mt-2">Algo queda tapado por la cabecera o la barra de respuesta</p>}
-            {toast && <p role="status" className="absolute left-2 right-2 top-14 mx-auto w-max max-w-full rounded-full bg-white text-black text-[12.5px] px-4 py-2 z-[90] shadow-lg">{toast}</p>}
-          </div>
 
           {/* abajo (celular): audiencia + compartir */}
           <div className="md:hidden absolute inset-x-3 bottom-3 flex items-center justify-between gap-3 z-[85]" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>

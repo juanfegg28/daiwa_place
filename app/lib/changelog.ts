@@ -15,6 +15,53 @@ export const RELEASE_STAGE: 'beta' | 'stable' = 'stable'
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.5.8',
+    date: '2026-10-27',
+    title: 'Historias a punto, Misiones en el Inicio y más fluidez',
+    sections: [
+      {
+        heading: 'Historias, más fáciles de manejar 📱',
+        items: [
+          'Arreglado en celular: no dejaba responder una historia ni enviar mensajes. Los controles se escondían solos a los 2 segundos y el botón de enviar se perdía al cerrarse el teclado; ahora responder y enviar funcionan al primer toque y el teclado ya no tapa la barra.',
+          'Tocar la foto o el nombre de alguien dentro de una historia te lleva directo a su perfil.',
+          'Arreglado el editor de historias en celular: los íconos de arriba (cerrar, deshacer, texto, stickers, música…) se salían de la pantalla y costaba tocarlos. Ahora siempre caben, son más grandes y respetan la zona segura del teléfono.',
+          'Con el teclado abierto, tocar la historia solo lo cierra (ya no cambia de historia sin querer). El campo de respuesta ya no hace zoom en iPhone.',
+          'Botones del visor más grandes, y la bandeja de historias se desliza con tope suave y tiene el «+» de crear más fácil de tocar.',
+        ],
+      },
+      {
+        heading: 'Misiones en el Inicio 🎯',
+        items: [
+          'En PC aparece una columna a la derecha del feed con tus misiones Diarias y Semanales en dos bloques que puedes minimizar. Reclamas ahí mismo (y abres el cofre semanal) sin entrar a Misiones. El feed se corre un poco a la izquierda para hacerle espacio.',
+          'En pantallas más chicas hay una tarjeta plegable «Misiones» encima de la caja de publicar, con puntito dorado cuando tienes premios por reclamar. Recuerda qué dejaste abierto o cerrado.',
+        ],
+      },
+      {
+        heading: 'Barra lateral que se minimiza ☰',
+        items: [
+          'En PC, las 3 rayitas minimizan la barra lateral a una columna de íconos. De entrada siempre está desplegada y recuerda tu elección. Minimizada, muestra un puntito rojo en las rayitas si te llegó un aviso o mensaje (y el numerito en cada ícono), más el saldo de Lunas y el puntito dorado de misiones.',
+        ],
+      },
+      {
+        heading: 'Tienda en celular 🛍️',
+        items: [
+          'Arreglado: «Explorar» no abría su menú en el celular. Ahora sube una hoja desde abajo con todas las categorías y cuántos cosméticos tiene cada una.',
+          'Las pestañas de la tienda se centran solas en la sección donde estás, y los filtros pasan a una sola fila deslizable con botones más grandes.',
+        ],
+      },
+      {
+        heading: 'Más rápido ⚡',
+        items: [
+          'Dar «me gusta» a una publicación o comentario es instantáneo (antes volvía a cargar todo el feed).',
+          'Escribir en la caja de publicar ya no repinta todas las publicaciones: se acabó el lag al teclear con el feed largo.',
+          'Perfiles y feed con varias decoraciones animadas: se pausan mientras te desplazas, y en celulares y equipos modestos animan menos a la vez (4 en vez de 8).',
+          'La barra lateral y los avisos/mensajes en vivo juntan ráfagas de eventos en una sola recarga, y la sesión ya no repinta toda la app sin necesidad.',
+          'El visor de historias deja de repintar el lienzo en cada fotograma del temporizador.',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.5.0',
     date: '2026-10-26',
     title: 'Tienda de Halloween 🎃',
@@ -737,4 +784,4 @@ export const CHANGELOG: Release[] = [
 
 export const LATEST_RELEASE = CHANGELOG[0]
 // Versión que se muestra en la app. Si un parche pequeño (1.0.x) no lleva notas en el changelog, igual se sube este número a mano.
-export const APP_VERSION = '1.5.0'
+export const APP_VERSION = '1.5.8'

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, CopyIcon, EyeIcon, FlagIcon, MoreIcon, PauseIcon, PlayIcon, StarIcon, TrashIcon, ArchiveIcon, HeartIcon, BlockIcon } from '../icons'
 import { supabase } from '../../lib/supabaseClient'
 import { useStoryAudio } from '../../lib/useStoryAudio'
+import { useKeyboardFit } from '../../lib/useKeyboardFit'
 import {
   addOwnSeen,
   deleteStory,
@@ -70,6 +71,8 @@ export default function StoryViewer({
 }) {
   const router = useRouter()
   const audio = useStoryAudio()
+  // v1.5.8 · en celular el visor mide lo que el teclado deja libre: la barra de respuesta siempre queda a la vista
+  useKeyboardFit(true)
   const [me, setMe] = useState<Me | null>(null)
   const [groups, setGroups] = useState<Group[]>([])
   const [gi, setGi] = useState(0)
@@ -118,6 +121,8 @@ export default function StoryViewer({
   const switchGroupRef = useRef<(t: number, w?: 'first' | 'last', d?: 'left' | 'right') => void>(() => {})
   const gesture = useRef({ x: 0, y: 0, t: 0, moved: false, holding: false, hold: 0, tap: 0, lastTap: 0, active: false })
   const initDone = useRef(false)
+  const replyFocusRef = useRef(false)
+  const anySheetRef = useRef(false)
 
   useEffect(() => {
     groupsRef.current = groups
@@ -133,6 +138,10 @@ export default function StoryViewer({
   const anySheet = viewersOpen || menuOpen || reportOpen || deleteOpen || pickerOpen || shortcutsOpen
   const running = ready && !holding && !userPaused && !replyFocus && !volDrag && !tabHidden && !anySheet && !closing && imgErrorId !== story?.id
   const canLike = !!story && !isMine && !isHighlight && story.is_active
+  useEffect(() => {
+    replyFocusRef.current = replyFocus
+    anySheetRef.current = anySheet
+  }, [replyFocus, anySheet])
 
   // ───────── carga de una persona (sus historias + enlaces firmados) ─────────
   const loadGroup = useCallback(async (key: string): Promise<StoryRow[]> => {
@@ -578,6 +587,11 @@ export default function StoryViewer({
       return
     }
     if (g.moved) return
+    // con el teclado abierto, tocar la historia solo lo cierra (no cambia de historia sin querer)
+    if (replyFocusRef.current) {
+      replyRef.current?.blur()
+      return
+    }
     const r = stageRef.current?.getBoundingClientRect()
     const fx = r ? (e.clientX - r.left) / r.width : 0.7
     const fy = r ? (e.clientY - r.top) / r.height : 0.5
@@ -606,13 +620,17 @@ export default function StoryViewer({
     }
   }
 
-  // mostrar/ocultar controles de PC tras 2 s sin mover el ratón
-  const wakeUi = () => {
+  // mostrar/ocultar controles de PC tras 2 s sin mover el ratón.
+  // v1.5.8 · SOLO con ratón de verdad: en celular cada toque genera un «mousemove» falso, y 2 s después la barra de respuesta
+  // y los botones se volvían invisibles e intocables (no dejaba responder). Además nunca se esconden mientras escribes
+  // o hay una hoja abierta.
+  const wakeUi = (e: React.PointerEvent) => {
+    if (e.pointerType !== 'mouse') return
     setUiVisible(true)
     if (idleTimer.current) window.clearTimeout(idleTimer.current)
     idleTimer.current = window.setTimeout(() => {
-      if (!gesture.current.holding) setUiVisible(false)
-    }, 2000)
+      if (!gesture.current.holding && !replyFocusRef.current && !anySheetRef.current) setUiVisible(false)
+    }, 2500)
   }
 
   // ───────── teclado (PC) ─────────
@@ -719,6 +737,25 @@ export default function StoryViewer({
     setMenuOpen(false)
   }
 
+  // v1.5.8 · capa de corazones y emojis flotantes: queda fija entre fotogramas (si no, el lienzo entero se repintaba ~16 veces por segundo)
+  const fxLayer = useMemo(
+    () => (
+      <>
+        {hearts.map((h) => (
+          <span key={h.id} className="story-heart-float absolute text-garnet-500 pointer-events-none" style={{ left: `${h.x}%`, top: `${h.y}%`, width: 96, height: 96, zIndex: 50 }}>
+            <HeartIcon filled className="w-full h-full drop-shadow-lg" />
+          </span>
+        ))}
+        {floaters.map((f) => (
+          <span key={f.id} className="absolute bottom-[12%] pointer-events-none text-[9cqw]" style={{ left: `${f.left}%`, animation: 'story-emoji-rise 1.6s ease-out both', animationDelay: `${f.delay}ms`, zIndex: 50 }}>
+            {f.emoji}
+          </span>
+        ))}
+      </>
+    ),
+    [hearts, floaters]
+  )
+
   // ───────── pantallas de estado ─────────
   if (phase === 'loading') {
     return (
@@ -745,7 +782,13 @@ export default function StoryViewer({
   const animClass = anim ? (anim.dir === 'left' ? 'story-cube-left' : 'story-cube-right') : ''
   const prevGroup = groups[gi - 1]
   const nextGroup = groups[gi + 1]
-  const uiOn = uiVisible && !holding
+  // los controles nunca se esconden mientras escribes o hay una hoja abierta
+  const uiOn = (uiVisible || replyFocus || anySheet) && !holding
+  const goProfile = (e: React.SyntheticEvent) => {
+    e.stopPropagation()
+    emitStoriesChanged()
+    router.push(`/perfil/${group.owner.username}`)
+  }
 
   const renderNeighbor = (g: Group, side: 'left' | 'right') => {
     const first = g.stories?.[0]
@@ -808,7 +851,7 @@ export default function StoryViewer({
   )
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black text-white overflow-hidden" role="dialog" aria-modal="true" aria-label={`Historias de ${label}`} onMouseMove={wakeUi}>
+    <div className="fixed inset-x-0 top-0 h-[var(--vvh,100dvh)] translate-y-[var(--vvt,0px)] md:inset-0 md:h-auto md:translate-y-0 z-[100] bg-black text-white overflow-hidden" role="dialog" aria-modal="true" aria-label={`Historias de ${label}`} onPointerMove={wakeUi}>
       {/* PC: la foto de la historia, muy desenfocada y oscurecida, hace de marco */}
       <div className="hidden md:block absolute inset-0 overflow-hidden" aria-hidden="true">
         {mediaUrl && (
@@ -846,16 +889,7 @@ export default function StoryViewer({
                 playing={musicPlaying}
                 progress={musicProgress}
               >
-                {hearts.map((h) => (
-                  <span key={h.id} className="story-heart-float absolute text-garnet-500 pointer-events-none" style={{ left: `${h.x}%`, top: `${h.y}%`, width: 96, height: 96, zIndex: 50 }}>
-                    <HeartIcon filled className="w-full h-full drop-shadow-lg" />
-                  </span>
-                ))}
-                {floaters.map((f) => (
-                  <span key={f.id} className="absolute bottom-[12%] pointer-events-none text-[9cqw]" style={{ left: `${f.left}%`, animation: 'story-emoji-rise 1.6s ease-out both', animationDelay: `${f.delay}ms`, zIndex: 50 }}>
-                    {f.emoji}
-                  </span>
-                ))}
+                {fxLayer}
               </StoryCanvas>
             </div>
 
@@ -900,16 +934,18 @@ export default function StoryViewer({
               <div className="px-2.5 pt-2.5 pb-10">
                 <ProgressBars count={stories.length} index={si} progress={progress} />
                 <div className="mt-2.5 flex items-center gap-2.5">
-                  <Avatar username={group.owner.username} avatarUrl={group.owner.avatar_url} size="w-[34px] h-[34px]" textSize="text-sm" sizes="40px" photoClassName="ring-2" className={hasUnseenMore ? '[--tw-ring-color:var(--color-garnet-400)]' : '[--tw-ring-color:rgba(255,255,255,.3)]'} />
-                  <div className="min-w-0 flex-1 leading-tight pointer-events-auto">
+                  <button type="button" onClick={goProfile} aria-label={`Ir al perfil de ${label}`} className="pointer-events-auto shrink-0 rounded-full touch-manipulation outline-none focus-visible:ring-2 focus-visible:ring-white/70">
+                    <Avatar username={group.owner.username} avatarUrl={group.owner.avatar_url} size="w-[38px] h-[38px]" textSize="text-sm" sizes="40px" photoClassName="ring-2" className={hasUnseenMore ? '[--tw-ring-color:var(--color-garnet-400)]' : '[--tw-ring-color:rgba(255,255,255,.3)]'} />
+                  </button>
+                  <div className="min-w-0 flex-1 leading-tight">
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-[14px] font-bold truncate">{isMine ? 'Tu historia' : label}</span>
+                      <button type="button" onClick={goProfile} aria-label={`Ir al perfil de ${label}`} className="pointer-events-auto min-w-0 text-left text-[14px] font-bold truncate touch-manipulation hover:underline underline-offset-2 outline-none focus-visible:underline">{isMine ? 'Tu historia' : label}</button>
                       <span className="text-[12px] text-white/70 shrink-0">{isHighlight ? fullDateLabel(story.created_at) : storyAgo(story.created_at)}</span>
                       {story.audience === 'friends' && <span className="rounded-full bg-emerald-600 text-white text-[10px] font-semibold px-1.5 py-[2px] shrink-0">Amigos</span>}
                     </div>
                     {isHighlight && <div className="text-[11.5px] text-white/75 truncate">{group.highlight?.title}</div>}
                     {track && (
-                      <a href={track.link ?? undefined} target="_blank" rel="noopener noreferrer" className="block text-[12px] text-white/90 overflow-hidden whitespace-nowrap">
+                      <a href={track.link ?? undefined} target="_blank" rel="noopener noreferrer" className="pointer-events-auto block text-[12px] text-white/90 overflow-hidden whitespace-nowrap">
                         <span className={track.title.length + track.artist.length > 34 ? 'story-marquee' : ''}>♪ {track.title} · {track.artist}</span>
                       </a>
                     )}
@@ -931,13 +967,13 @@ export default function StoryViewer({
                         onDragging={setVolDrag}
                       />
                     )}
-                    <button type="button" onClick={() => setMenuOpen(true)} aria-label="Más opciones" className="w-9 h-9 rounded-full bg-black/40 backdrop-blur flex items-center justify-center">
+                    <button type="button" onClick={() => setMenuOpen(true)} aria-label="Más opciones" className="w-10 h-10 rounded-full bg-black/40 backdrop-blur flex items-center justify-center touch-manipulation active:scale-95">
                       <MoreIcon className="w-5 h-5" />
                     </button>
                     <button type="button" onClick={() => setShortcutsOpen(true)} aria-label="Atajos de teclado" className="hidden md:flex w-9 h-9 rounded-full bg-black/40 backdrop-blur items-center justify-center text-sm font-semibold">
                       ?
                     </button>
-                    <button type="button" onClick={close} aria-label="Cerrar" className="w-9 h-9 rounded-full bg-black/40 backdrop-blur flex items-center justify-center">
+                    <button type="button" onClick={close} aria-label="Cerrar" className="w-10 h-10 rounded-full bg-black/40 backdrop-blur flex items-center justify-center touch-manipulation active:scale-95">
                       <CloseIcon className="w-5 h-5" />
                     </button>
                   </div>

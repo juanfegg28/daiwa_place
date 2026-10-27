@@ -7,7 +7,7 @@ import { ClaimDot } from './economy/ClaimDot'
 import { formatNumber, refreshWallet, subscribeWallet, type WalletSummary } from '../lib/economy'
 
 /** Chip de saldo (☾ 1 250). Lleva a la tienda; con puntito si hay misiones por reclamar. */
-export default function WalletChip({ userId, compact = false }: { userId: string | null; compact?: boolean }) {
+export default function WalletChip({ userId, compact = false, rail = false }: { userId: string | null; compact?: boolean; /** barra lateral de PC minimizada: ícono arriba y saldo abajo */ rail?: boolean }) {
   const [w, setW] = useState<WalletSummary | null>(null)
   const [bump, setBump] = useState(false)
   const last = useRef<number | null>(null)
@@ -36,6 +36,20 @@ export default function WalletChip({ userId, compact = false }: { userId: string
   if (!userId || !w) return null
   const dot = w.claimable > 0 || w.founder_available
   const label = `${formatNumber(w.balance)} ${w.currency}${dot ? ' · tienes cosas por reclamar' : ''}`
+  if (rail) {
+    return (
+      <Link
+        href="/monedas"
+        aria-label={`Mi saldo: ${label}`}
+        title={`Mi saldo: ${label}`}
+        className="press relative flex w-full flex-col items-center gap-0.5 rounded-xl border border-amber-400/60 bg-gradient-to-b from-amber-400/20 to-amber-600/10 text-amber-100 py-1.5 shadow-[0_0_14px_-4px] shadow-amber-400/50 hover:from-amber-400/30 transition"
+      >
+        <MoonCoinIcon className="w-5 h-5 text-amber-300" />
+        <span className={`text-[11px] font-bold tabular-nums leading-none ${bump ? 'bal-bump' : ''}`}>{formatNumber(w.balance)}</span>
+        {dot && <ClaimDot className="-top-1 -right-1 w-2.5 h-2.5" label="Tienes cosas por reclamar" />}
+      </Link>
+    )
+  }
   if (compact) {
     // Celular (barra de arriba): píldora dorada con brillo, bien visible
     return (

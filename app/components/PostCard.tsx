@@ -3,7 +3,7 @@
 import Avatar from './cosmetics/Avatar'
 import NameText from './cosmetics/NameText'
 import type { Equip } from '../lib/cosmetics'
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, memo, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabaseClient'
@@ -479,7 +479,7 @@ function CommentThread({ comment, depth }: { comment: Comment; depth: number }) 
 
 /* ---------- La publicación ---------- */
 
-export default function PostCard({
+function PostCard({
   post,
   currentUserId,
   showAuthor = true,
@@ -1140,3 +1140,6 @@ export default function PostCard({
     </article>
   )
 }
+
+// v1.5.8 · memo: al escribir en la caja de publicar (o al dar like en otra publicación) las demás tarjetas ya no se repintan
+export default memo(PostCard)

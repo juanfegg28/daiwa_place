@@ -448,6 +448,7 @@ export default function ChatPane({ convId, me, friendIds }: Props) {
     URL.revokeObjectURL(draft.previewUrl)
   }
 
+  const sentByTap = useRef(false)
   const submit = () => {
     const content = text.trim()
     if (!content) return
@@ -875,10 +876,27 @@ export default function ChatPane({ convId, me, friendIds }: Props) {
             />
             <button
               type="button"
-              onClick={submit}
+              // v1.5.8 · en celular, tocar «Enviar» con el teclado abierto cerraba el teclado y movía la barra antes de que
+              // llegara el clic (a veces no se enviaba). Ahora se envía en el mismo instante del toque y el teclado se queda abierto.
+              onMouseDown={(e) => e.preventDefault()}
+              onPointerDown={(e) => {
+                if (e.pointerType === 'mouse' || !text.trim()) return
+                e.preventDefault()
+                sentByTap.current = true
+                window.setTimeout(() => (sentByTap.current = false), 450)
+                submit()
+                textareaRef.current?.focus()
+              }}
+              onClick={() => {
+                if (sentByTap.current) {
+                  sentByTap.current = false
+                  return
+                }
+                submit()
+              }}
               disabled={!text.trim()}
               aria-label="Enviar mensaje"
-              className="shrink-0 w-10 h-10 rounded-full bg-garnet-600 hover:bg-garnet-500 text-white flex items-center justify-center transition disabled:opacity-40 disabled:hover:bg-garnet-600"
+              className="shrink-0 w-11 h-11 rounded-full bg-garnet-600 hover:bg-garnet-500 text-white flex items-center justify-center transition disabled:opacity-40 disabled:hover:bg-garnet-600 touch-manipulation active:scale-95"
             >
               <SendIcon className="w-[18px] h-[18px]" />
             </button>

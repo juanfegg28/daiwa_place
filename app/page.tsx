@@ -1,7 +1,7 @@
 'use client'
 
 import Avatar from './components/cosmetics/Avatar'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from './lib/supabaseClient'
 import AppShell, { useAppSession } from './components/AppShell'
@@ -13,6 +13,7 @@ import MentionField, { type MentionFieldHandle } from './components/MentionField
 import { AtIcon, ImageIcon } from './components/icons'
 import FormatToolbar from './components/FormatToolbar'
 import DailyQuestionCard, { DAILY_TAG } from './components/DailyQuestionCard'
+import { MissionsInline, MissionsSide, useMissionsPanel } from './components/economy/MissionsPanel'
 import { dayPartFor, firstNameOf, pickGreeting, type DayPart } from './lib/greeting'
 import { prepareImage } from './lib/images'
 import { POST_SELECT, POST_IMAGES_BUCKET, MAX_POST_IMAGES, MAX_POST_LENGTH, fetchFeedItems } from './lib/queries'
@@ -42,6 +43,7 @@ export default function HomePage() {
 
 function Feed() {
   const { userId, username, avatarUrl, displayName } = useAppSession()
+  const { state: missions, overlay: missionsOverlay } = useMissionsPanel(userId)
   const [items, setItems] = useState<FeedItem[]>([])
   const [content, setContent] = useState('')
   const [drafts, setDrafts] = useState<DraftImage[]>([])
@@ -285,46 +287,85 @@ function Feed() {
     loadPosts()
   }
 
-  const handleLike = async (post: Post) => {
-    if (!userId) {
-      router.push('/login')
-      return
-    }
-    const alreadyLiked = post.likes.some((l) => l.user_id === userId)
-    if (alreadyLiked) {
-      await supabase.from('likes').delete().eq('post_id', post.id).eq('user_id', userId)
-    } else {
-      await supabase.from('likes').insert({ post_id: post.id, user_id: userId })
-    }
-    loadPosts()
-  }
+  // v1.5.8 · Manejadores ESTABLES (useCallback + ref a loadPosts) para que las tarjetas del feed no se repinten con cada tecla que
+  // escribes en la caja de publicar, y «me gusta» instantáneo: antes cada like volvía a pedir TODO el feed (se sentía lento).
+  const loadPostsRef = useRef(loadPosts)
+  useEffect(() => {
+    loadPostsRef.current = loadPosts
+  })
+  const reload = useCallback(() => {
+    void loadPostsRef.current()
+  }, [])
 
-  const handleLikeComment = async (commentId: string, alreadyLiked: boolean) => {
-    if (!userId) {
-      router.push('/login')
-      return
-    }
-    if (alreadyLiked) {
-      await supabase.from('comment_likes').delete().eq('comment_id', commentId).eq('user_id', userId)
-    } else {
-      await supabase.from('comment_likes').insert({ comment_id: commentId, user_id: userId })
-    }
-    loadPosts()
-  }
+  const handleLike = useCallback(
+    async (post: Post) => {
+      if (!userId) {
+        router.push('/login')
+        return
+      }
+      const alreadyLiked = post.likes.some((l) => l.user_id === userId)
+      setItems((prev) =>
+        prev.map((it) =>
+          it.post.id === post.id
+            ? { ...it, post: { ...it.post, likes: alreadyLiked ? it.post.likes.filter((l) => l.user_id !== userId) : [...it.post.likes, { user_id: userId }] } }
+            : it
+        )
+      )
+      const res = alreadyLiked
+        ? await supabase.from('likes').delete().eq('post_id', post.id).eq('user_id', userId)
+        : await supabase.from('likes').insert({ post_id: post.id, user_id: userId })
+      if (res.error) reload() // no se pudo: se vuelve a lo real
+    },
+    [userId, router, reload]
+  )
 
-  const handleAddComment = async (postId: string, text: string, parentCommentId?: string | null) => {
-    if (!userId) {
-      router.push('/login')
-      return
-    }
-    await supabase.from('comments').insert({
-      post_id: postId,
-      user_id: userId,
-      content: text,
-      parent_comment_id: parentCommentId ?? null,
-    })
-    loadPosts()
-  }
+  const handleLikeComment = useCallback(
+    async (commentId: string, alreadyLiked: boolean) => {
+      if (!userId) {
+        router.push('/login')
+        return
+      }
+      setItems((prev) =>
+        prev.map((it) =>
+          it.post.comments.some((c) => c.id === commentId)
+            ? {
+                ...it,
+                post: {
+                  ...it.post,
+                  comments: it.post.comments.map((c) =>
+                    c.id === commentId
+                      ? { ...c, comment_likes: alreadyLiked ? c.comment_likes.filter((l) => l.user_id !== userId) : [...c.comment_likes, { user_id: userId }] }
+                      : c
+                  ),
+                },
+              }
+            : it
+        )
+      )
+      const res = alreadyLiked
+        ? await supabase.from('comment_likes').delete().eq('comment_id', commentId).eq('user_id', userId)
+        : await supabase.from('comment_likes').insert({ comment_id: commentId, user_id: userId })
+      if (res.error) reload()
+    },
+    [userId, router, reload]
+  )
+
+  const handleAddComment = useCallback(
+    async (postId: string, text: string, parentCommentId?: string | null) => {
+      if (!userId) {
+        router.push('/login')
+        return
+      }
+      await supabase.from('comments').insert({
+        post_id: postId,
+        user_id: userId,
+        content: text,
+        parent_comment_id: parentCommentId ?? null,
+      })
+      reload()
+    },
+    [userId, router, reload]
+  )
 
   const draftImages: PostImage[] = drafts.map((d) => ({ url: d.previewUrl, path: d.id, w: d.w, h: d.h }))
   const canPublish =
@@ -334,11 +375,16 @@ function Feed() {
     !processingImages
 
   return (
-    <div className="max-w-xl mx-auto py-6 px-4">
+    <div className="max-w-[944px] mx-auto py-6 px-4 xl:flex xl:items-start xl:justify-center xl:gap-7">
+      {missionsOverlay}
+      <div className="w-full min-w-0 max-w-xl mx-auto xl:mx-0 xl:flex-1">
       <AnnouncementBanner />
 
       {/* Historias de 24 h (v1.2.0): solo personas que sigues, amigos primero */}
       <StoriesTray />
+
+      {/* Misiones: en pantallas chicas, tarjeta plegable; en PC grande van en la columna de la derecha */}
+      {username && <MissionsInline state={missions} />}
 
       {username && (
         <form ref={composerRef} onSubmit={handlePost} className="surface-card rounded-2xl p-3 sm:p-4 mb-4 sm:mb-6">
@@ -478,12 +524,12 @@ function Feed() {
               key={item.key}
               post={item.post}
               repostedBy={item.repostedBy}
-              onUserHidden={() => loadPosts()}
+              onUserHidden={reload}
               currentUserId={userId}
               onToggleLike={handleLike}
               onToggleCommentLike={handleLikeComment}
               onAddComment={handleAddComment}
-              onRefresh={loadPosts}
+              onRefresh={reload}
             />
           ))
         )}
@@ -500,6 +546,10 @@ function Feed() {
           </div>
         )}
       </div>
+      </div>
+
+      {/* PC grande: misiones a un lado del feed (diarias y semanales, plegables) */}
+      {username && <MissionsSide state={missions} />}
     </div>
   )
 }

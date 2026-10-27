@@ -50,14 +50,37 @@ const ReplyBar = forwardRef<
     }
   }
 
+  // v1.5.8 · En celular, al tocar un botón mientras el teclado está abierto, el campo pierde el foco, el teclado se cierra,
+  // la barra se mueve de sitio… y el «clic» se perdía (por eso a veces no se podía enviar). Ahora estos botones actúan en el
+  // mismo instante en que se toca (pointerdown) y no dejan que el campo pierda el foco. El teclado (Enter / Espacio sobre el
+  // botón) sigue funcionando por el clic normal.
+  const tapped = useRef(false)
+  const tap = (fn: () => void) => ({
+    onMouseDown: (e: React.MouseEvent) => e.preventDefault(),
+    onPointerDown: (e: React.PointerEvent) => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return
+      e.preventDefault()
+      tapped.current = true
+      window.setTimeout(() => (tapped.current = false), 450)
+      fn()
+    },
+    onClick: () => {
+      if (tapped.current) {
+        tapped.current = false
+        return
+      }
+      fn()
+    },
+  })
+
   const heart = (
     <button
       type="button"
-      onClick={onLike}
+      {...tap(onLike)}
       disabled={!canLike}
       aria-label={liked ? 'Quitar el like' : 'Dar like'}
       aria-pressed={liked}
-      className="shrink-0 w-11 h-11 flex items-center justify-center text-white disabled:opacity-40 outline-none focus-visible:ring-2 focus-visible:ring-white/70 rounded-full"
+      className="shrink-0 w-12 h-12 flex items-center justify-center text-white disabled:opacity-40 outline-none focus-visible:ring-2 focus-visible:ring-white/70 rounded-full touch-manipulation"
     >
       <span key={liked ? 'on' : 'off'} className={liked ? 'story-heart-pop text-garnet-500' : ''}>
         <HeartIcon filled={liked} className="w-7 h-7" />
@@ -87,18 +110,17 @@ const ReplyBar = forwardRef<
             <button
               key={e}
               type="button"
-              onMouseDown={(ev) => ev.preventDefault()}
-              onClick={() => onReact(e)}
+              {...tap(() => onReact(e))}
               aria-label={`Reaccionar con ${e}`}
-              className="text-[30px] leading-none w-11 h-11 flex items-center justify-center hover:scale-125 transition-transform"
+              className="text-[30px] leading-none w-11 h-11 flex items-center justify-center hover:scale-125 active:scale-110 transition-transform touch-manipulation"
             >
               {e}
             </button>
           ))}
         </div>
       )}
-      <div className="flex items-center gap-1">
-        <div className="flex-1 flex items-center rounded-full border border-white/35 bg-black/25 backdrop-blur h-11 pl-4 pr-1">
+      <div className="flex items-center gap-1.5">
+        <div className="flex-1 min-w-0 flex items-center rounded-full border border-white/35 bg-black/35 backdrop-blur h-12 pl-4 pr-1.5">
           <input
             ref={inputRef}
             value={text}
@@ -126,16 +148,17 @@ const ReplyBar = forwardRef<
             enterKeyHint="send"
             placeholder={`Enviar mensaje a @${ownerName}…`}
             aria-label={`Responder a la historia de ${ownerName}`}
-            className="flex-1 min-w-0 bg-transparent text-[14px] text-white placeholder:text-white/65 outline-none"
+            autoComplete="off"
+            autoCorrect="on"
+            className="flex-1 min-w-0 bg-transparent text-[16px] md:text-[14px] text-white placeholder:text-white/65 outline-none"
           />
           {text.trim() && (
             <button
               type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => void submit()}
+              {...tap(() => void submit())}
               disabled={sending}
               aria-label="Enviar respuesta"
-              className="w-9 h-9 rounded-full flex items-center justify-center text-white bg-garnet-600 disabled:opacity-60"
+              className="w-10 h-10 rounded-full flex items-center justify-center text-white bg-garnet-600 active:scale-95 disabled:opacity-60 touch-manipulation"
             >
               <SendIcon className="w-[18px] h-[18px]" />
             </button>

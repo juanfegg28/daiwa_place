@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { HeartIcon, MoonCoinIcon, SearchIcon, StoreIcon, TargetIcon } from '../icons'
+import { CloseIcon, HeartIcon, MoonCoinIcon, SearchIcon, StoreIcon, TargetIcon } from '../icons'
 import { ClaimDot } from '../economy/ClaimDot'
 import { formatNumber } from '../../lib/economy'
 import { useShop } from './ShopProvider'
@@ -23,11 +23,25 @@ export default function ShopFrame({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!menu) return
-    const off = (e: MouseEvent) => { if (!menuRef.current?.contains(e.target as Node)) setMenu(false) }
+    const off = (e: MouseEvent) => { if (!window.matchMedia('(min-width: 640px)').matches) return; if (!menuRef.current?.contains(e.target as Node)) setMenu(false) }
     const esc = (e: KeyboardEvent) => e.key === 'Escape' && setMenu(false)
     document.addEventListener('mousedown', off); document.addEventListener('keydown', esc)
     return () => { document.removeEventListener('mousedown', off); document.removeEventListener('keydown', esc) }
   }, [menu])
+
+  const navRef = useRef<HTMLElement>(null)
+  // v1.5.8 · al cambiar de sección, la pestaña activa se centra sola en la barra deslizable (en celular se perdía fuera de pantalla)
+  useEffect(() => {
+    const nav = navRef.current
+    const el = nav?.querySelector<HTMLElement>('[data-active="1"]')
+    if (!nav || !el) return
+    const target = el.offsetLeft - (nav.clientWidth - el.offsetWidth) / 2
+    nav.scrollTo({ left: Math.max(0, target), behavior: 'smooth' })
+  }, [path])
+  useEffect(() => {
+    const t = window.setTimeout(() => setMenu(false), 0)
+    return () => window.clearTimeout(t)
+  }, [path])
 
   const saleCount = shop.shelf.filter((i) => i.sale_id && !i.owned).length
   const on = (href: string, exact = false) => (exact ? path === href : path === href || path.startsWith(href + '/'))
@@ -69,14 +83,15 @@ export default function ShopFrame({ children }: { children: ReactNode }) {
       </div>
 
       {/* Pestañas */}
-      <nav aria-label="Secciones de la tienda" className="mt-2 border-b border-ink-700 flex items-center overflow-x-auto sm:overflow-visible -mx-3 px-3 sm:mx-0 sm:px-0">
-        <Link href="/tienda" className={tab(on('/tienda', true) || on('/tienda/seleccion') || on('/tienda/coleccion'))} aria-current={on('/tienda', true) ? 'page' : undefined}>Destacado{(on('/tienda', true) || on('/tienda/seleccion')) && bar}</Link>
+      <nav ref={navRef} aria-label="Secciones de la tienda" className="mt-2 border-b border-ink-700 flex items-center overflow-x-auto sm:overflow-visible -mx-3 px-3 sm:mx-0 sm:px-0 story-scroll-hide scroll-smooth">
+        <Link href="/tienda" data-active={on('/tienda', true) || on('/tienda/seleccion') || on('/tienda/coleccion') ? '1' : undefined} className={tab(on('/tienda', true) || on('/tienda/seleccion') || on('/tienda/coleccion'))} aria-current={on('/tienda', true) ? 'page' : undefined}>Destacado{(on('/tienda', true) || on('/tienda/seleccion')) && bar}</Link>
         <div ref={menuRef} className="relative shrink-0">
-          <button type="button" onClick={() => setMenu((m) => !m)} aria-haspopup="menu" aria-expanded={menu} className={`${tab(on('/tienda/explorar'))} inline-flex items-center gap-1`}>
+          <button type="button" data-active={on('/tienda/explorar') ? '1' : undefined} onClick={() => setMenu((m) => !m)} aria-haspopup="menu" aria-expanded={menu} className={`${tab(on('/tienda/explorar'))} inline-flex items-center gap-1`}>
             Explorar <Chevron open={menu} />{on('/tienda/explorar') && bar}
           </button>
+          {/* PC: menú desplegable bajo el botón */}
           {menu && (
-            <div role="menu" className="absolute z-40 left-0 top-full mt-1 w-56 rounded-2xl border border-ink-600 bg-ink-900 shadow-2xl shadow-black/60 p-1.5">
+            <div role="menu" className="hidden sm:block absolute z-40 left-0 top-full mt-1 w-56 rounded-2xl border border-ink-600 bg-ink-900 shadow-2xl shadow-black/60 p-1.5">
               <Link role="menuitem" href="/tienda/explorar" onClick={() => setMenu(false)} className="block rounded-xl px-3 py-2 text-sm text-neutral-100 hover:bg-ink-700 font-medium">Todo el catálogo</Link>
               {CATEGORY_SLUGS.map((c) => (
                 <Link role="menuitem" key={c.slug} href={`/tienda/explorar/${c.slug}`} onClick={() => setMenu(false)} className="block rounded-xl px-3 py-2 text-sm text-neutral-300 hover:bg-ink-700 hover:text-white">{c.label}</Link>
@@ -84,13 +99,38 @@ export default function ShopFrame({ children }: { children: ReactNode }) {
             </div>
           )}
         </div>
-        <Link href="/tienda/descuentos" className={`${tab(on('/tienda/descuentos'))} inline-flex items-center gap-1.5`}>
+        <Link href="/tienda/descuentos" data-active={on('/tienda/descuentos') ? '1' : undefined} className={`${tab(on('/tienda/descuentos'))} inline-flex items-center gap-1.5`}>
           Descuentos {saleCount > 0 && <span className="rounded-full bg-emerald-500 text-ink-950 text-[10px] font-extrabold px-1.5 py-0.5 tabular-nums">{saleCount}</span>}{on('/tienda/descuentos') && bar}
         </Link>
-        <Link href="/tienda/colecciones" className={tab(on('/tienda/colecciones'))}>Colecciones{on('/tienda/colecciones') && bar}</Link>
-        <Link href="/tienda/inventario" className={tab(on('/tienda/inventario'))}>Mi inventario{on('/tienda/inventario') && bar}</Link>
-        <Link href="/tienda/canjear" className={tab(on('/tienda/canjear'))}>Canjear código{on('/tienda/canjear') && bar}</Link>
+        <Link href="/tienda/colecciones" data-active={on('/tienda/colecciones') ? '1' : undefined} className={tab(on('/tienda/colecciones'))}>Colecciones{on('/tienda/colecciones') && bar}</Link>
+        <Link href="/tienda/inventario" data-active={on('/tienda/inventario') ? '1' : undefined} className={tab(on('/tienda/inventario'))}>Mi inventario{on('/tienda/inventario') && bar}</Link>
+        <Link href="/tienda/canjear" data-active={on('/tienda/canjear') ? '1' : undefined} className={tab(on('/tienda/canjear'))}>Canjear código{on('/tienda/canjear') && bar}</Link>
       </nav>
+
+      {/* Celular: «Explorar» abre una hoja desde abajo (el menú desplegable se cortaba dentro de la barra deslizable) */}
+      {menu && (
+        <div className="sm:hidden fixed inset-0 z-[70]" role="dialog" aria-modal="true" aria-label="Explorar la tienda">
+          <button type="button" aria-label="Cerrar" onClick={() => setMenu(false)} className="absolute inset-0 bg-black/65 sheet-backdrop" />
+          <div className="sheet-panel absolute inset-x-0 bottom-0 max-h-[82dvh] overflow-y-auto rounded-t-3xl border border-b-0 border-ink-600 bg-ink-900 pt-2 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl">
+            <div className="mx-auto mb-2 h-1.5 w-10 rounded-full bg-ink-600" aria-hidden="true" />
+            <div className="flex items-center justify-between px-5 pb-1">
+              <h2 className="font-display text-lg font-semibold text-neutral-50">Explorar</h2>
+              <button type="button" onClick={() => setMenu(false)} aria-label="Cerrar" className="w-10 h-10 -mr-2 rounded-full inline-flex items-center justify-center text-neutral-400 hover:text-white hover:bg-ink-800"><CloseIcon className="w-5 h-5" /></button>
+            </div>
+            <div className="px-3 grid gap-1.5">
+              <Link href="/tienda/explorar" onClick={() => setMenu(false)} className="press flex items-center justify-between rounded-2xl border border-garnet-500/40 bg-garnet-600/10 px-4 py-3.5 text-[15px] font-semibold text-garnet-100">Todo el catálogo <span aria-hidden="true">→</span></Link>
+              {CATEGORY_SLUGS.map((c) => {
+                const n = shop.shelf.filter((i) => i.type === c.type).length
+                return (
+                  <Link key={c.slug} href={`/tienda/explorar/${c.slug}`} onClick={() => setMenu(false)} className={`press flex items-center justify-between rounded-2xl border px-4 py-3.5 text-[15px] transition ${path.startsWith(`/tienda/explorar/${c.slug}`) ? 'border-garnet-500 bg-garnet-600/20 text-white' : 'border-ink-700 bg-ink-800/60 text-neutral-100 hover:bg-ink-700'}`}>
+                    <span>{c.label}</span><span className="text-xs text-neutral-500 tabular-nums">{n}</span>
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {shop.error && <p className="text-sm text-red-300 mt-3" role="alert">{shop.error}</p>}
       <div className="mt-5">{children}</div>

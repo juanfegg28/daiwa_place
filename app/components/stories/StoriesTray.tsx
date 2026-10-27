@@ -179,9 +179,9 @@ export default function StoriesTray() {
         </button>
       )}
 
-      <div ref={scrollRef} onScroll={updateArrows} className="flex gap-1.5 md:gap-2 overflow-x-auto px-1 pt-1 pb-2 scroll-smooth story-scroll-hide">
+      <div ref={scrollRef} onScroll={updateArrows} className="flex gap-1.5 md:gap-2 overflow-x-auto px-1 pt-1 pb-2 scroll-smooth snap-x snap-proximity story-scroll-hide">
         {/* Tu historia */}
-        <div className="shrink-0 flex flex-col items-center w-[78px] md:w-[88px] story-tray-in">
+        <div className="shrink-0 snap-start flex flex-col items-center w-[78px] md:w-[88px] story-tray-in">
           <div className="relative">
             <button
               type="button"
@@ -204,9 +204,9 @@ export default function StoriesTray() {
               type="button"
               onClick={goCreate}
               aria-label={canCreate || !quota ? 'Crear una historia' : 'Ya no te quedan historias hoy'}
-              className={`absolute bottom-0.5 right-0.5 w-5 h-5 rounded-full border-2 border-ink-950 flex items-center justify-center text-white ${canCreate || !quota ? 'bg-garnet-600' : 'bg-ink-500'}`}
+              className={`absolute bottom-0 right-0 w-6 h-6 rounded-full border-2 border-ink-950 flex items-center justify-center text-white touch-manipulation before:absolute before:-inset-2 before:content-[''] active:scale-90 transition ${canCreate || !quota ? 'bg-garnet-600' : 'bg-ink-500'}`}
             >
-              {canCreate || !quota ? <PlusIcon className="w-3 h-3" /> : <LockIcon className="w-2.5 h-2.5" />}
+              {canCreate || !quota ? <PlusIcon className="w-3.5 h-3.5" /> : <LockIcon className="w-3 h-3" />}
             </button>
           </div>
           <span className="mt-1 w-full truncate text-center text-[12px] text-neutral-300">Tu historia</span>
@@ -235,7 +235,7 @@ export default function StoriesTray() {
                 }}
                 aria-label={`Historias de ${label}`}
                 style={{ animationDelay: `${Math.min(i, 12) * 40}ms` }}
-                className={`story-tray-in shrink-0 flex flex-col items-center w-[78px] md:w-[88px] touch-manipulation outline-none focus-visible:ring-2 focus-visible:ring-garnet-400 rounded-xl ${u.is_muted ? 'opacity-55' : ''}`}
+                className={`story-tray-in shrink-0 snap-start flex flex-col items-center w-[78px] md:w-[88px] touch-manipulation outline-none focus-visible:ring-2 focus-visible:ring-garnet-400 rounded-xl ${u.is_muted ? 'opacity-55' : ''}`}
               >
                 <span className="relative">
                   <span className="md:hidden">

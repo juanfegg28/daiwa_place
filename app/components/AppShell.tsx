@@ -3,7 +3,7 @@
 import WalletChip from './WalletChip'
 import { ClaimDot, useClaimable, useWalletRefreshOnNavigate } from './economy/ClaimDot'
 import Avatar from './cosmetics/Avatar'
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabaseClient'
@@ -179,6 +179,29 @@ export default function AppShell({
   const [showOnline, setShowOnline] = useState(true)
   const [showReadReceipts, setShowReadReceipts] = useState(true)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  // v1.5.8 · barra lateral de PC: se puede minimizar (3 rayitas). De entrada SIEMPRE abierta; lo que elijas se recuerda en este navegador.
+  const [railCollapsed, setRailCollapsed] = useState(false)
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      try {
+        if (window.localStorage.getItem('daiwa_sidebar_collapsed') === '1') setRailCollapsed(true)
+      } catch {
+        /* sin almacenamiento */
+      }
+    }, 0)
+    return () => window.clearTimeout(t)
+  }, [])
+  const toggleRail = () => {
+    setRailCollapsed((v) => {
+      const next = !v
+      try {
+        window.localStorage.setItem('daiwa_sidebar_collapsed', next ? '1' : '0')
+      } catch {
+        /* sin almacenamiento */
+      }
+      return next
+    })
+  }
   const [onlineIds, setOnlineIds] = useState<Set<string>>(new Set())
   const presenceRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
   const pathname = usePathname()
@@ -280,9 +303,14 @@ export default function AppShell({
     function recount() {
       countUnread(id)
     }
+    // v1.5.8 · varios eventos seguidos (ráfaga de likes, etc.) se juntan en UNA sola recarga
+    let timer: number | undefined
     function bump() {
-      countUnread(id)
-      setNotificationsVersion((v) => v + 1)
+      window.clearTimeout(timer)
+      timer = window.setTimeout(() => {
+        countUnread(id)
+        setNotificationsVersion((v) => v + 1)
+      }, 350)
     }
     recount()
     const channel = supabase
@@ -296,6 +324,7 @@ export default function AppShell({
     const interval = window.setInterval(recount, 60000)
     window.addEventListener('focus', bump)
     return () => {
+      window.clearTimeout(timer)
       window.clearInterval(interval)
       window.removeEventListener('focus', bump)
       supabase.removeChannel(channel)
@@ -323,9 +352,14 @@ export default function AppShell({
     function recount() {
       countDm()
     }
+    // v1.5.8 · una conversación activa dispara muchos eventos (mensaje, lectura, reacción…): se juntan en una sola recarga
+    let timer: number | undefined
     function bump() {
-      countDm()
-      setDmVersion((v) => v + 1)
+      window.clearTimeout(timer)
+      timer = window.setTimeout(() => {
+        countDm()
+        setDmVersion((v) => v + 1)
+      }, 350)
     }
     recount()
     const channel = supabase
@@ -339,6 +373,7 @@ export default function AppShell({
     const interval = window.setInterval(bump, 45000)
     window.addEventListener('focus', bump)
     return () => {
+      window.clearTimeout(timer)
       window.clearInterval(interval)
       window.removeEventListener('focus', bump)
       supabase.removeChannel(channel)
@@ -401,6 +436,43 @@ export default function AppShell({
   useWalletRefreshOnNavigate(userId, pathname)
   const isSupreme = isSupremeAdmin(username)
   const canSeeAdmin = isSupreme || hasAnyRole
+
+  // v1.5.8 · El valor del contexto se arma UNA vez por cambio real (antes era un objeto nuevo en cada render y repintaba a todos los que lo leen).
+  const loadRef = useRef(load)
+  const refreshNotifRef = useRef(refreshNotifications)
+  const refreshDmRef = useRef(refreshDm)
+  useEffect(() => {
+    loadRef.current = load
+    refreshNotifRef.current = refreshNotifications
+    refreshDmRef.current = refreshDm
+  })
+  const stableRefresh = useCallback(() => loadRef.current(), [])
+  const stableRefreshNotifications = useCallback(() => refreshNotifRef.current(), [])
+  const stableRefreshDm = useCallback(() => refreshDmRef.current(), [])
+  const sessionValue = useMemo<SessionState>(
+    () => ({
+      loading,
+      userId,
+      username,
+      avatarUrl,
+      displayName: idStudent,
+      permissions,
+      isSupreme,
+      hasAnyRole,
+      refresh: stableRefresh,
+      unreadNotifications: userId ? unreadCount : 0,
+      notificationsVersion,
+      refreshNotifications: stableRefreshNotifications,
+      unreadMessages: userId ? unreadMessages : 0,
+      messageRequests: userId ? messageRequests : 0,
+      dmVersion,
+      refreshDm: stableRefreshDm,
+      onlineIds,
+      showOnline,
+      showReadReceipts,
+    }),
+    [loading, userId, username, avatarUrl, idStudent, permissions, isSupreme, hasAnyRole, stableRefresh, unreadCount, notificationsVersion, stableRefreshNotifications, unreadMessages, messageRequests, dmVersion, stableRefreshDm, onlineIds, showOnline, showReadReceipts]
+  )
 
   // Entradas principales del menú (los Avisos y los Mensajes van aparte, más destacados)
   const navItems: NavItem[] = [
@@ -540,39 +612,33 @@ export default function AppShell({
   }
 
   return (
-    <AppSessionContext.Provider
-      value={{
-        loading,
-        userId,
-        username,
-        avatarUrl,
-        displayName: idStudent,
-        permissions,
-        isSupreme,
-        hasAnyRole,
-        refresh: load,
-        unreadNotifications: userId ? unreadCount : 0,
-        notificationsVersion,
-        refreshNotifications,
-        unreadMessages: userId ? unreadMessages : 0,
-        messageRequests: userId ? messageRequests : 0,
-        dmVersion,
-        refreshDm,
-        onlineIds,
-        showOnline,
-        showReadReceipts,
-      }}
-    >
+    <AppSessionContext.Provider value={sessionValue}>
       <div className="min-h-screen bg-ink-950 text-neutral-100 md:flex">
-        {/* Sidebar de escritorio */}
-        <aside className="hidden md:flex md:flex-col md:w-64 lg:w-72 md:shrink-0 md:h-screen md:sticky md:top-0 border-r border-ink-800 bg-ink-900/60 px-4 py-6 overflow-y-auto">
-          <Link href="/" className="px-2 mb-6 inline-block">
-            <Logo size="md" />
-          </Link>
+        {/* Sidebar de escritorio (v1.5.8: se puede minimizar con las 3 rayitas; abierta de entrada) */}
+        <aside
+          aria-label="Menú principal"
+          className={`hidden md:flex md:flex-col md:shrink-0 md:h-screen md:sticky md:top-0 border-r border-ink-800 bg-ink-900/60 overflow-y-auto overflow-x-hidden transition-[width] duration-200 ease-out ${
+            railCollapsed ? 'md:w-[76px] px-2.5 py-4 items-center' : 'md:w-64 lg:w-72 px-4 py-6'
+          }`}
+        >
+          {railCollapsed ? (
+            <>
+              {/* Minimizada: solo íconos. La hamburguesa lleva un puntito rojo si hay avisos/mensajes y uno dorado si hay misiones por reclamar */}
+              <button
+                type="button"
+                onClick={toggleRail}
+                aria-label={menuBadge > 0 ? `Abrir la barra lateral (${menuBadge} sin leer)` : 'Abrir la barra lateral'}
+                title="Abrir la barra lateral"
+                className="press relative w-11 h-11 mb-3 rounded-xl flex items-center justify-center text-neutral-200 hover:bg-ink-800 transition"
+              >
+                <MenuIcon className="w-6 h-6" />
+                {menuBadge > 0 ? (
+                  <span aria-hidden="true" className="absolute top-1 right-1 w-3 h-3 rounded-full bg-red-500 border-2 border-ink-900" />
+                ) : (
+                  missionDot && <ClaimDot className="top-1 right-1 w-3 h-3" label="Tienes misiones por reclamar" />
+                )}
+              </button>
 
-          {/* Avisos y Mensajes: aparte de las demás opciones, en píldoras compactas con su numerito */}
-          {quickItems.length > 0 && (
-            <div className="mb-4 grid grid-cols-2 gap-1.5 pb-4 border-b border-ink-800">
               {quickItems.map((item) => {
                 const active = item.match(pathname)
                 const Icon = item.icon
@@ -581,89 +647,197 @@ export default function AppShell({
                     key={item.href}
                     href={item.href}
                     aria-label={item.label}
-                    className={`flex items-center justify-center gap-2 rounded-xl px-2.5 py-2 text-[12.5px] font-medium transition border ${
-                      active
-                        ? 'bg-garnet-600/90 text-white border-garnet-400/40 shadow-sm'
-                        : 'bg-ink-800/70 border-ink-700 text-neutral-200 hover:bg-ink-700'
+                    title={item.label}
+                    className={`relative mb-1 w-11 h-11 rounded-xl flex items-center justify-center transition border ${
+                      active ? 'bg-garnet-600/90 text-white border-garnet-400/40' : 'bg-ink-800/70 border-ink-700 text-neutral-200 hover:bg-ink-700'
                     }`}
                   >
-                    <span className="relative">
-                      <Icon filled={active} className="w-[18px] h-[18px]" />
-                      {!!item.badge && item.badge > 0 && <CountBubble small count={item.badge} className="absolute -top-1.5 -right-2" />}
-                    </span>
-                    <span>{item.shortLabel ?? item.label}</span>
+                    <Icon filled={active} className="w-5 h-5" />
+                    {!!item.badge && item.badge > 0 && <CountBubble small count={item.badge} className="absolute -top-1.5 -right-1.5" />}
                   </Link>
                 )
               })}
-            </div>
-          )}
 
-          {userId && (
-            <div className="mb-4">
-              <WalletChip userId={userId} />
-            </div>
-          )}
+              {userId && (
+                <div className="my-2 w-full">
+                  <WalletChip userId={userId} rail />
+                </div>
+              )}
 
-          <nav className="flex-1 space-y-1">{navItems.map((item) => renderNavLink(item, 'desktop'))}</nav>
+              <nav className="flex-1 mt-1 flex flex-col items-center gap-1">
+                {navItems.map((item) => {
+                  const active = item.match(pathname)
+                  const Icon = item.icon
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      aria-label={item.label}
+                      title={item.label}
+                      className={`relative w-11 h-11 rounded-xl flex items-center justify-center transition ${
+                        active ? 'bg-garnet-600/90 text-white shadow-[0_8px_24px_-8px] shadow-garnet-600/70' : 'text-neutral-300 hover:bg-ink-800'
+                      }`}
+                    >
+                      <Icon filled={active} className="w-5 h-5" />
+                      {item.dot && <ClaimDot className="top-1 right-1 w-2.5 h-2.5" label={`${item.label}: tienes premios por reclamar`} />}
+                    </Link>
+                  )
+                })}
+              </nav>
 
-          {username && (
-            <Link
-              href="/configuracion"
-              className={`mb-1 mt-3 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition ${
-                pathname === '/configuracion'
-                  ? 'bg-ink-800 text-neutral-100'
-                  : 'text-neutral-300 hover:bg-ink-800'
-              }`}
-            >
-              <SettingsIcon className="w-5 h-5" />
-              Configuración
-            </Link>
-          )}
-
-          <Link
-            href="/novedades"
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Ver las notas de la última actualización"
-            className="mb-3 inline-flex items-center gap-2 self-start px-3 py-1.5 rounded-full text-[11px] text-neutral-500 hover:text-garnet-400 hover:bg-ink-800 transition"
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-garnet-500" />
-            v{APP_VERSION} · Novedades
-          </Link>
-
-          <div className="pt-4 border-t border-ink-800">
-            {loading ? null : userId ? (
-              <div className="space-y-1">
+              {username && (
                 <Link
-                  href={`/perfil/${username}`}
-                  className="flex items-center gap-3 px-2 py-1.5 rounded-xl hover:bg-ink-800 transition group"
+                  href="/configuracion"
+                  aria-label="Configuración"
+                  title="Configuración"
+                  className={`mt-2 w-11 h-11 rounded-xl flex items-center justify-center transition ${
+                    pathname === '/configuracion' ? 'bg-ink-800 text-neutral-100' : 'text-neutral-300 hover:bg-ink-800'
+                  }`}
                 >
-                  <Avatar username={username ?? '?'} avatarUrl={avatarUrl} size="w-9 h-9" textSize="text-sm" sizes="48px" />
-                  <div className="min-w-0 flex-1 leading-tight">
-                    <p className="text-sm font-bold text-neutral-100 truncate group-hover:text-garnet-400 transition">
-                      {displayLabel}
-                    </p>
-                    <p className="text-xs text-neutral-600 truncate">@{username}</p>
-                  </div>
+                  <SettingsIcon className="w-5 h-5" />
+                </Link>
+              )}
+              <Link
+                href="/novedades"
+                target="_blank"
+                rel="noopener noreferrer"
+                title={`v${APP_VERSION} · Novedades`}
+                aria-label={`Versión ${APP_VERSION}: ver novedades`}
+                className="my-2 text-[10px] text-neutral-500 hover:text-garnet-400 transition inline-flex items-center gap-1"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-garnet-500" />v{APP_VERSION}
+              </Link>
+
+              <div className="pt-3 border-t border-ink-800 w-full flex flex-col items-center gap-2">
+                {loading ? null : userId ? (
+                  <>
+                    <Link href={`/perfil/${username}`} aria-label="Mi perfil" title={displayLabel ?? 'Mi perfil'}>
+                      <Avatar username={username ?? '?'} avatarUrl={avatarUrl} size="w-9 h-9" textSize="text-sm" sizes="48px" />
+                    </Link>
+                    <button onClick={handleLogout} aria-label="Cerrar sesión" title="Cerrar sesión" className="w-9 h-9 rounded-xl flex items-center justify-center text-neutral-500 hover:text-garnet-400 hover:bg-ink-800 transition">
+                      <LogoutIcon className="w-4 h-4" />
+                    </button>
+                  </>
+                ) : (
+                  <Link href="/login" aria-label="Iniciar sesión" title="Iniciar sesión" className="w-11 h-11 rounded-xl bg-garnet-600 hover:bg-garnet-500 text-white flex items-center justify-center transition">
+                    <LoginIcon className="w-5 h-5" />
+                  </Link>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center justify-between mb-6">
+                <Link href="/" className="px-2 inline-block">
+                  <Logo size="md" />
                 </Link>
                 <button
-                  onClick={handleLogout}
-                  className="w-full flex items-center gap-1.5 px-2 text-xs text-neutral-500 hover:text-garnet-400 transition"
+                  type="button"
+                  onClick={toggleRail}
+                  aria-label="Minimizar la barra lateral"
+                  title="Minimizar la barra lateral"
+                  className="press relative w-10 h-10 rounded-xl flex items-center justify-center text-neutral-400 hover:text-neutral-100 hover:bg-ink-800 transition"
                 >
-                  <LogoutIcon className="w-3.5 h-3.5" />
-                  Cerrar sesión
+                  <MenuIcon className="w-5 h-5" />
                 </button>
               </div>
-            ) : (
+
+              {/* Avisos y Mensajes: aparte de las demás opciones, en píldoras compactas con su numerito */}
+              {quickItems.length > 0 && (
+                <div className="mb-4 grid grid-cols-2 gap-1.5 pb-4 border-b border-ink-800">
+                  {quickItems.map((item) => {
+                    const active = item.match(pathname)
+                    const Icon = item.icon
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        aria-label={item.label}
+                        className={`flex items-center justify-center gap-2 rounded-xl px-2.5 py-2 text-[12.5px] font-medium transition border ${
+                          active
+                            ? 'bg-garnet-600/90 text-white border-garnet-400/40 shadow-sm'
+                            : 'bg-ink-800/70 border-ink-700 text-neutral-200 hover:bg-ink-700'
+                        }`}
+                      >
+                        <span className="relative">
+                          <Icon filled={active} className="w-[18px] h-[18px]" />
+                          {!!item.badge && item.badge > 0 && <CountBubble small count={item.badge} className="absolute -top-1.5 -right-2" />}
+                        </span>
+                        <span>{item.shortLabel ?? item.label}</span>
+                      </Link>
+                    )
+                  })}
+                </div>
+              )}
+
+              {userId && (
+                <div className="mb-4">
+                  <WalletChip userId={userId} />
+                </div>
+              )}
+
+              <nav className="flex-1 space-y-1">{navItems.map((item) => renderNavLink(item, 'desktop'))}</nav>
+
+              {username && (
+                <Link
+                  href="/configuracion"
+                  className={`mb-1 mt-3 flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition ${
+                    pathname === '/configuracion'
+                      ? 'bg-ink-800 text-neutral-100'
+                      : 'text-neutral-300 hover:bg-ink-800'
+                  }`}
+                >
+                  <SettingsIcon className="w-5 h-5" />
+                  Configuración
+                </Link>
+              )}
+
               <Link
-                href="/login"
-                className="flex items-center gap-2 justify-center bg-garnet-600 hover:bg-garnet-500 text-white text-sm font-medium rounded-xl py-2.5 transition"
+                href="/novedades"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Ver las notas de la última actualización"
+                className="mb-3 inline-flex items-center gap-2 self-start px-3 py-1.5 rounded-full text-[11px] text-neutral-500 hover:text-garnet-400 hover:bg-ink-800 transition"
               >
-                <LoginIcon className="w-4 h-4" />
-                Iniciar sesión
+                <span className="w-1.5 h-1.5 rounded-full bg-garnet-500" />
+                v{APP_VERSION} · Novedades
               </Link>
-            )}
-          </div>
+
+              <div className="pt-4 border-t border-ink-800">
+                {loading ? null : userId ? (
+                  <div className="space-y-1">
+                    <Link
+                      href={`/perfil/${username}`}
+                      className="flex items-center gap-3 px-2 py-1.5 rounded-xl hover:bg-ink-800 transition group"
+                    >
+                      <Avatar username={username ?? '?'} avatarUrl={avatarUrl} size="w-9 h-9" textSize="text-sm" sizes="48px" />
+                      <div className="min-w-0 flex-1 leading-tight">
+                        <p className="text-sm font-bold text-neutral-100 truncate group-hover:text-garnet-400 transition">
+                          {displayLabel}
+                        </p>
+                        <p className="text-xs text-neutral-600 truncate">@{username}</p>
+                      </div>
+                    </Link>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-1.5 px-2 text-xs text-neutral-500 hover:text-garnet-400 transition"
+                    >
+                      <LogoutIcon className="w-3.5 h-3.5" />
+                      Cerrar sesión
+                    </button>
+                  </div>
+                ) : (
+                  <Link
+                    href="/login"
+                    className="flex items-center gap-2 justify-center bg-garnet-600 hover:bg-garnet-500 text-white text-sm font-medium rounded-xl py-2.5 transition"
+                  >
+                    <LoginIcon className="w-4 h-4" />
+                    Iniciar sesión
+                  </Link>
+                )}
+              </div>
+            </>
+          )}
         </aside>
 
         {/* Barra superior móvil: las 3 rayitas (con la burbuja roja), el logo y listo. Ya no hay barra de abajo. */}

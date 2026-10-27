@@ -5,7 +5,20 @@
 // Así un feed lleno de gente con decoraciones animadas no se come el procesador del teléfono.
 import { useEffect, useSyncExternalStore } from 'react'
 
-export const MAX_ANIMATED = 8
+/** Tope de animaciones a la vez. v1.5.8: en celulares y equipos modestos (pantalla táctil, ≤ 4 núcleos o ≤ 4 GB) baja a 4 para que
+ *  los perfiles con varias decoraciones no se pongan pesados; en PC normal sigue en 8. */
+function pickMax(): number {
+  if (typeof window === 'undefined') return 8
+  try {
+    const nav = navigator as Navigator & { deviceMemory?: number }
+    const touch = window.matchMedia?.('(pointer: coarse)').matches
+    const weak = (nav.hardwareConcurrency ?? 8) <= 4 || (nav.deviceMemory ?? 8) <= 4
+    return touch || weak ? 4 : 8
+  } catch {
+    return 8
+  }
+}
+export const MAX_ANIMATED = pickMax()
 
 type Entry = { prio: number; order: number; refs: number }
 const entries = new Map<string, Entry>()

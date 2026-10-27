@@ -524,7 +524,7 @@ select optgroup {
 /* Miniaturas en reposo (tienda, inventario, clóset): nada se anima hasta que las señalas o las eliges */
 .pv-idle *, .pv-idle *::before, .pv-idle *::after { animation: none !important; }
 /* Mientras la pantalla se desplaza, el fondo y la tarjeta animados del perfil se pausan (vuelven solos al soltar) */
-html[data-scrolling="1"] .bgl *, html[data-scrolling="1"] .sk-bg *, html[data-scrolling="1"] .sk-fg * { animation-play-state: paused !important; }
+html[data-scrolling="1"] .bgl *, html[data-scrolling="1"] .sk-bg *, html[data-scrolling="1"] .sk-fg *, html[data-scrolling="1"] .dpw * { animation-play-state: paused !important; }
 /* El ▶ de «toca para ver la animación» solo se muestra donde no hay cursor (celulares y tablets) */
 @media (hover: hover) { .play-hint { display: none; } }
 
@@ -547,3 +547,11 @@ html[data-scrolling="1"] .bgl *, html[data-scrolling="1"] .sk-bg *, html[data-sc
   .shop-progress { transform: scaleX(1); }
 }
 [data-anim="off"] .shop-bat, [data-anim="off"] .shop-twinkle, [data-anim="off"] .shop-fade-in { animation: none !important; }
+
+
+/* ───────── v1.5.8 · editor de historias en celular ───────── */
+/* El escenario 9:16 siempre cabe dentro de la pantalla (antes, en celulares más altos que 16:9, se pasaba de ancho y los íconos de arriba quedaban cortados) */
+@media (max-width: 767px) {
+  .story-editor-area { container-type: size; }
+  .story-editor-stage { height: auto !important; max-height: none !important; width: min(100cqw, calc(100cqh * 9 / 16)); }
+}

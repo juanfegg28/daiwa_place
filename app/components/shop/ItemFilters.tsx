@@ -28,7 +28,7 @@ export function applyFilters(items: CatalogItem[], f: FState, balance: number, q
   return sortItems(out, f.sort)
 }
 
-const sel = 'rounded-full bg-ink-800 border border-ink-700 text-neutral-200 px-3 py-1.5 text-sm'
+const sel = 'shrink-0 rounded-full bg-ink-800 border border-ink-700 text-neutral-200 px-3 py-2 sm:py-1.5 text-sm'
 
 /** Barra de filtros compartida (Explorar, Selecciones, Descuentos). Los selectores sobrantes se esconden con las banderas. */
 export function FilterBar({ f, set, collections, showType = false, showColl = true, total, types }: {
@@ -36,7 +36,7 @@ export function FilterBar({ f, set, collections, showType = false, showColl = tr
 }) {
   const up = (p: Partial<FState>) => set({ ...f, ...p })
   return (
-    <div className="flex flex-wrap items-center gap-2 text-sm">
+    <div className="flex items-center gap-2 text-sm overflow-x-auto sm:flex-wrap sm:overflow-visible -mx-3 px-3 sm:mx-0 sm:px-0 pb-1 sm:pb-0 story-scroll-hide">
       {showType && (
         <select value={f.type} onChange={(e) => up({ type: e.target.value as FState['type'] })} aria-label="Tipo" className={sel}>
           <option value="todo">Todo tipo</option>
@@ -61,9 +61,9 @@ export function FilterBar({ f, set, collections, showType = false, showColl = tr
         <option value="rareza">Más raros primero</option>
         <option value="nombre">Nombre A–Z</option>
       </select>
-      <label className="inline-flex items-center gap-1.5 text-neutral-300"><input type="checkbox" checked={f.afford} onChange={(e) => up({ afford: e.target.checked })} className="accent-amber-400" /> Lo que puedo pagar</label>
-      <label className="inline-flex items-center gap-1.5 text-neutral-300"><input type="checkbox" checked={f.hideOwned} onChange={(e) => up({ hideOwned: e.target.checked })} className="accent-amber-400" /> Ocultar lo que ya tengo</label>
-      <span className="ml-auto text-xs text-neutral-500">{total} cosméticos</span>
+      <label className="shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 text-neutral-300 rounded-full border border-ink-700 bg-ink-800/50 px-3 py-2 sm:py-1.5 sm:border-0 sm:bg-transparent sm:px-0"><input type="checkbox" checked={f.afford} onChange={(e) => up({ afford: e.target.checked })} className="accent-amber-400" /> Lo que puedo pagar</label>
+      <label className="shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 text-neutral-300 rounded-full border border-ink-700 bg-ink-800/50 px-3 py-2 sm:py-1.5 sm:border-0 sm:bg-transparent sm:px-0"><input type="checkbox" checked={f.hideOwned} onChange={(e) => up({ hideOwned: e.target.checked })} className="accent-amber-400" /> Ocultar lo que ya tengo</label>
+      <span className="shrink-0 sm:ml-auto text-xs text-neutral-500 whitespace-nowrap pl-1">{total} cosméticos</span>
     </div>
   )
 }
