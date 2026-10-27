@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '../../lib/supabaseClient'
 import ProfilePreviewCard from '../../components/ProfilePreviewCard'
-import { useAvatarCropper, BANNER_CROP } from '../../components/AvatarCropper'
+import { useAvatarCropper, BANNER_CROP_GIF } from '../../components/AvatarCropper'
+import { uploadBanner } from '../../lib/banner'
 import { ArrowLeftIcon, CalendarIcon, CameraIcon, CommentIcon, GraduationCapIcon, HeartIcon, KeyIcon, UserIcon } from '../../components/icons'
 import { ESTADOS_SENTIMENTALES } from '../../lib/constants'
 import { checkStudentName, NAME_HELP, NAME_PLACEHOLDER } from '../../lib/nameFilter'
@@ -51,7 +52,7 @@ export default function RegisterPage() {
       setBannerFile(file)
       setBannerPreview(previewUrl)
     },
-    BANNER_CROP
+    BANNER_CROP_GIF
   )
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -194,14 +195,9 @@ export default function RegisterPage() {
     }
 
     if (bannerFile) {
-      const ext = bannerFile.name.split('.').pop() || 'jpg'
-      const path = `${userId}/banner.${ext}`
-      const { error: uploadError } = await supabase.storage.from('avatars').upload(path, bannerFile, { upsert: true })
-      if (uploadError) {
-        uploadWarnings.push('Banner: ' + uploadError.message)
-      } else {
-        bannerUrl = supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl
-      }
+      const up = await uploadBanner(supabase, userId, bannerFile)
+      if ('error' in up) uploadWarnings.push('Banner: ' + up.error)
+      else bannerUrl = up.url
     }
 
     const { error: profileError } = await supabase.from('profiles').insert({
@@ -372,7 +368,7 @@ export default function RegisterPage() {
               <label className="press flex cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-white/15 bg-ink-950/40 py-3.5 text-sm text-neutral-300 transition hover:border-garnet-500/60 hover:text-garnet-300">
                 <CameraIcon className="h-4 w-4" />
                 {bannerPreview ? 'Cambiar banner' : 'Banner'}
-                <input type="file" accept="image/*" onChange={handleBannerChange} className="hidden" />
+                <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={handleBannerChange} className="hidden" />
               </label>
             </div>
 

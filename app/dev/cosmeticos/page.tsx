@@ -134,9 +134,9 @@ function Gallery() {
         </div>
       </Section>
 
-      <Section title="Insignias de colección" count={BADGE_IDS.filter((b: string) => b !== 'crimson' && b !== 'emo').length}>
+      <Section title="Insignias de colección" count={BADGE_IDS.length}>
         <div className="flex flex-wrap gap-4">
-          {BADGE_IDS.filter((b: string) => b !== 'crimson' && b !== 'emo').map((b: string) => <span key={b} data-badge={b} className="text-center"><CollectionBadge collection={b} size={48} /><p className="text-[10px] text-neutral-500">{b}</p></span>)}
+          {BADGE_IDS.map((b: string) => <span key={b} data-badge={b} className="text-center"><CollectionBadge collection={b} size={48} /><p className="text-[10px] text-neutral-500">{b}</p></span>)}
         </div>
       </Section>
     </div>

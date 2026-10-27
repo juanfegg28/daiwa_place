@@ -3,21 +3,15 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import AppShell, { useAppSession } from '../../components/AppShell'
-import { ShopHeader, ShopTabs } from '../../components/economy/ShopChrome'
+import { useAppSession } from '../../components/AppShell'
 import ItemPreview from '../../components/cosmetics/ItemPreview'
 import { useHoverPlay } from '../../components/cosmetics/usePlay'
 import { useShopData } from '../../components/cosmetics/useShopData'
-import { refreshWallet, subscribeWallet, type WalletSummary } from '../../lib/economy'
 import { setAllowNextKits } from '../../lib/cosmeticsRelease'
 import { RARITY_LABEL, RARITY_STYLE, TYPE_LABEL, lookPatch, saveLook, type CatalogItem, type CosmeticType, type InventoryItem } from '../../lib/cosmetics'
 
 export default function InventarioPage() {
-  return (
-    <AppShell>
-      <Content />
-    </AppShell>
-  )
+  return <Content />
 }
 
 const ORDER: CosmeticType[] = ['avatar_decoration', 'profile_card', 'entry_effect', 'name_effect', 'font', 'background', 'title', 'badge']
@@ -26,15 +20,8 @@ function Content() {
   const router = useRouter()
   const { loading: sessionLoading } = useAppSession()
   const { userId, me, inventory, upcoming, worn, loading, reload } = useShopData({ inventory: true, preview: true })
-  const [w, setW] = useState<WalletSummary | null>(null)
   const [busy, setBusy] = useState('')
   const [err, setErr] = useState('')
-  useEffect(() => {
-    if (!userId) return
-    const u = subscribeWallet(setW)
-    refreshWallet()
-    return u
-  }, [userId])
   useEffect(() => {
     if (!sessionLoading && !userId) router.replace('/login')
   }, [sessionLoading, userId, router])
@@ -64,9 +51,7 @@ function Content() {
   const groups = useMemo(() => ORDER.map((t) => ({ type: t, items: inventory.filter((i) => i.type === t) })).filter((g) => g.items.length), [inventory])
   if (!userId) return null
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6">
-      <ShopHeader w={w} />
-      <ShopTabs active="inventario" />
+    <div>
       {err && <p className="text-sm text-red-300 mb-3" role="alert">{err}</p>}
       {loading ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">{Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-48 rounded-2xl bg-ink-800/60 animate-pulse" />)}</div>

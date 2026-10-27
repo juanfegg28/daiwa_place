@@ -63,6 +63,40 @@ export type CatalogItem = {
   obtainable: 'tienda' | 'gratis' | 'logro' | 'evento' | 'fundador'
   release_version: string
   owned: boolean
+  /** v1.5.0 · `price` ya es el precio VIGENTE (con oferta si la hay); `base_price` es el de lista. */
+  base_price?: number
+  sale_id?: string | null
+  sale_name?: string | null
+  sale_ends_at?: string | null
+  wished?: boolean
+}
+
+/** v1.5.0 · Oferta activa (el grupo de cosméticos rebajados). Los ítems vienen en el catálogo con su `sale_id`. */
+export type ShopSale = {
+  id: string
+  name: string
+  blurb: string | null
+  kind: 'oferta' | 'dia' | 'semana' | 'evento'
+  theme: string
+  starts_at: string
+  ends_at: string
+  in_banner: boolean
+  sort: number
+}
+
+/** v1.5.0 · «Selección» del banner principal (p. ej. «Selección de Halloween») */
+export type ShopFeature = {
+  id: string
+  slug: string
+  title: string
+  subtitle: string | null
+  cta: string
+  theme: string
+  collections: string[]
+  item_ids: string[]
+  starts_at: string
+  ends_at: string | null
+  sort: number
 }
 
 export type InventoryItem = Omit<CatalogItem, 'price' | 'release_version' | 'owned'> & { source: string; acquired_at: string }
@@ -90,6 +124,15 @@ export type PackQuote = {
   discount_pct: number
   price: number
 }
+
+// ───────── Ofertas (v1.5.0) ─────────
+/** ¿Tiene una oferta vigente? (el servidor ya puso en `price` el precio rebajado) */
+export const onSale = (i: Pick<CatalogItem, 'sale_id' | 'base_price' | 'price'>): boolean => !!i.sale_id && (i.base_price ?? 0) > i.price
+/** Porcentaje de descuento redondeado (0 si no hay oferta) */
+export function salePct(i: Pick<CatalogItem, 'sale_id' | 'base_price' | 'price'>): number {
+  return onSale(i) ? Math.max(1, Math.round(100 - (i.price * 100) / (i.base_price as number))) : 0
+}
+export const SALE_KIND_LABEL: Record<ShopSale['kind'], string> = { oferta: 'Oferta', dia: 'Oferta del día', semana: 'Destacado de la semana', evento: 'Oferta especial' }
 
 export const RARITY_LABEL: Record<Rarity, string> = { comun: 'Común', raro: 'Raro', epico: 'Épico', legendario: 'Legendario', mitico: 'Mítico' }
 export const RARITY_STYLE: Record<Rarity, string> = {
@@ -120,13 +163,17 @@ async function rpc<T>(fn: string, args?: Record<string, unknown>): Rpc<T> {
 /** Mensajes de la base en español, sin ruido técnico */
 export function cleanError(msg: string): string {
   if (/permission denied|does not exist|schema cache|Could not find the function/i.test(msg)) {
-    return 'Esta función todavía no está disponible (falta correr el SQL de la v1.4.0).'
+    return 'Esta función todavía no está disponible (falta correr el SQL de la tienda de la v1.5.0).'
   }
   return msg.replace(/^.*?ERROR:\s*/, '')
 }
 
 export const shopCatalog = () => rpc<CatalogItem[]>('shop_catalog')
 export const shopCollections = () => rpc<ShopCollection[]>('shop_collections')
+export const shopSalesActive = () => rpc<ShopSale[]>('shop_sales_active')
+export const shopFeaturesActive = () => rpc<ShopFeature[]>('shop_features_active')
+/** Corazón: devuelve true si quedó en la lista de deseos */
+export const shopWishToggle = (item: string) => rpc<boolean>('shop_wish_toggle', { p_item: item })
 export const shopPackQuote = (collection: string) => rpc<PackQuote | null>('shop_pack_quote', { p_collection: collection })
 export const myInventory = () => rpc<InventoryItem[]>('my_inventory')
 /** Solo devuelve filas para la cuenta del equipo con acceso total; para el resto, vacío. */

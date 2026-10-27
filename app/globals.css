@@ -532,3 +532,18 @@ html[data-scrolling="1"] .bgl *, html[data-scrolling="1"] .sk-bg *, html[data-sc
 @media (max-width: 767px) {
   html.chat-lock, html.chat-lock body { overflow: hidden; overscroll-behavior: none; }
 }
+
+/* ───────── Tienda v1.5.0: banners (solo transform/opacity; se apagan con movimiento reducido o animaciones desactivadas) ───────── */
+@keyframes shopBat { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-46px, -12px); } }
+.shop-bat { animation: shopBat 7s ease-in-out infinite; transform-box: fill-box; }
+@keyframes shopTwinkle { 0%, 100% { opacity: .25; } 50% { opacity: .9; } }
+.shop-twinkle { animation: shopTwinkle 3.4s ease-in-out infinite; }
+@keyframes shopFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.shop-fade-in { animation: shopFadeIn .45s ease both; }
+@keyframes shopProgress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.shop-progress { transform-origin: left; animation: shopProgress 7s linear forwards; }
+@media (prefers-reduced-motion: reduce) {
+  .shop-bat, .shop-twinkle, .shop-fade-in, .shop-progress { animation: none !important; }
+  .shop-progress { transform: scaleX(1); }
+}
+[data-anim="off"] .shop-bat, [data-anim="off"] .shop-twinkle, [data-anim="off"] .shop-fade-in { animation: none !important; }

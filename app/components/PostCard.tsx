@@ -89,7 +89,7 @@ type PostCardProps = {
 
 const ROOT_PREVIEW = 3 // comentarios principales visibles antes de "Ver más"
 const COLLAPSE_THRESHOLD = 2 // hilos con más respuestas que esto empiezan ocultos
-const MAX_INDENT_LEVEL = 4 // después de este nivel las respuestas ya no se corren más a la derecha
+const MAX_INDENT_LEVEL = 2 // después de este nivel las respuestas ya no se corren más a la derecha (en celular cada nivel le roba ancho al texto)
 
 const EDIT_ERROR_HINT =
   'No se pudo completar la acción. Revisa que hayas corrido el SQL de permisos (RLS) en Supabase.'
@@ -257,7 +257,7 @@ function CommentThread({ comment, depth }: { comment: Comment; depth: number }) 
           username={commentAuthor?.username ?? 'usuario'}
           avatarUrl={commentAuthor?.avatar_url ?? null}
           deco={commentAuthor?.avatar_deco ?? null}
-          size={depth > 0 ? 'w-7 h-7' : 'w-8 h-8'}
+          size={depth > 0 ? 'w-6 h-6 sm:w-7 sm:h-7' : 'w-8 h-8'}
         />
         <div className="flex-1 min-w-0">
           {editing ? (
@@ -440,7 +440,7 @@ function CommentThread({ comment, depth }: { comment: Comment; depth: number }) 
       </div>
 
       {children.length > 0 && !collapsed && (
-        <div className={`mt-2 flex ${depth < MAX_INDENT_LEVEL ? 'ml-3.5' : ''}`}>
+        <div className={`mt-2 flex ${depth < MAX_INDENT_LEVEL ? 'ml-1 sm:ml-3.5' : ''}`}>
           {depth < MAX_INDENT_LEVEL && (
             // Línea del hilo, como en Reddit: al tocarla se pliegan las respuestas
             <button
@@ -448,7 +448,7 @@ function CommentThread({ comment, depth }: { comment: Comment; depth: number }) 
               onClick={() => setCollapsed(true)}
               aria-label="Ocultar respuestas"
               title="Ocultar respuestas"
-              className="group/rail shrink-0 w-4 flex justify-center cursor-pointer"
+              className="group/rail shrink-0 w-3 sm:w-4 flex justify-center cursor-pointer"
             >
               <span className="w-[2px] h-full rounded-full bg-ink-600 group-hover/rail:bg-garnet-500 transition-colors" />
             </button>

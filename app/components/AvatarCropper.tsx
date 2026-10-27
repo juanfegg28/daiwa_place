@@ -11,7 +11,16 @@ export type CropperOptions = {
   outputWidth?: number
   title?: string
   fileName?: string
+  /** Si es true, un GIF NO se recorta: se usa tal cual para no perder la animación (se muestra con object-cover) */
+  allowGif?: boolean
+  /** Peso máximo de un GIF (bytes) */
+  maxGifBytes?: number
+  /** Se llama si el archivo no se puede usar (p. ej. GIF muy pesado). Por defecto, alert() */
+  onReject?: (msg: string) => void
 }
+
+/** Banner del perfil: recorte 3:1, pero un GIF animado (hasta 25 MB) se sube sin recortar para que se siga moviendo */
+export const BANNER_CROP_GIF: CropperOptions = { ...{ aspect: 3, shape: 'rect', outputWidth: 1500, title: 'Acomoda tu banner', fileName: 'banner.jpg' }, allowGif: true, maxGifBytes: 25 * 1024 * 1024 }
 
 /** Recorte 3:1 para el banner del perfil */
 export const BANNER_CROP: CropperOptions = {
@@ -78,6 +87,17 @@ export function useAvatarCropper(
   }
 
   const openCropper = (file: File) => {
+    if (options.allowGif && (file.type === 'image/gif' || /\.gif$/i.test(file.name))) {
+      const max = options.maxGifBytes ?? 25 * 1024 * 1024
+      if (file.size > max) {
+        const msg = `Ese GIF pesa ${(file.size / 1048576).toFixed(1)} MB y el máximo es ${Math.round(max / 1048576)} MB. Prueba comprimiéndolo (ezgif.com) o usa una imagen normal.`
+        if (options.onReject) options.onReject(msg)
+        else if (typeof window !== 'undefined') window.alert(msg)
+        return
+      }
+      onConfirm(file, URL.createObjectURL(file)) // sin recortar: el canvas aplanaría el GIF a un solo cuadro
+      return
+    }
     const url = URL.createObjectURL(file)
     setCropSrc(url)
     setImgSize(null)

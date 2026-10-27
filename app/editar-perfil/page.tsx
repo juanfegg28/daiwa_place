@@ -6,7 +6,8 @@ import Link from 'next/link'
 import { supabase } from '../lib/supabaseClient'
 import AppShell, { useAppSession } from '../components/AppShell'
 import ProfilePreviewCard from '../components/ProfilePreviewCard'
-import { useAvatarCropper, BANNER_CROP } from '../components/AvatarCropper'
+import { useAvatarCropper, BANNER_CROP_GIF } from '../components/AvatarCropper'
+import { uploadBanner } from '../lib/banner'
 import { CameraIcon } from '../components/icons'
 import IdentityFields from '../components/IdentityFields'
 import { IDENTITY_VISIBILITY_OPTIONS, type IdentityVisibility } from '../lib/identities'
@@ -56,7 +57,7 @@ function EditProfileForm() {
       setBannerFile(file)
       setBannerPreview(previewUrl)
     },
-    BANNER_CROP
+    BANNER_CROP_GIF
   )
 
   const loadProfile = async (id: string) => {
@@ -147,17 +148,9 @@ function EditProfileForm() {
     }
 
     if (bannerFile) {
-      const ext = bannerFile.name.split('.').pop() || 'jpg'
-      const path = `${userId}/banner.${ext}`
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(path, bannerFile, { upsert: true })
-      if (uploadError) {
-        uploadWarnings.push('Banner: ' + uploadError.message)
-      } else {
-        const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)
-        bannerUrl = `${urlData.publicUrl}?t=${Date.now()}`
-      }
+      const up = await uploadBanner(supabase, userId, bannerFile)
+      if ('error' in up) uploadWarnings.push('Banner: ' + up.error)
+      else bannerUrl = up.url
     }
 
     const { error: updateError } = await supabase
@@ -237,8 +230,8 @@ function EditProfileForm() {
           </label>
           <label className="flex-1 flex items-center justify-center gap-2 cursor-pointer text-sm text-neutral-300 border border-ink-700 hover:bg-ink-800 rounded-xl py-2.5 transition">
             <CameraIcon className="w-4 h-4" />
-            Cambiar banner
-            <input type="file" accept="image/*" onChange={handleBannerChange} className="hidden" />
+            Cambiar banner <span className="text-[10px] text-neutral-500">(GIF ok)</span>
+            <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={handleBannerChange} className="hidden" />
           </label>
         </div>
 

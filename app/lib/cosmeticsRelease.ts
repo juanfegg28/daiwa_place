@@ -1,9 +1,11 @@
 // Guardia de versiones de los cosméticos (archivo PURO: sin React ni Supabase, para poder usarlo también en el servidor).
 // La autoridad es la base de datos (is_active + guardián de profiles); esto es una defensa extra en el navegador.
 
-/** Colecciones de la 1.5.0: existen en el código pero NO se dibujan hasta que se lancen. */
-export const NEXT_KIT_COLLECTIONS: readonly string[] = ['crimson', 'emo']
-export const RELEASED_VERSION = '1.4.0'
+/** Colecciones de una versión futura: existen en el código pero NO se dibujan hasta que se lancen.
+ *  v1.5.0: Sangre Noir, Emo Abismo y las 7 de Halloween ya se lanzaron, así que la lista queda vacía.
+ *  Cuando llegue la siguiente tanda (1.6.0…), se escriben aquí sus ids para esconderla hasta su día. */
+export const NEXT_KIT_COLLECTIONS: readonly string[] = []
+export const RELEASED_VERSION = '1.5.0'
 
 let allowNext = false
 /** Solo el estudio del equipo (cuenta con acceso total) enciende esto para PROBAR lo que viene. Nunca en perfiles. */

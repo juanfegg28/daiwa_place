@@ -202,6 +202,95 @@ def({
     draw: (c, p, e, t) => { const sp = Math.min(p.sp, 9); c.save(); c.translate(p.x, p.y); c.rotate(p.r); c.lineWidth = 1.4; c.strokeStyle = p.c; c.fillStyle = '#0a070c'; for (const m of [-1, 1]) { c.save(); c.translate(m * sp * 0.7, sp * 0.2 * (m > 0 ? 1 : 0.2)); c.rotate(m * sp * 0.012); c.beginPath(); c.rect(m > 0 ? 0 : -p.s * 1.4, -p.s, p.s * 1.4, p.s * 2); c.clip(); c.scale(1, 1); heart(c, p.s); c.fill(); c.stroke(); c.restore() } c.restore() } }),
 })
 
+// ───────── Halloween (1.5.0)
+const batD = (c, s, fl) => { const f2 = 0.35 + 0.65 * Math.abs(Math.sin(fl)); c.beginPath(); c.moveTo(0, -s * 0.2); c.quadraticCurveTo(-s * 0.4, -s * 0.5, -s * 0.6, -s * 0.2 * f2 - s * 0.1); c.quadraticCurveTo(-s * 1.0, -s * 0.5 * f2, -s * 1.5, -s * 0.1 * f2); c.quadraticCurveTo(-s * 1.1, s * 0.05, -s * 1.0, s * 0.3); c.quadraticCurveTo(-s * 0.7, s * 0.1, -s * 0.5, s * 0.3); c.quadraticCurveTo(-s * 0.2, s * 0.1, 0, s * 0.35); c.quadraticCurveTo(s * 0.2, s * 0.1, s * 0.5, s * 0.3); c.quadraticCurveTo(s * 0.7, s * 0.1, s * 1.0, s * 0.3); c.quadraticCurveTo(s * 1.1, s * 0.05, s * 1.5, -s * 0.1 * f2); c.quadraticCurveTo(s * 1.0, -s * 0.5 * f2, s * 0.6, -s * 0.2 * f2 - s * 0.1); c.quadraticCurveTo(s * 0.4, -s * 0.5, 0, -s * 0.2); c.closePath() }
+const crossD = (c, s) => { c.beginPath(); c.moveTo(0, -s); c.lineTo(s * 0.18, -s * 0.7); c.lineTo(s * 0.18, -s * 0.28); c.lineTo(s * 0.55, -s * 0.28); c.lineTo(s * 0.7, 0); c.lineTo(s * 0.55, s * 0.28); c.lineTo(s * 0.18, s * 0.28); c.lineTo(s * 0.18, s * 1.1); c.lineTo(-s * 0.18, s * 1.1); c.lineTo(-s * 0.18, s * 0.28); c.lineTo(-s * 0.55, s * 0.28); c.lineTo(-s * 0.7, 0); c.lineTo(-s * 0.55, -s * 0.28); c.lineTo(-s * 0.18, -s * 0.28); c.lineTo(-s * 0.18, -s * 0.7); c.closePath() }
+const puff = (c, x, y, r, col, a) => glow(c, x, y, r, col, a)
+def({
+  slug: 'bandada-de-la-cripta', name: 'Bandada de la cripta', rarity: 'epico', price: 2400, dur: 5, tint: 0.3, coll: 'cripta',
+  palettes: P4([['hueso', 'Hueso y sangre', '#C9CDD8', '#0C0709', '#F4EFE6', '#C0142E'], ['violeta', 'Violeta', '#B8A4F0', '#0A0714', '#F1ECFF', '#8A4CFF'], ['azul', 'Azul frío', '#9CC4F0', '#050A14', '#EAF4FF', '#2E7BFF'], ['ambar', 'Ámbar', '#E0C27A', '#0E0A04', '#FFF4D6', '#FF7A1F']]),
+  create: (env) => {
+    const fog = system({ rate: 5, ambient: 1.4, max: 22, spawn: (R, e) => ({ x: A(-20, e.W + 20, R), y: e.H + 30, r: A(40, 90, R), vy: A(-30, -14, R), vx: A(-10, 10, R), a: A(0.14, 0.26, R) }), step: (p, dt, t, e) => { p.y += p.vy * dt; p.x += p.vx * dt; return p.y > -60 }, draw: (c, p, e) => puff(c, p.x, p.y, p.r, e.P.d1, p.a) })(env)
+    const bats = system({ rate: 7, ambient: 0.9, max: 16, spawn: (R, e) => { const dir = R() < 0.5 ? 1 : -1; return { x: dir > 0 ? -20 : e.W + 20, y: A(e.H * 0.1, e.H * 0.8, R), vx: dir * A(70, 150, R), s: A(5, 9, R), ph: A(0, 6, R), w: A(0, 30, R), dir, a: A(0, 1, R) } }, step: (p, dt, t, e) => { p.x += p.vx * dt; p.y += Math.sin(t * 2.2 + p.ph) * 26 * dt; return p.x > -40 && p.x < e.W + 40 }, draw: (c, p, e, t) => { c.save(); c.translate(p.x, p.y); c.scale(p.dir, 1); c.fillStyle = '#0d0a10'; c.strokeStyle = e.P.d1; c.lineWidth = 1; batD(c, p.s, t * 16 + p.ph); c.fill(); c.stroke(); c.restore() } })(env)
+    return { update(dt, t) { fog.update(dt, t); bats.update(dt, t) }, draw(c, t) { fog.draw(c, t); bats.draw(c, t) } }
+  },
+})
+def({
+  slug: 'lluvia-de-cruces', name: 'Lluvia de cruces', rarity: 'raro', price: 1600, dur: 0, tint: 0.12, coll: 'cruces',
+  palettes: P4([['plata', 'Plata', '#D4D8E4', '#070708', '#FFFFFF', '#7A86A8'], ['sangre', 'Plata y sangre', '#CFCFD8', '#0A0507', '#FFFFFF', '#C41E3A'], ['oro', 'Oro viejo', '#E8CC8A', '#0A0804', '#FFF2CC', '#8A5A10'], ['violeta', 'Violeta', '#C4B0F0', '#07050F', '#FFFFFF', '#6A3CD0']]),
+  create: system({ rate: 9, ambient: 2.4, max: 40,
+    spawn: (R, e) => ({ x: A(8, e.W - 8, R), y: -16, s: A(4, 9, R), vy: A(26, 60, R), ph: A(0, 6, R), r: A(-0.5, 0.5, R), vr: A(-0.8, 0.8, R), c: R() < 0.75 ? e.P.d1 : e.P.d4 }),
+    step: (p, dt, t, e) => { p.y += p.vy * dt; p.x += Math.sin(t * 1.2 + p.ph) * 12 * dt; p.r += p.vr * dt * 0.3; return p.y < e.H + 20 },
+    draw: (c, p, e, t) => { c.save(); c.translate(p.x, p.y); c.rotate(p.r); c.shadowColor = p.c; c.shadowBlur = 6; c.fillStyle = p.c; c.strokeStyle = '#000'; c.lineWidth = 0.8; crossD(c, p.s); c.fill(); c.stroke(); c.restore(); const g = Math.max(0, Math.sin(t * 3 + p.ph)); if (g > 0.85) { c.fillStyle = '#fff'; c.globalAlpha = (g - 0.85) * 6; c.beginPath(); c.arc(p.x, p.y - p.s * 0.4, 1.6, 0, TAU); c.fill(); c.globalAlpha = 1 } } }),
+})
+def({
+  slug: 'calabazas-flotantes', name: 'Calabazas flotantes', rarity: 'comun', price: 900, dur: 0, tint: 0.1, coll: 'calabaza',
+  palettes: P4([['naranja', 'Naranja', '#FF8A1F', '#140D08', '#FFC46B', '#8B8B84'], ['violeta', 'Violeta bruja', '#A855F7', '#0E0816', '#E0C4FF', '#7CFF4D'], ['toxico', 'Tóxico', '#7CFF4D', '#08120A', '#D8FFC4', '#FF8A1F'], ['sangre', 'Sangre', '#E03030', '#140808', '#FFB0A8', '#D8D0C0']]),
+  create: system({ rate: 4, ambient: 1.6, max: 20,
+    spawn: (R, e) => ({ x: A(14, e.W - 14, R), y: e.H + 16, s: A(7, 13, R), vy: A(-44, -20, R), ph: A(0, 6, R), spark: R() < 0.45 }),
+    step: (p, dt, t, e) => { p.y += p.vy * dt; p.x += Math.sin(t * 1.4 + p.ph) * 14 * dt; return p.y > -24 },
+    draw: (c, p, e, t) => { if (p.spark) { c.fillStyle = e.P.d3; c.globalAlpha = 0.9; c.beginPath(); c.arc(p.x, p.y, 1.6, 0, TAU); c.fill(); c.globalAlpha = 1; return } glow(c, p.x, p.y, p.s * 2.2, e.P.d1, 0.45); c.save(); c.translate(p.x, p.y); c.rotate(Math.sin(t * 2 + p.ph) * 0.2); c.fillStyle = e.P.d1; c.beginPath(); c.ellipse(0, 0, p.s, p.s * 0.84, 0, 0, TAU); c.fill(); c.strokeStyle = 'rgba(0,0,0,.35)'; c.lineWidth = 1; c.beginPath(); c.ellipse(0, 0, p.s * 0.4, p.s * 0.82, 0, 0, TAU); c.stroke(); c.fillStyle = e.P.d3; c.globalAlpha = 0.8 + 0.2 * Math.sin(t * 5 + p.ph); c.beginPath(); c.moveTo(-p.s * 0.5, -p.s * 0.1); c.lineTo(-p.s * 0.2, -p.s * 0.4); c.lineTo(-p.s * 0.1, -p.s * 0.05); c.moveTo(p.s * 0.5, -p.s * 0.1); c.lineTo(p.s * 0.2, -p.s * 0.4); c.lineTo(p.s * 0.1, -p.s * 0.05); c.moveTo(-p.s * 0.5, p.s * 0.25); c.lineTo(0, p.s * 0.5); c.lineTo(p.s * 0.5, p.s * 0.25); c.lineTo(0, p.s * 0.35); c.fill(); c.restore(); c.globalAlpha = 1 } }),
+})
+def({
+  slug: 'parvada-de-cuervos', name: 'Parvada de cuervos', rarity: 'epico', price: 2500, dur: 5, tint: 0.3, coll: 'cuervo',
+  palettes: P4([['plata', 'Plata y noche', '#D5DAE5', '#07080C', '#FFFFFF', '#7C8499'], ['sangre', 'Plata y rubí', '#D8D2D8', '#0A0508', '#FFFFFF', '#C41E3A'], ['violeta', 'Amatista', '#C8B4F8', '#08060F', '#FFFFFF', '#7A4CE0'], ['oro', 'Oro negro', '#E6C888', '#0A0804', '#FFF2CC', '#8A5A10']]),
+  create: (env) => {
+    const fea = []
+    const base = system({ rate: 9, ambient: 1.2, max: 16, spawn: (R, e) => ({ x: -20, y: A(e.H * 0.1, e.H * 0.7, R), vx: A(90, 170, R), s: A(6, 11, R), ph: A(0, 6, R), up: A(-18, 4, R) }), step: (p, dt, t, e) => { p.x += p.vx * dt; p.y += p.up * dt + Math.sin(t * 1.8 + p.ph) * 14 * dt; if (Math.random() < dt * 0.8 && fea.length < 14) fea.push({ x: p.x, y: p.y, vy: A(16, 34, Math.random), a: 1, r: A(0, 6, Math.random) }); return p.x < e.W + 30 }, draw: (c, p, e, t) => { c.save(); c.translate(p.x, p.y); c.fillStyle = '#030305'; c.strokeStyle = e.P.d1; c.lineWidth = 0.7; batD(c, p.s, t * 12 + p.ph); c.fill(); c.stroke(); c.fillStyle = e.P.d4; c.beginPath(); c.arc(p.s * 0.1, -p.s * 0.1, 0.9, 0, TAU); c.fill(); c.restore() } })(env)
+    return { update(dt, t) { base.update(dt, t); for (let i = fea.length - 1; i >= 0; i--) { const q = fea[i]; q.y += q.vy * dt; q.x += Math.sin(t * 2 + q.r) * 10 * dt; q.a -= 0.4 * dt; if (q.a <= 0) fea.splice(i, 1) } }, draw(c, t) { base.draw(c, t); for (const q of fea) { c.save(); c.translate(q.x, q.y); c.rotate(q.r + t); c.globalAlpha = q.a; c.fillStyle = '#050507'; c.strokeStyle = env.P.d1; c.lineWidth = 0.6; c.beginPath(); c.ellipse(0, 0, 1.6, 6, 0, 0, TAU); c.fill(); c.stroke(); c.restore() } c.globalAlpha = 1 } }
+  },
+})
+def({
+  slug: 'petalos-y-perlas', name: 'Pétalos y perlas', rarity: 'raro', price: 1700, dur: 0, tint: 0.1, coll: 'barroco',
+  palettes: P4([['grafito', 'Grafito', '#BFC3CC', '#0C0C0F', '#FFFFFF', '#6C707A'], ['sepia', 'Sepia', '#D6BE98', '#0D0A06', '#FFF4DC', '#7A5A34'], ['rosa', 'Rosa ceniza', '#E3B8C4', '#0C0709', '#FFEAF0', '#8A5A68'], ['acero', 'Azul acero', '#A8C4DE', '#06090D', '#EAF4FF', '#4A6A8A']]),
+  create: system({ rate: 10, ambient: 2.6, max: 44,
+    spawn: (R, e) => ({ x: A(0, e.W, R), y: -12, s: A(5, 10, R), vy: A(22, 50, R), ph: A(0, 6, R), r: A(0, 6, R), vr: A(-2, 2, R), pearl: R() < 0.25 }),
+    step: (p, dt, t, e) => { p.y += p.vy * dt; p.x += Math.sin(t * 1.1 + p.ph) * 22 * dt; p.r += p.vr * dt; return p.y < e.H + 16 },
+    draw: (c, p, e, t) => { c.save(); c.translate(p.x, p.y); if (p.pearl) { const g = c.createRadialGradient(-p.s * 0.1, -p.s * 0.1, 0, 0, 0, p.s * 0.4); g.addColorStop(0, '#fff'); g.addColorStop(1, e.P.d1); c.fillStyle = g; c.beginPath(); c.arc(0, 0, p.s * 0.4, 0, TAU); c.fill() } else { c.rotate(p.r); c.scale(1, Math.cos(t * 2 + p.ph) * 0.6 + 0.4); c.fillStyle = e.P.d1; c.strokeStyle = e.P.d4; c.lineWidth = 0.9; c.beginPath(); c.moveTo(0, p.s); c.bezierCurveTo(-p.s, p.s * 0.5, -p.s * 0.8, -p.s * 0.8, 0, -p.s); c.bezierCurveTo(p.s * 0.8, -p.s * 0.8, p.s, p.s * 0.5, 0, p.s); c.fill(); c.stroke() } c.restore() } }),
+})
+def({
+  slug: 'niebla-del-bosque', name: 'Niebla del bosque', rarity: 'epico', price: 2400, dur: 0, tint: 0.3, coll: 'creepy',
+  palettes: P4([['niebla', 'Niebla', '#B9C4C0', '#070A09', '#E8F0EC', '#8A9A94'], ['sangre', 'Niebla roja', '#D0A8A8', '#0B0606', '#FFE8E4', '#B01818'], ['verde', 'Enfermizo', '#A8D080', '#070B05', '#EEFFD8', '#5E8A2E'], ['azul', 'Frío', '#9CB8D8', '#05080D', '#E6F0FF', '#4A6A96']]),
+  create: (env) => {
+    const fog = system({ rate: 6, ambient: 1.8, max: 26, spawn: (R, e) => ({ x: -60, y: A(e.H * 0.35, e.H + 10, R), r: A(50, 110, R), vx: A(12, 34, R), a: A(0.1, 0.22, R) }), step: (p, dt, t, e) => { p.x += p.vx * dt; return p.x < e.W + 120 }, draw: (c, p, e) => puff(c, p.x, p.y, p.r, e.P.d1, p.a) })(env)
+    let fl = 0, nx = 1.2
+    return { update(dt, t) { fog.update(dt, t); fl = Math.max(0, fl - dt * 6); if (t > nx) { fl = 1; nx = t + 1.4 + Math.random() * 2.4 } }, draw(c, t) { fog.draw(c, t); if (fl > 0) { c.globalAlpha = fl * 0.5; c.fillStyle = env.P.d3; for (let i = 0; i < 6; i++) { const y = ((Math.sin(t * 91 + i * 7.3) * 0.5 + 0.5) * env.H) | 0; c.fillRect(0, y, env.W, 1 + (i % 3)) } c.globalAlpha = 1 } c.globalAlpha = 0.07; c.fillStyle = env.P.d3; for (let i = 0; i < 20; i++) c.fillRect(((Math.sin(t * 13 + i * 9.7) * 0.5 + 0.5) * env.W) | 0, ((Math.sin(t * 7 + i * 3.1) * 0.5 + 0.5) * env.H) | 0, 2, 1); c.globalAlpha = 1 } }
+  },
+})
+def({
+  slug: 'tinta-y-luna', name: 'Tinta y luna', rarity: 'epico', price: 2400, dur: 5, tint: 0.35, coll: 'creepy',
+  palettes: P4([['tinta', 'Tinta y sangre', '#F2F2F2', '#060606', '#FFFFFF', '#B3141E'], ['blanco', 'Blanco y negro', '#F2F2F2', '#060606', '#FFFFFF', '#9A9AA2'], ['azul', 'Tinta azul', '#E4ECF8', '#05070B', '#FFFFFF', '#2E5CC0'], ['verde', 'Tinta tóxica', '#E8F4E0', '#050805', '#FFFFFF', '#3E9A28']]),
+  create: (env) => {
+    const drops = system({ rate: 10, ambient: 2, max: 30, spawn: (R, e) => ({ x: A(0, e.W, R), y: -10, vy: A(80, 180, R), r: A(1.6, 3.6, R), c: R() < 0.3 ? e.P.d4 : '#000', tr: A(10, 40, R) }), step: (p, dt) => { p.y += p.vy * dt; return p.y < env.H + 30 }, draw: (c, p, e) => { c.fillStyle = p.c; c.beginPath(); c.ellipse(p.x, p.y, p.r, p.r * 1.8, 0, 0, TAU); c.fill(); c.fillRect(p.x - p.r * 0.35, p.y - p.tr, p.r * 0.7, p.tr) } })(env)
+    return { update(dt, t) { drops.update(dt, t) }, draw(c, t) { const k = Math.min(1, t / 1.2); c.fillStyle = '#000'; c.globalAlpha = 0.9 * (t < 4 ? k : Math.max(0.5, 1 - (t - 4) * 0.2)); c.fillRect(0, 0, env.W, 16 + 22 * k); for (let i = 0; i < 9; i++) { const x = (i + 0.5) * env.W / 9, h = 16 + k * (24 + 38 * Math.abs(Math.sin(i * 2.3))), w = 4 + (i % 3) * 2; c.fillRect(x - w / 2, 0, w, h); c.beginPath(); c.arc(x, h, w / 2, 0, TAU); c.fill() } c.globalAlpha = 1; drops.draw(c, t); const mx = env.W * 0.82, my = env.H * 0.2, mr = Math.min(env.W, env.H) * 0.07; glow(c, mx, my, mr * 4, env.P.d3, 0.35 * k); c.fillStyle = env.P.d3; c.beginPath(); c.arc(mx, my, mr, 0, TAU); c.fill(); c.fillStyle = '#000'; c.globalAlpha = 0.9; c.beginPath(); c.arc(mx + mr * 0.45, my - mr * 0.15, mr * 0.9, 0, TAU); c.fill(); c.globalAlpha = 1 } }
+  },
+})
+def({
+  slug: 'glitch-de-senal', name: 'Glitch de señal', rarity: 'epico', price: 2400, dur: 4, tint: 0.2, coll: 'creepy',
+  palettes: P4([['rojo', 'Duotono rojo', '#B8433B', '#090404', '#F4D6D0', '#FFFFFF'], ['cian', 'Señal cian', '#2EC4D6', '#030A0B', '#CFF8FF', '#FFFFFF'], ['crt', 'Fósforo', '#3DFF7A', '#030B05', '#C8FFD8', '#FFFFFF'], ['violeta', 'Ultravioleta', '#A66CFF', '#08050F', '#E6D4FF', '#FFFFFF']]),
+  create: system({ rate: 46, ambient: 9, max: 60, intro: 3,
+    spawn: (R, e) => ({ x: A(-20, e.W, R), y: A(0, e.H, R), w: A(30, e.W * 0.7, R), h: A(2, 18, R), life: A(0.15, 0.8, R), c: R() < 0.6 ? e.P.d1 : e.P.d3, a: A(0.25, 0.7, R), sh: A(-24, 24, R) }),
+    step: (p, dt) => { p.life -= dt; p.x += p.sh * dt * 4; return p.life > 0 },
+    draw: (c, p, e, t) => { c.globalAlpha = p.a; c.fillStyle = p.c; c.fillRect(p.x, p.y, p.w, p.h); if (p.h < 6) { c.fillStyle = '#fff'; c.globalAlpha = p.a * 0.5; c.fillRect(p.x + 3, p.y, p.w * 0.4, 1) } c.globalAlpha = 1 } }),
+})
+def({
+  slug: 'ceniza-cayendo', name: 'Ceniza cayendo', rarity: 'raro', price: 1500, dur: 0, tint: 0.15, coll: 'creepy',
+  palettes: P4([['ceniza', 'Ceniza', '#F2F2F2', '#060606', '#FFFFFF', '#8A8A92'], ['rosa', 'Ceniza rosa', '#F5D0DE', '#09050A', '#FFF0F6', '#C04070'], ['sangre', 'Ceniza roja', '#F0D0D0', '#0B0505', '#FFF0F0', '#B01818'], ['azul', 'Ceniza azul', '#D4E4F8', '#05070B', '#F0F8FF', '#4A74C0']]),
+  create: system({ rate: 22, ambient: 5, max: 60,
+    spawn: (R, e) => ({ x: A(-10, e.W + 10, R), y: -6, r: A(0.8, 2.8, R), vy: A(14, 40, R), vx: A(-4, 22, R), ph: A(0, 6, R), ember: R() < 0.12, a: A(0.4, 0.95, R) }),
+    step: (p, dt, t, e) => { p.y += p.vy * dt; p.x += (p.vx + Math.sin(t * 1.5 + p.ph) * 12) * dt; return p.y < e.H + 8 },
+    draw: (c, p, e) => { c.globalAlpha = p.a; if (p.ember) glow(c, p.x, p.y, p.r * 4, e.P.d4, 0.7); c.fillStyle = p.ember ? e.P.d4 : e.P.d1; c.beginPath(); c.ellipse(p.x, p.y, p.r, p.r * 0.7, p.ph, 0, TAU); c.fill(); c.globalAlpha = 1 } }),
+})
+def({
+  slug: 'bruma-y-estrellas-azules', name: 'Bruma y estrellas azules', rarity: 'legendario', price: 5000, dur: 5, tint: 0.35, coll: 'vampiro',
+  palettes: P4([['bruma', 'Bruma azul', '#7FD6E6', '#06151C', '#CFF3F8', '#3F7FA6'], ['noche', 'Noche azul', '#6FA0FF', '#060A1E', '#D4E2FF', '#9A7CFF'], ['hielo', 'Hielo', '#B8E8F0', '#06141A', '#F0FCFF', '#4A9AB8'], ['menta', 'Menta', '#6FE0C0', '#04140F', '#D0FFF0', '#2A8A78']]),
+  create: (env) => {
+    const fog = system({ rate: 6, ambient: 1.4, max: 22, spawn: (R, e) => ({ x: A(-20, e.W + 20, R), y: A(e.H * 0.3, e.H + 20, R), r: A(50, 100, R), vx: A(-16, 16, R), vy: A(-14, -4, R), a: A(0.12, 0.26, R) }), step: (p, dt, t, e) => { p.x += p.vx * dt; p.y += p.vy * dt; return p.y > -80 }, draw: (c, p, e) => puff(c, p.x, p.y, p.r, e.P.d1, p.a) })(env)
+    const stars = system({ rate: 9, ambient: 2, max: 34, spawn: (R, e) => ({ x: A(10, e.W - 10, R), y: e.H + 12, s: A(5, 12, R), vy: A(-60, -26, R), ph: A(0, 6, R), r: A(0, 6, R), vr: A(-1.2, 1.2, R), tw: R() < 0.4 }), step: (p, dt, t, e) => { p.y += p.vy * dt; p.x += Math.sin(t * 1.3 + p.ph) * 14 * dt; p.r += p.vr * dt; return p.y > -20 }, draw: (c, p, e, t) => { c.save(); c.translate(p.x, p.y); c.rotate(p.r); c.shadowColor = e.P.d1; c.shadowBlur = 8; c.strokeStyle = e.P.d3; c.lineWidth = 1.6; c.lineJoin = 'round'; if (p.tw) { c.fillStyle = e.P.d3; c.globalAlpha = 0.5 + 0.5 * Math.sin(t * 5 + p.ph); star(c, 4, p.s, p.s * 0.2); c.fill() } else { star(c, 5, p.s, p.s * 0.42); c.stroke() } c.restore(); c.globalAlpha = 1 } })(env)
+    return { update(dt, t) { fog.update(dt, t); stars.update(dt, t) }, draw(c, t) { fog.draw(c, t); stars.draw(c, t); c.strokeStyle = env.P.d3; c.globalAlpha = 0.3; c.lineWidth = 1; c.save(); c.translate(env.W / 2, env.H * 0.45); c.rotate(-0.25); c.beginPath(); c.ellipse(0, 0, env.W * 0.48, env.H * 0.14, 0, 0, TAU); c.stroke(); c.restore(); c.globalAlpha = 1 } }
+  },
+})
+
 // ───────── API pública
 export function startEntry(effect, canvas, { paletteId, hue = 0, loop = true, seed = 7, reduced = false, onFrame } = {}) {
   const def_ = effect.palettes.find((p) => p.id === paletteId) || effect.palettes[0]

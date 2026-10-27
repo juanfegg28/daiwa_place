@@ -3,17 +3,18 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import ItemPreview, { type PreviewSubject } from './ItemPreview'
-import { MoonCoinIcon } from '../icons'
+import { HeartIcon, MoonCoinIcon } from '../icons'
+import { Countdown, SalePill } from '../shop/ShopBits'
 import { palettesOf } from './kit'
 import {
-  RARITY_LABEL, RARITY_STYLE, TYPE_LABEL, howToGet, lookPatch, saveLook, shopBuy,
+  RARITY_LABEL, RARITY_STYLE, TYPE_LABEL, howToGet, lookPatch, onSale, salePct, saveLook, shopBuy,
   type CatalogItem, type Equip,
 } from '../../lib/cosmetics'
 import { formatNumber, refreshWallet } from '../../lib/economy'
 
 /** Hoja de detalle: ver sobre ti, elegir paleta/color, probar, comprar (con confirmación) y equipar */
 export default function ItemSheet({
-  item, me, balance, onClose, onChanged, onRain,
+  item, me, balance, onClose, onChanged, onRain, wished, onWish,
 }: {
   item: CatalogItem
   me: PreviewSubject
@@ -22,6 +23,9 @@ export default function ItemSheet({
   /** se llama después de comprar/equipar para recargar el catálogo */
   onChanged: () => void
   onRain?: () => void
+  /** v1.5.0 · corazón de la lista de deseos (solo en la tienda) */
+  wished?: boolean
+  onWish?: () => void
 }) {
   const pals = useMemo(() => (item.type === 'font' ? [] : palettesOf(item.type, item.slug)), [item.type, item.slug])
   const [palette, setPalette] = useState<string | undefined>(pals[0]?.id)
@@ -48,7 +52,10 @@ export default function ItemSheet({
     setErr('')
     const { data, error } = await shopBuy(item.id, item.price)
     setBusy(false)
-    if (error || !data) return setErr(error || 'No se pudo comprar')
+    if (error || !data) {
+      if (error && /precio cambi/i.test(error)) onChanged() // la oferta empezó o terminó mientras mirabas: se actualiza el precio
+      return setErr(error || 'No se pudo comprar')
+    }
     setOwned(true)
     setBal(data.balance)
     setStep('done')
@@ -79,8 +86,22 @@ export default function ItemSheet({
             <h2 className="font-display text-xl font-semibold text-neutral-50 leading-tight">{item.name}</h2>
             <span className={`inline-block mt-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${RARITY_STYLE[item.rarity]}`}>{RARITY_LABEL[item.rarity]}</span>
           </div>
-          <button type="button" onClick={onClose} aria-label="Cerrar" className="w-9 h-9 rounded-full hover:bg-ink-800 text-neutral-400 text-xl leading-none">×</button>
+          <div className="flex items-center gap-1 shrink-0">
+            {onWish && !owned && forSale && (
+              <button type="button" onClick={onWish} aria-pressed={!!wished} aria-label={wished ? 'Quitar de mi lista de deseos' : 'Agregar a mi lista de deseos'} title={wished ? 'Quitar de deseos' : 'Agregar a deseos'}
+                className={`w-9 h-9 rounded-full inline-flex items-center justify-center hover:bg-ink-800 transition ${wished ? 'text-garnet-400' : 'text-neutral-400'}`}>
+                <HeartIcon className="w-5 h-5" filled={!!wished} />
+              </button>
+            )}
+            <button type="button" onClick={onClose} aria-label="Cerrar" className="w-9 h-9 rounded-full hover:bg-ink-800 text-neutral-400 text-xl leading-none">×</button>
+          </div>
         </div>
+        {onSale(item) && !owned && item.sale_ends_at && (
+          <div className="mb-3 rounded-xl border border-emerald-500/40 bg-gradient-to-r from-emerald-500/15 to-transparent px-3 py-2 flex items-center justify-between gap-2">
+            <p className="text-sm text-emerald-200 font-semibold flex items-center gap-2 min-w-0"><SalePill pct={salePct(item)} /> <span className="truncate">{item.sale_name ?? 'Oferta'}</span></p>
+            <Countdown to={item.sale_ends_at} className="text-[11px] text-emerald-200/90 shrink-0" />
+          </div>
+        )}
 
         <div className="rounded-2xl border border-ink-700 bg-ink-950/70 overflow-hidden mb-3 min-h-[180px]">
           <ItemPreview type={item.type} slug={item.slug} palette={palette} hue={hue} me={me} />
@@ -123,6 +144,7 @@ export default function ItemSheet({
                 className="press rounded-xl bg-amber-400 hover:bg-amber-300 disabled:bg-ink-700 disabled:text-neutral-500 text-ink-950 font-bold py-3 transition inline-flex items-center justify-center gap-2">
                 <MoonCoinIcon className="w-5 h-5" />
                 {short > 0 ? `Te faltan ${formatNumber(short)} ☾` : `Comprar por ${formatNumber(item.price)} ☾`}
+                {onSale(item) && short <= 0 && <s className="font-normal text-ink-800/70 text-sm">{formatNumber(item.base_price ?? 0)}</s>}
               </button>
             ) : null}
             {short > 0 && forSale && !owned && (
@@ -136,7 +158,7 @@ export default function ItemSheet({
           <div className="rounded-2xl border border-amber-400/40 bg-amber-400/5 p-3">
             <p className="text-sm text-neutral-200">Vas a comprar <b>{item.name}</b></p>
             <dl className="mt-2 text-sm grid grid-cols-2 gap-y-1 tabular-nums">
-              <dt className="text-neutral-500">Precio</dt><dd className="text-right text-amber-200 font-semibold">{formatNumber(item.price)} ☾</dd>
+              <dt className="text-neutral-500">Precio</dt><dd className="text-right text-amber-200 font-semibold">{onSale(item) && <s className="text-neutral-500 font-normal mr-1.5">{formatNumber(item.base_price ?? 0)}</s>}{formatNumber(item.price)} ☾</dd>
               <dt className="text-neutral-500">Tu saldo</dt><dd className="text-right text-neutral-200">{formatNumber(bal)} ☾</dd>
               <dt className="text-neutral-500">Saldo después</dt><dd className="text-right text-neutral-200">{formatNumber(bal - item.price)} ☾</dd>
             </dl>

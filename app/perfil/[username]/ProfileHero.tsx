@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import { isGifUrl } from '../../lib/banner'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -130,7 +131,7 @@ export default function ProfileHero({
           className="relative w-full overflow-hidden bg-gradient-to-r from-garnet-700 via-garnet-600 to-ink-900"
           style={{ aspectRatio: '3 / 1', minHeight: 110, maxHeight: 230, borderTopLeftRadius: 28, borderTopRightRadius: 28 }}
         >
-          {profile.banner_url && <Image src={profile.banner_url} alt="Banner" fill sizes="(max-width: 768px) 100vw, 672px" priority className="object-cover" />}
+          {profile.banner_url && <Image src={profile.banner_url} unoptimized={isGifUrl(profile.banner_url)} alt="Banner" fill sizes="(max-width: 768px) 100vw, 672px" priority className="object-cover" />}
         </div>
         <SkinCard card={cos.card} seam="attached">
           <div style={{ ['--av' as string]: 'clamp(92px,16cqw,150px)', marginTop: 'calc(var(--av) / -2)' }} className="flex items-end justify-between gap-3">
@@ -183,7 +184,7 @@ export default function ProfileHero({
   return (
     <>
       <div className="w-full max-h-64 bg-gradient-to-r from-garnet-700 via-garnet-600 to-ink-900 relative" style={{ aspectRatio: '3 / 1' }}>
-        {profile.banner_url && <Image src={profile.banner_url} alt="Banner" fill sizes="(max-width: 768px) 100vw, 1024px" priority className="object-cover" />}
+        {profile.banner_url && <Image src={profile.banner_url} unoptimized={isGifUrl(profile.banner_url)} alt="Banner" fill sizes="(max-width: 768px) 100vw, 1024px" priority className="object-cover" />}
       </div>
 
       <div className="max-w-2xl mx-auto px-4 sm:px-6">

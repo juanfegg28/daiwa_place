@@ -15,6 +15,43 @@ export const RELEASE_STAGE: 'beta' | 'stable' = 'stable'
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.5.0',
+    date: '2026-10-26',
+    title: 'Tienda de Halloween 🎃',
+    sections: [
+      {
+        heading: 'Nueva tienda, estilo Discord 🛍️',
+        items: [
+          'La tienda se rediseñó: Destacado, Explorar, Descuentos, Colecciones, Mi inventario y Canjear código, con buscador y tu saldo siempre a la vista.',
+          'Banner principal con la «Selección de Halloween»: rota solo cada 7 segundos (se detiene si lo señalas o lo tocas) y te lleva directo a todo lo nuevo.',
+          'Nuevo banner de Descuentos con cuenta atrás y el descuento más grande de cada oferta. Todas las ofertas viven en la pestaña «Descuentos».',
+          'Lista de deseos con el corazón: guarda lo que quieres, mira cuánto suma todo y te avisamos con la etiqueta «En oferta».',
+          'Cada colección muestra sus decoraciones de avatar (sobre tu foto) para que veas qué incluye y cuáles ya tienes.',
+        ],
+      },
+      {
+        heading: 'Cosméticos nuevos 🦇',
+        items: [
+          'Ya están disponibles Sangre Noir y Emo Abismo, más 7 colecciones de Halloween: Cripta de Hueso, Cruz de Plata, Noche de Calabazas, Cuervo de Hierro, Barroco Monocromo, Creepypastas y Vampiro Azul.',
+          'Más de 60 diseños nuevos entre decoraciones, tarjetas, efectos de entrada, fondos y títulos, con insignia y título exclusivo al completar cada colección.',
+        ],
+      },
+      {
+        heading: 'Banners con GIF 🎞️',
+        items: [
+          'Ahora puedes poner un GIF animado como banner de tu perfil (máximo 25 MB). Se sube tal cual para que se siga moviendo.',
+        ],
+      },
+      {
+        heading: 'Arreglos',
+        items: [
+          'Los comentarios ya no se van achicando cuando respondes varias veces seguidas: ahora se aplanan y el texto conserva su ancho en el celular.',
+          'La tienda carga más rápido: las miniaturas siguen quietas y solo se animan al señalarlas, y el catálogo se muestra de 24 en 24.',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.4.5',
     date: '2026-10-24',
     title: 'Mi clóset y arreglos',
@@ -700,4 +737,4 @@ export const CHANGELOG: Release[] = [
 
 export const LATEST_RELEASE = CHANGELOG[0]
 // Versión que se muestra en la app. Si un parche pequeño (1.0.x) no lleva notas en el changelog, igual se sube este número a mano.
-export const APP_VERSION = '1.4.5'
+export const APP_VERSION = '1.5.0'

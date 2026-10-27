@@ -15,6 +15,8 @@ import { LOFI } from './lofi.js'
 import { MITICAS } from './miticas.js'
 import { CRIMSON } from './crimson.js'
 import { EMO } from './emo.js'
+import { HW1 } from './hw1.js'
+import { HW2 } from './hw2.js'
 
 export const COLLECTIONS = [
   { id: 'noctis', name: 'Noctis Gótico', theme: 'dark' },
@@ -32,7 +34,14 @@ export const COLLECTIONS = [
   { id: 'lofi', name: 'Lofi Night', theme: 'noche tranquila' },
   { id: 'crimson', name: 'Sangre Noir', theme: 'dark rojizo' },
   { id: 'emo', name: 'Emo Abismo', theme: 'súper emo dark' },
+  { id: 'cripta', name: 'Cripta de Hueso', theme: 'halloween: murciélagos y cadenas' },
+  { id: 'cruces', name: 'Cruz de Plata', theme: 'halloween: cruces góticas' },
+  { id: 'calabaza', name: 'Noche de Calabazas', theme: 'halloween clásico' },
+  { id: 'cuervo', name: 'Cuervo de Hierro', theme: 'hierro forjado y cuervos' },
+  { id: 'barroco', name: 'Barroco Monocromo', theme: 'barroco gris' },
+  { id: 'creepy', name: 'Creepypastas', theme: 'creepypasta: sets de ambiente' },
+  { id: 'vampiro', name: 'Vampiro Azul', theme: 'vampiro azul' },
   { id: 'miticas', name: 'Míticas', theme: 'no se compran' },
 ]
-export const AVATAR_DECOS = [...NOCTIS, ...VELVET, ...SAKURA, ...MAGICA, ...NEON, ...PIXEL, ...SAMURAI, ...ACADEMIA, ...COSMOS, ...BOSQUE, ...CIELO, ...ORO, ...LOFI, ...CRIMSON, ...EMO, ...MITICAS]
+export const AVATAR_DECOS = [...NOCTIS, ...VELVET, ...SAKURA, ...MAGICA, ...NEON, ...PIXEL, ...SAMURAI, ...ACADEMIA, ...COSMOS, ...BOSQUE, ...CIELO, ...ORO, ...LOFI, ...CRIMSON, ...EMO, ...HW1, ...HW2, ...MITICAS]
 export const decoBySlug = (s) => AVATAR_DECOS.find((d) => d.slug === s)

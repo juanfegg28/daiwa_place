@@ -1,3 +1,4 @@
+-- ⚠ REEMPLAZADO en la v1.5.0 por v1.5.0_lanzar_halloween.sql (que enciende Sangre Noir, Emo Abismo y las 7 de Halloween). NO corras este archivo.
 -- =====================================================================
 -- DaiwaPlace v1.5.0 · ACTIVAR «Sangre Noir» y «Emo Abismo»  (NO correr hasta el lanzamiento de la 1.5.0)
 -- No hace falta redesplegar diseños: los diseños ya viajan en la app. Esto solo los enciende.
