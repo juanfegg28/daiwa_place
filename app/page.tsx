@@ -34,7 +34,7 @@ type DraftImage = {
 }
 
 /** Lado de las misiones en PC: 'left' (a la izquierda del feed) o 'right' (a la derecha). Cambia solo esta palabra. */
-const MISSIONS_SIDE: 'left' | 'right' = 'left'
+const MISSIONS_SIDE: 'left' | 'right' = 'right'
 
 export default function HomePage() {
   return (
