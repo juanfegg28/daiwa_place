@@ -15,6 +15,9 @@ import Toast from './Toast'
 
 type Collapsed = { day: boolean; week: boolean; card: boolean }
 const STORE_KEY = 'daiwa_home_missions_v1'
+const CACHE_KEY = 'daiwa_home_missions_cache_v1'
+type Cached = { uid: string; day: DayMissions; week: WeekMissions; at: number }
+let memCache: Cached | null = null
 // De entrada: en PC los dos bloques abiertos; la tarjeta de pantallas chicas, cerrada
 const DEFAULTS: Collapsed = { day: false, week: false, card: true }
 
@@ -80,17 +83,48 @@ export function useMissionsPanel(userId: string | null | undefined): { state: Mi
         return
       }
       setFailed(false)
-      setLoadedAt(Date.now())
+      const at = Date.now()
+      setLoadedAt(at)
       setDay(d.data as DayMissions)
       setWeek(w.data as WeekMissions)
+      if (userId) {
+        memCache = { uid: userId, day: d.data as DayMissions, week: w.data as WeekMissions, at }
+        try {
+          window.localStorage.setItem(CACHE_KEY, JSON.stringify(memCache))
+        } catch {
+          /* sin almacenamiento */
+        }
+      }
     } finally {
       inflight.current = false
     }
-  }, [])
+  }, [userId])
+
+  // v1.5.9 · Al renovar el feed, las misiones salen AL INSTANTE con lo último que se vio (y se actualizan solas en segundo plano)
+  useEffect(() => {
+    if (!userId) return
+    let c = memCache
+    if (!c) {
+      try {
+        const raw = window.localStorage.getItem(CACHE_KEY)
+        if (raw) c = JSON.parse(raw) as Cached
+      } catch {
+        /* sin almacenamiento */
+      }
+    }
+    if (!c || c.uid !== userId) return
+    const t = window.setTimeout(() => {
+      setDay(c.day)
+      setWeek(c.week)
+      setLoadedAt(c.at)
+    }, 0)
+    return () => window.clearTimeout(t)
+  }, [userId])
 
   useEffect(() => {
     if (!userId) return
-    const first = window.setTimeout(() => void load(), 0)
+    // v1.5.9 · el primer pedido espera un poquito para que el feed cargue primero (antes competían y todo tardaba)
+    const first = window.setTimeout(() => void load(), 700)
     const onFocus = () => void load()
     const iv = window.setInterval(() => document.visibilityState === 'visible' && void load(), 90000)
     const clock = window.setInterval(() => tick((n) => n + 1), 60000)
@@ -267,11 +301,20 @@ function Blocks({ s }: { s: MissionsPanelState }) {
   )
 }
 
-/** PC grande: columna a la derecha del feed */
+/** PC (desde 1024 px): columna al lado del feed */
 export function MissionsSide({ state }: { state: MissionsPanelState }) {
-  if (state.failed || !state.ready) return null
+  if (state.failed) return null
+  if (!state.ready) {
+    return (
+      <aside aria-hidden="true" className="hidden lg:block w-[268px] xl:w-[300px] shrink-0 sticky top-6 space-y-2.5">
+        <div className="h-6 w-28 rounded-lg bg-ink-800/70 animate-pulse" />
+        <div className="h-14 rounded-2xl bg-ink-900/60 border border-ink-800 animate-pulse" />
+        <div className="h-14 rounded-2xl bg-ink-900/60 border border-ink-800 animate-pulse" />
+      </aside>
+    )
+  }
   return (
-    <aside aria-label="Misiones" className="hidden xl:block w-[320px] shrink-0 sticky top-6 max-h-[calc(100dvh-3rem)] overflow-y-auto overscroll-contain pr-0.5 story-scroll-hide">
+    <aside aria-label="Misiones" className="hidden lg:block w-[268px] xl:w-[300px] shrink-0 sticky top-6 max-h-[calc(100dvh-3rem)] overflow-y-auto overscroll-contain pr-0.5 story-scroll-hide">
       <div className="flex items-center gap-2 px-1 mb-2.5">
         <TargetIcon className="w-5 h-5 text-garnet-400" />
         <h2 className="font-display text-lg font-semibold text-neutral-50">Misiones</h2>
@@ -287,7 +330,7 @@ export function MissionsInline({ state }: { state: MissionsPanelState }) {
   if (state.failed || !state.ready) return null
   const open = !state.collapsed.card
   return (
-    <section aria-label="Misiones" className="xl:hidden mb-4 sm:mb-5">
+    <section aria-label="Misiones" className="lg:hidden mb-4 sm:mb-5">
       <button
         type="button"
         onClick={() => state.toggle('card')}

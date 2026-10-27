@@ -33,6 +33,9 @@ type DraftImage = {
   previewUrl: string
 }
 
+/** Lado de las misiones en PC: 'left' (a la izquierda del feed) o 'right' (a la derecha). Cambia solo esta palabra. */
+const MISSIONS_SIDE: 'left' | 'right' = 'left'
+
 export default function HomePage() {
   return (
     <AppShell>
@@ -375,9 +378,9 @@ function Feed() {
     !processingImages
 
   return (
-    <div className="max-w-[944px] mx-auto py-6 px-4 xl:flex xl:items-start xl:justify-center xl:gap-7">
+    <div className={`max-w-[944px] mx-auto py-6 px-4 lg:flex lg:items-start lg:justify-center lg:gap-6 ${MISSIONS_SIDE === 'left' ? 'lg:flex-row-reverse' : ''}`}>
       {missionsOverlay}
-      <div className="w-full min-w-0 max-w-xl mx-auto xl:mx-0 xl:flex-1">
+      <div className="w-full min-w-0 max-w-xl mx-auto lg:mx-0 lg:flex-1">
       <AnnouncementBanner />
 
       {/* Historias de 24 h (v1.2.0): solo personas que sigues, amigos primero */}
