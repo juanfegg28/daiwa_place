@@ -7,7 +7,8 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { supabase } from '../../lib/supabaseClient'
-import { countdown, refreshWallet, subscribeWallet, type DayMissions, type Mission, type WeekMissions } from '../../lib/economy'
+import { countdown, effectiveReward, refreshWallet, subscribeWallet, type DayMissions, type Mission, type WeekMissions } from '../../lib/economy'
+import { MISSIONS_CHANGED } from './MissionNotifier'
 import { CheckIcon, GiftIcon, MoonCoinIcon, TargetIcon } from '../icons'
 import { ClaimDot } from './ClaimDot'
 import MoonRain from './MoonRain'
@@ -48,6 +49,8 @@ export function useMissionsPanel(userId: string | null | undefined): { state: Mi
   const [collapsed, setCollapsed] = useState<Collapsed>(DEFAULTS)
   const [, tick] = useState(0)
   const inflight = useRef(false)
+  const again = useRef(false)
+  const claimLock = useRef(false)
 
   // recuerda qué dejaste abierto o cerrado
   useEffect(() => {
@@ -74,7 +77,12 @@ export function useMissionsPanel(userId: string | null | undefined): { state: Mi
   }, [])
 
   const load = useCallback(async () => {
-    if (inflight.current) return
+    // v1.5.9 · si piden recargar mientras ya hay una recarga en curso, se repite al terminar (antes se descartaba y la lista se quedaba
+    // mostrando «Reclamar» en una misión ya reclamada)
+    if (inflight.current) {
+      again.current = true
+      return
+    }
     inflight.current = true
     try {
       const [d, w] = await Promise.all([supabase.rpc('missions_today'), supabase.rpc('missions_week')])
@@ -97,6 +105,10 @@ export function useMissionsPanel(userId: string | null | undefined): { state: Mi
       }
     } finally {
       inflight.current = false
+      if (again.current) {
+        again.current = false
+        void load()
+      }
     }
   }, [userId])
 
@@ -136,7 +148,9 @@ export function useMissionsPanel(userId: string | null | undefined): { state: Mi
       lastClaimable = c
     })
     window.addEventListener('focus', onFocus)
+    window.addEventListener(MISSIONS_CHANGED, onFocus)
     return () => {
+      window.removeEventListener(MISSIONS_CHANGED, onFocus)
       window.clearTimeout(first)
       window.clearInterval(iv)
       window.clearInterval(clock)
@@ -147,14 +161,29 @@ export function useMissionsPanel(userId: string | null | undefined): { state: Mi
 
   const say = (text: string, tone: 'ok' | 'error' = 'ok') => setToast({ text, tone })
 
+  // v1.5.9 · Reclamar sin problemas: candado inmediato (varios toques seguidos = UN solo reclamo), la misión se marca como reclamada
+  // al instante y, si algo falla, vuelve a su estado real.
+  const markClaimed = (id: string, claimed: boolean) => {
+    const f = (list: Mission[]) => list.map((x) => (x.id === id ? { ...x, claimed, claimable: !claimed } : x))
+    setDay((d) => (d ? { ...d, missions: f(d.missions) } : d))
+    setWeek((w) => (w ? { ...w, missions: f(w.missions) } : w))
+  }
   const claim = useCallback(
     async (m: Mission) => {
-      if (busy) return
+      if (claimLock.current) return
+      claimLock.current = true
       setBusy(true)
+      markClaimed(m.id, true)
       const { data, error } = await supabase.rpc('mission_claim', { p_id: m.id })
+      claimLock.current = false
       setBusy(false)
       if (error) {
-        say(error.message, 'error')
+        // «Ya reclamaste…» no es un fallo real: la misión ya estaba cobrada
+        if (!/ya reclamaste/i.test(error.message)) {
+          markClaimed(m.id, false)
+          say(error.message, 'error')
+        }
+        void refreshWallet(true)
         void load()
         return
       }
@@ -164,13 +193,15 @@ export function useMissionsPanel(userId: string | null | undefined): { state: Mi
       void refreshWallet(true)
       void load()
     },
-    [busy, load]
+    [load]
   )
 
   const openChest = useCallback(async () => {
-    if (busy) return
+    if (claimLock.current) return
+    claimLock.current = true
     setBusy(true)
     const { data, error } = await supabase.rpc('chest_claim')
+    claimLock.current = false
     setBusy(false)
     if (error) {
       say(error.message, 'error')
@@ -180,7 +211,7 @@ export function useMissionsPanel(userId: string | null | undefined): { state: Mi
     say(`¡Cofre semanal! +${(data as { reward: number }).reward} ☾`)
     void refreshWallet(true)
     void load()
-  }, [busy, load])
+  }, [load])
 
   const dayClaimable = day?.missions.filter((m) => m.claimable).length ?? 0
   const weekClaimable = (week?.missions.filter((m) => m.claimable).length ?? 0) + (week?.chest_ready && !week.chest_paid ? 1 : 0)
@@ -216,14 +247,14 @@ const Chevron = ({ open }: { open: boolean }) => (
   </svg>
 )
 
-function Row({ m, busy, onClaim }: { m: Mission; busy: boolean; onClaim: (m: Mission) => void }) {
+function Row({ m, mult, busy, onClaim }: { m: Mission; mult: number; busy: boolean; onClaim: (m: Mission) => void }) {
   const pct = Math.min(100, Math.round((m.progress / m.target) * 100))
   return (
     <li className={`rounded-xl border px-3 py-2.5 ${m.claimed ? 'border-ink-800 bg-ink-900/30 opacity-65' : m.claimable ? 'border-amber-500/45 bg-amber-500/8' : 'border-ink-700 bg-ink-900/50'}`}>
       <div className="flex items-start gap-2">
         <p className="flex-1 min-w-0 text-[13px] leading-snug text-neutral-100">{m.text}</p>
         <span className="shrink-0 inline-flex items-center gap-0.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-300 text-[11px] font-semibold px-2 py-0.5 tabular-nums">
-          <MoonCoinIcon className="w-3 h-3" />+{m.reward}
+          <MoonCoinIcon className="w-3 h-3" />+{effectiveReward(m, mult)}{mult !== 1 && m.period !== 'achievement' ? <span className="ml-0.5 text-[10px] opacity-80">×{mult}</span> : null}
         </span>
       </div>
       <div className="mt-2 flex items-center gap-2">
@@ -270,7 +301,7 @@ function Blocks({ s }: { s: MissionsPanelState }) {
     <div className="space-y-2.5">
       <Block title="Diarias" sub={`${done}/${day.missions.length} · ${countdown(day.ends_at, day.server_now, s.loadedAt)}`} open={!s.collapsed.day} onToggle={() => s.toggle('day')} dot={s.dayClaimable > 0}>
         <ul className="space-y-2">
-          {day.missions.map((m) => <Row key={m.id} m={m} busy={s.busy} onClaim={s.claim} />)}
+          {day.missions.map((m) => <Row key={m.id} m={m} mult={day.multiplier} busy={s.busy} onClaim={s.claim} />)}
         </ul>
         <p className="mt-2 text-[11px] text-neutral-500">
           Bono por las {day.missions.length}: +{day.bonus_amount} ☾{day.bonus_paid ? ' ✓' : ''}
@@ -279,7 +310,7 @@ function Blocks({ s }: { s: MissionsPanelState }) {
       </Block>
       <Block title="Semanales" sub={`${weekDone}/${week.missions.length} · ${countdown(week.ends_at, week.server_now, s.loadedAt)}`} open={!s.collapsed.week} onToggle={() => s.toggle('week')} dot={s.weekClaimable > 0}>
         <ul className="space-y-2">
-          {week.missions.map((m) => <Row key={m.id} m={m} busy={s.busy} onClaim={s.claim} />)}
+          {week.missions.map((m) => <Row key={m.id} m={m} mult={week.multiplier} busy={s.busy} onClaim={s.claim} />)}
         </ul>
         <div className="mt-2.5 flex items-center gap-2.5 rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2.5">
           <GiftIcon className="w-6 h-6 text-amber-300 shrink-0" />

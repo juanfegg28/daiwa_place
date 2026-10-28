@@ -99,6 +99,12 @@ export const CATEGORY_LABELS: Record<Mission['category'], string> = {
   personalizacion: 'Personalización',
 }
 
+/** Lunas que de verdad se pagan al reclamar: las diarias/semanales/de evento se multiplican con los eventos de «Lunas x2/x3». */
+export function effectiveReward(m: Pick<Mission, 'reward' | 'period'>, multiplier: number | undefined): number {
+  const x = m.period === 'daily' || m.period === 'weekly' || m.period === 'event' ? multiplier ?? 1 : 1
+  return Math.round(m.reward * x)
+}
+
 export const DIFFICULTY_LABELS: Record<string, string> = { easy: 'Fácil', medium: 'Media', hard: 'Difícil', challenge: 'Desafío' }
 
 // ───────── Caché del resumen (se comparte entre páginas para no pedirlo en cada navegación) ─────────

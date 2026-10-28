@@ -1,6 +1,7 @@
 'use client'
 
 import WalletChip from './WalletChip'
+import MissionNotifier from './economy/MissionNotifier'
 import { ClaimDot, useClaimable, useWalletRefreshOnNavigate } from './economy/ClaimDot'
 import Avatar from './cosmetics/Avatar'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
@@ -10,6 +11,7 @@ import { supabase } from '../lib/supabaseClient'
 import { applyTheme, type ThemeMode } from '../lib/theme'
 import Logo from './Logo'
 import { APP_VERSION } from '../lib/changelog'
+import { lockBodyScroll, releaseStaleScrollLocks } from '../lib/scrollLock'
 import { isSupremeAdmin, mergePermissions, type Permissions } from '../lib/permissions'
 import {
   HomeIcon,
@@ -205,6 +207,12 @@ export default function AppShell({
   const [onlineIds, setOnlineIds] = useState<Set<string>>(new Set())
   const presenceRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
   const pathname = usePathname()
+  // v1.5.9 · Red de seguridad contra «la pantalla se queda pegada»: al cambiar de página, si quedó algún bloqueo de scroll huérfano
+  // (visor de historias, chat con teclado…) se limpia solo, sin tener que recargar.
+  useEffect(() => {
+    const t = window.setTimeout(() => releaseStaleScrollLocks(pathname.startsWith('/mensajes') || pathname.startsWith('/historias')), 350)
+    return () => window.clearTimeout(t)
+  }, [pathname])
   const router = useRouter()
 
   const load = async () => {
@@ -569,11 +577,10 @@ export default function AppShell({
       if (e.key === 'Escape') setDrawerOpen(false)
     }
     document.addEventListener('keydown', onKey)
-    const prevOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    const unlock = lockBodyScroll()
     return () => {
       document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prevOverflow
+      unlock()
     }
   }, [drawerOpen])
 
@@ -614,6 +621,7 @@ export default function AppShell({
   return (
     <AppSessionContext.Provider value={sessionValue}>
       <div className="min-h-screen bg-ink-950 text-neutral-100 md:flex">
+        <MissionNotifier userId={userId} />
         {/* Sidebar de escritorio (v1.5.8: se puede minimizar con las 3 rayitas; abierta de entrada) */}
         <aside
           aria-label="Menú principal"

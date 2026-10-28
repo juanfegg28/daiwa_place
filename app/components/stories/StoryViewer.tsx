@@ -7,6 +7,7 @@ import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, CopyIcon, EyeIcon, FlagIc
 import { supabase } from '../../lib/supabaseClient'
 import { useStoryAudio } from '../../lib/useStoryAudio'
 import { useKeyboardFit } from '../../lib/useKeyboardFit'
+import { lockBodyScroll } from '../../lib/scrollLock'
 import {
   addOwnSeen,
   deleteStory,
@@ -459,13 +460,7 @@ export default function StoryViewer({
   }, [])
 
   // bloquea el scroll de fondo
-  useEffect(() => {
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prev
-    }
-  }, [])
+  useEffect(() => lockBodyScroll(), [])
 
   // ───────── like ─────────
   const setLike = useCallback(

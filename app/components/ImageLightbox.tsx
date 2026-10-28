@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import type { PostImage } from '../lib/types'
 import { ChevronLeftIcon, ChevronRightIcon, CloseIcon } from './icons'
+import { lockBodyScroll } from '../lib/scrollLock'
 
 /** Visor de fotos a pantalla completa: muestra la foto entera, sin recortes. */
 export default function ImageLightbox({
@@ -27,11 +28,10 @@ export default function ImageLightbox({
       if (e.key === 'ArrowRight') setIndex((i) => (i + 1) % total)
     }
     document.addEventListener('keydown', onKey)
-    const prevOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    const unlock = lockBodyScroll()
     return () => {
       document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = prevOverflow
+      unlock()
     }
   }, [total, onClose])
 

@@ -16,9 +16,12 @@ export function useKeyboardFit(active: boolean, onResize?: () => void) {
     const mq = window.matchMedia('(max-width: 767px)')
     const vv = window.visualViewport
     let raf = 0
+    let timer = 0
+    let disposed = false
     const apply = () => {
       cancelAnimationFrame(raf)
       raf = requestAnimationFrame(() => {
+        if (disposed) return
         if (!mq.matches) {
           root.style.removeProperty('--vvh')
           root.style.removeProperty('--vvt')
@@ -39,9 +42,16 @@ export function useKeyboardFit(active: boolean, onResize?: () => void) {
     window.addEventListener('resize', apply)
     window.addEventListener('orientationchange', apply)
     mq.addEventListener?.('change', apply)
-    const onFocusOut = () => setTimeout(apply, 120) // al cerrar el teclado
+    const onFocusOut = () => {
+      window.clearTimeout(timer)
+      timer = window.setTimeout(apply, 120) // al cerrar el teclado
+    }
     document.addEventListener('focusout', onFocusOut)
     return () => {
+      // v1.5.9 · antes, el temporizador de «al cerrar el teclado» seguía vivo después de salir y volvía a poner el bloqueo de scroll
+      // (chat-lock) en la página siguiente: no se podía bajar hasta recargar. Ahora se cancela todo al salir.
+      disposed = true
+      window.clearTimeout(timer)
       cancelAnimationFrame(raf)
       vv?.removeEventListener('resize', apply)
       vv?.removeEventListener('scroll', apply)

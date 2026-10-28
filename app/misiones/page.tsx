@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AppShell, { useAppSession } from '../components/AppShell'
 import { CheckIcon, FlameIcon, GiftIcon, MoonCoinIcon } from '../components/icons'
@@ -10,6 +10,8 @@ import {
   CATEGORY_LABELS, DIFFICULTY_LABELS, countdown, refreshWallet,
   type DayMissions, type Mission, type StreakState, type WeekMissions,
 } from '../lib/economy'
+import { effectiveReward } from '../lib/economy'
+import { MISSIONS_CHANGED } from '../components/economy/MissionNotifier'
 import MoonRain from '../components/economy/MoonRain'
 import Toast from '../components/economy/Toast'
 
@@ -32,9 +34,10 @@ const CAT_STYLE: Record<Mission['category'], string> = {
 }
 
 function MissionCard({
-  m, busy, onClaim, onReroll, canReroll, rerollLabel,
+  m, mult = 1, busy, onClaim, onReroll, canReroll, rerollLabel,
 }: {
   m: Mission
+  mult?: number
   busy: boolean
   onClaim: (m: Mission) => void
   onReroll?: (m: Mission) => void
@@ -54,7 +57,7 @@ function MissionCard({
           <p className="text-[15px] text-neutral-50 leading-snug">{m.text}</p>
         </div>
         <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-300 text-xs font-semibold px-2.5 py-1 tabular-nums">
-          <MoonCoinIcon className="w-3.5 h-3.5" />+{m.reward}
+          <MoonCoinIcon className="w-3.5 h-3.5" />+{effectiveReward(m, mult)}{mult !== 1 && (m.period === 'daily' || m.period === 'weekly') ? <span className="ml-0.5 text-[10.5px] opacity-80">×{mult}</span> : null}
         </span>
       </div>
       <div className="mt-3 flex items-center gap-3">
@@ -102,24 +105,40 @@ function MisionesContent() {
   const [loadedAt, setLoadedAt] = useState(0)
   const [chestOpen, setChestOpen] = useState(false)
 
+  const loadingAll = useRef(false)
+  const loadAgain = useRef(false)
+  const claimLock = useRef(false)
   const loadAll = useCallback(async () => {
-    const [d, w, a, o, s] = await Promise.all([
-      supabase.rpc('missions_today'),
-      supabase.rpc('missions_week'),
-      supabase.rpc('achievements_list'),
-      supabase.rpc('missions_onboarding'),
-      supabase.rpc('streak_state_me'),
-    ])
-    if (d.error || w.error) {
-      setError(true)
+    // v1.5.9 · una recarga pedida mientras otra está en curso se repite al terminar (si no, la lista se quedaba vieja)
+    if (loadingAll.current) {
+      loadAgain.current = true
       return
     }
-    setLoadedAt(Date.now())
-    setDay(d.data as DayMissions)
-    setWeek(w.data as WeekMissions)
-    setAch((a.data as Mission[]) ?? [])
-    setOnb((o.data as Mission[]) ?? [])
-    setStreak((s.data as StreakState) ?? null)
+    loadingAll.current = true
+    try {
+      do {
+        loadAgain.current = false
+        const [d, w, a, o, s] = await Promise.all([
+          supabase.rpc('missions_today'),
+          supabase.rpc('missions_week'),
+          supabase.rpc('achievements_list'),
+          supabase.rpc('missions_onboarding'),
+          supabase.rpc('streak_state_me'),
+        ])
+        if (d.error || w.error) {
+          setError(true)
+          return
+        }
+        setLoadedAt(Date.now())
+        setDay(d.data as DayMissions)
+        setWeek(w.data as WeekMissions)
+        setAch((a.data as Mission[]) ?? [])
+        setOnb((o.data as Mission[]) ?? [])
+        setStreak((s.data as StreakState) ?? null)
+      } while (loadAgain.current)
+    } finally {
+      loadingAll.current = false
+    }
   }, [])
 
   useEffect(() => {
@@ -129,6 +148,12 @@ function MisionesContent() {
     if (!userId) return
     supabase.rpc('streak_touch').then(() => loadAll())
   }, [userId, loadAll])
+  // el aviso de «misión completada» (o reclamar desde el Inicio) refresca esta lista al instante
+  useEffect(() => {
+    const on = () => void loadAll()
+    window.addEventListener(MISSIONS_CHANGED, on)
+    return () => window.removeEventListener(MISSIONS_CHANGED, on)
+  }, [loadAll])
   useEffect(() => {
     const t = setInterval(() => tick((n) => n + 1), 30000)
     return () => clearInterval(t)
@@ -136,12 +161,28 @@ function MisionesContent() {
 
   const say = (text: string, tone: 'ok' | 'error' = 'ok') => setToast({ text, tone })
 
+  // v1.5.9 · candado inmediato (varios toques = UN solo reclamo) y la misión se marca como reclamada al instante
+  function markClaimed(id: string, claimed: boolean) {
+    const f = (list: Mission[]) => list.map((x) => (x.id === id ? { ...x, claimed, claimable: !claimed } : x))
+    setDay((d) => (d ? { ...d, missions: f(d.missions) } : d))
+    setWeek((w) => (w ? { ...w, missions: f(w.missions) } : w))
+    setAch((l) => f(l))
+    setOnb((l) => f(l))
+  }
   async function claim(m: Mission) {
+    if (claimLock.current) return
+    claimLock.current = true
     setBusy(true)
+    markClaimed(m.id, true)
     const { data, error: err } = await supabase.rpc('mission_claim', { p_id: m.id })
+    claimLock.current = false
     setBusy(false)
     if (err) {
-      say(err.message, 'error')
+      if (!/ya reclamaste/i.test(err.message)) {
+        markClaimed(m.id, false)
+        say(err.message, 'error')
+      }
+      refreshWallet(true)
       return loadAll()
     }
     const r = data as { reward: number; bonus: number }
@@ -245,7 +286,7 @@ function MisionesContent() {
           </p>
           <ul className="space-y-3">
             {day.missions.map((m) => (
-              <MissionCard key={m.id} m={m} busy={busy} onClaim={claim} onReroll={reroll} canReroll rerollLabel={day.rerolls_free_left > 0 ? 'gratis' : `${day.reroll_cost} ☾`} />
+              <MissionCard key={m.id} m={m} mult={day.multiplier} busy={busy} onClaim={claim} onReroll={reroll} canReroll rerollLabel={day.rerolls_free_left > 0 ? 'gratis' : `${day.reroll_cost} ☾`} />
             ))}
           </ul>
         </>
@@ -256,7 +297,7 @@ function MisionesContent() {
           <p className="text-xs text-neutral-500 mb-3">Se renuevan en {countdown(week.ends_at, week.server_now, loadedAt)}{week.multiplier !== 1 && <span className="text-amber-300"> · ¡Lunas x{week.multiplier}!</span>}</p>
           <ul className="space-y-3 mb-5">
             {week.missions.map((m) => (
-              <MissionCard key={m.id} m={m} busy={busy} onClaim={claim} />
+              <MissionCard key={m.id} m={m} mult={week?.multiplier ?? 1} busy={busy} onClaim={claim} />
             ))}
           </ul>
           <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 flex items-center gap-4">

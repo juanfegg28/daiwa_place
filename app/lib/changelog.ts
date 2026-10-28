@@ -15,6 +15,28 @@ export const RELEASE_STAGE: 'beta' | 'stable' = 'stable'
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.5.9',
+    date: '2026-10-27',
+    title: 'Misiones al instante y pantalla que ya no se pega',
+    sections: [
+      {
+        heading: 'Misiones 🎯',
+        items: [
+          'Aviso INSTANTÁNEO: en cuanto haces algo que completa una misión (dar like, comentar, publicar, ver o responder una historia, seguir…) sale un aviso en cualquier pantalla con el nombre de la misión y un botón para reclamarla ahí mismo.',
+          'Reclamar sin problemas: varios toques seguidos cuentan como UNO solo, la misión se marca como reclamada al instante y la lista ya no se queda mostrando «Reclamar» en una misión cobrada (antes podía tardar hasta que recargabas la página).',
+          'Ahora se ve lo que de verdad te van a pagar: en los eventos de «Lunas x2/x3» la recompensa muestra el valor multiplicado (por eso una misión de 15 pagaba 45 y parecía un error). El servidor nunca pagó doble por reclamar varias veces.',
+          'Las misiones del Inicio salen al instante al renovar el feed (se guardan y se actualizan solas en segundo plano) y ya no compiten con la carga de las publicaciones.',
+        ],
+      },
+      {
+        heading: 'Arreglos 🛠️',
+        items: [
+          'Arreglado en celular: al salir de una historia o de un chat, la pantalla a veces quedaba bloqueada y no se podía bajar hasta volver a entrar a la página. Era un bloqueo de scroll que se quedaba pegado (afectaba a historias, chats con teclado, visor de fotos y menú). Ahora el bloqueo se cuenta y se libera solo, y hay una red de seguridad que lo limpia al cambiar de página.',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.5.8',
     date: '2026-10-27',
     title: 'Historias a punto, Misiones en el Inicio y más fluidez',
@@ -784,4 +806,4 @@ export const CHANGELOG: Release[] = [
 
 export const LATEST_RELEASE = CHANGELOG[0]
 // Versión que se muestra en la app. Si un parche pequeño (1.0.x) no lleva notas en el changelog, igual se sube este número a mano.
-export const APP_VERSION = '1.5.8'
+export const APP_VERSION = '1.5.9'
