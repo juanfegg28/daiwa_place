@@ -12,7 +12,7 @@ export default function Toast({ message, onClose, tone = 'ok' }: { message: stri
   return (
     <div
       role="status"
-      className={`fixed left-1/2 -translate-x-1/2 bottom-6 z-[70] max-w-[92vw] px-4 py-2.5 rounded-xl text-sm shadow-xl border ${
+      className={`fixed inset-x-0 mx-auto w-fit bottom-[calc(1.5rem+env(safe-area-inset-bottom,0px))] z-[70] max-w-[92vw] text-center px-4 py-2.5 rounded-xl text-sm shadow-xl border ${
         tone === 'error' ? 'bg-red-950/90 border-red-800 text-red-100' : 'bg-ink-800 border-ink-600 text-neutral-100'
       }`}
     >

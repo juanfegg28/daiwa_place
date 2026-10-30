@@ -3,7 +3,8 @@
 import { useMemo, useState } from 'react'
 import ItemPicker, { btnCls, btnPrimary, inputCls } from './ItemPicker'
 import BannerArt from '../components/shop/BannerArt'
-import { SHOP_THEMES, themeOf } from '../components/shop/shopThemes'
+import { themeOf } from '../components/shop/shopThemes'
+import BannerPicker from './BannerPicker'
 import { adminFeatureDelete, adminFeatureSave, fromLocalInput, slugify, toLocalInput, sellable, type AdminCollection, type AdminFeature, type AdminItem } from '../lib/shopAdmin'
 
 type Draft = { id: string | null; title: string; slug: string; slugTouched: boolean; subtitle: string; cta: string; theme: string; collections: string[]; item_ids: string[]; starts: string; ends: string; is_active: boolean; sort: number }
@@ -62,7 +63,7 @@ export default function SeleccionesPanel({ items, collections, features, reload 
             <label className="text-xs text-neutral-400">Texto del botón<input value={d.cta} maxLength={30} onChange={(e) => up({ cta: e.target.value })} className={`${inputCls} mt-1`} /></label>
             <label className="text-xs text-neutral-400">Orden en el carrusel (menor = primero)<input type="number" value={d.sort} onChange={(e) => up({ sort: Number(e.target.value) || 0 })} className={`${inputCls} mt-1`} /></label>
           </div>
-          <div><p className="text-xs text-neutral-400 mb-1.5">Colores</p><div className="flex flex-wrap gap-2">{SHOP_THEMES.map((th) => <button key={th.id} type="button" onClick={() => up({ theme: th.id })} className={`h-9 px-3 rounded-lg border-2 text-xs font-medium text-white ${d.theme === th.id ? 'border-white' : 'border-transparent opacity-80 hover:opacity-100'}`} style={{ background: `linear-gradient(135deg, ${th.a}, ${th.b} 55%, ${th.c})` }}>{th.label}</button>)}</div></div>
+          <BannerPicker value={d.theme} onChange={(id) => up({ theme: id })} label="Banner de la selección" />
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="text-xs text-neutral-400">Empieza<input type="datetime-local" value={d.starts} onChange={(e) => up({ starts: e.target.value })} className={`${inputCls} mt-1`} /></label>
             <label className="text-xs text-neutral-400">Termina (vacío = sin fecha de fin)<input type="datetime-local" value={d.ends} onChange={(e) => up({ ends: e.target.value })} className={`${inputCls} mt-1`} /></label>

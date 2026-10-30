@@ -1,19 +1,21 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo } from 'react'
+import { useContext, useMemo } from 'react'
 import { ChevronRightIcon } from '../icons'
 import BannerArt from './BannerArt'
 import { Countdown, SalePill } from './ShopBits'
 import { MiniItem } from './ShopItems'
-import { useShop } from './ShopProvider'
+import { ShopContext, useShop } from './ShopProvider'
 import { saleSummary } from './shopUtil'
 import { themeOf } from './shopThemes'
+import NewTag from '../NewTag'
 import { SALE_KIND_LABEL, type ShopSale } from '../../lib/cosmetics'
 
 /** Cabecera ilustrada de una oferta (la usa el banner de la portada y la página de Descuentos) */
 export function SaleHeader({ sale, maxPct, count, compact = false }: { sale: ShopSale; maxPct: number; count: number; compact?: boolean }) {
   const t = themeOf(sale.theme)
+  const isNew = !!useContext(ShopContext)?.freshKeys.has(`s:${sale.id}`)
   return (
     <div className="relative overflow-hidden isolate">
       <BannerArt theme={sale.theme} />
@@ -21,6 +23,7 @@ export function SaleHeader({ sale, maxPct, count, compact = false }: { sale: Sho
       <div className={`relative z-10 ${compact ? 'p-4' : 'p-5 sm:p-6'}`}>
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em]" style={{ background: t.c, color: '#120408' }}>{SALE_KIND_LABEL[sale.kind]}</span>
+          {isNew && <NewTag>Novedad</NewTag>}
           <Countdown to={sale.ends_at} className="text-[11px] text-white/90 rounded-full bg-black/40 px-2 py-1" />
         </div>
         <div className="mt-2 flex flex-wrap items-end justify-between gap-3">

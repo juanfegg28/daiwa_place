@@ -62,7 +62,7 @@ export default function ShopItemCard({ item, me, onOpen, canAfford, equipped, is
       </button>
       {onWish && forSale && !item.owned && (
         <button type="button" onClick={onWish} aria-pressed={!!item.wished} aria-label={item.wished ? `Quitar ${item.name} de mis deseos` : `Agregar ${item.name} a mis deseos`}
-          className={`absolute top-2 right-2 w-8 h-8 rounded-full bg-ink-950/70 backdrop-blur border border-ink-700 inline-flex items-center justify-center transition hover:bg-ink-900 active:scale-90 ${item.wished ? 'text-garnet-400' : 'text-neutral-300 sm:opacity-0 sm:group-hover/card:opacity-100 focus:opacity-100'}`}>
+          className={`absolute top-2 right-2 w-8 h-8 rounded-full bg-ink-950/70 border border-ink-700 inline-flex items-center justify-center transition hover:bg-ink-900 active:scale-90 ${item.wished ? 'text-garnet-400' : 'text-neutral-300 sm:opacity-0 sm:group-hover/card:opacity-100 focus:opacity-100'}`}>
           <HeartIcon className="w-4 h-4" filled={!!item.wished} />
         </button>
       )}

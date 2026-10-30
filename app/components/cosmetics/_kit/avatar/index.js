@@ -17,6 +17,7 @@ import { CRIMSON } from './crimson.js'
 import { EMO } from './emo.js'
 import { HW1 } from './hw1.js'
 import { HW2 } from './hw2.js'
+import { DM1 } from './dm1.js'
 
 export const COLLECTIONS = [
   { id: 'noctis', name: 'Noctis Gótico', theme: 'dark' },
@@ -41,7 +42,8 @@ export const COLLECTIONS = [
   { id: 'barroco', name: 'Barroco Monocromo', theme: 'barroco gris' },
   { id: 'creepy', name: 'Creepypastas', theme: 'creepypasta: sets de ambiente' },
   { id: 'vampiro', name: 'Vampiro Azul', theme: 'vampiro azul' },
+  { id: 'muertos', name: 'Ofrenda de Día de Muertos', theme: 'día de muertos: catrinas, cempasúchil y papel picado' },
   { id: 'miticas', name: 'Míticas', theme: 'no se compran' },
 ]
-export const AVATAR_DECOS = [...NOCTIS, ...VELVET, ...SAKURA, ...MAGICA, ...NEON, ...PIXEL, ...SAMURAI, ...ACADEMIA, ...COSMOS, ...BOSQUE, ...CIELO, ...ORO, ...LOFI, ...CRIMSON, ...EMO, ...HW1, ...HW2, ...MITICAS]
+export const AVATAR_DECOS = [...NOCTIS, ...VELVET, ...SAKURA, ...MAGICA, ...NEON, ...PIXEL, ...SAMURAI, ...ACADEMIA, ...COSMOS, ...BOSQUE, ...CIELO, ...ORO, ...LOFI, ...CRIMSON, ...EMO, ...HW1, ...HW2, ...DM1, ...MITICAS]
 export const decoBySlug = (s) => AVATAR_DECOS.find((d) => d.slug === s)

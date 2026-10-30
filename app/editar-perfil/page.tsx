@@ -219,6 +219,10 @@ function EditProfileForm() {
         estadoPersonal={estadoPersonal}
         avatarPreview={avatarPreview}
         bannerPreview={bannerPreview}
+        identity={identity}
+        identityDetail={identityDetail}
+        identityVisibility={identityVisibility}
+        music={music}
       />
 
       <form onSubmit={handleSave} className="space-y-5">

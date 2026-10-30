@@ -71,10 +71,25 @@ const SEALS: Record<string, () => ReactNode> = {
       <circle cx="32" cy="22" r="4" fill="#4ade80" fillOpacity=".5" />
     </g>
   ),
+  // v1.5.10 · muñeca de porcelana colgada de hilos de marioneta (antes eran solo unas rayitas y un círculo)
   Doll: () => (
-    <g stroke="#e9d5ff" strokeWidth="1.2" fill="none" strokeOpacity=".8">
-      <path d="M10 8c6 4 4 9 10 10M54 6c-6 4-4 9-10 10M30 34c2-5-1-8 3-12" />
-      <circle cx="32" cy="20" r="9" strokeOpacity=".5" />
+    <g>
+      <g stroke="#e9d5ff" strokeOpacity=".55" strokeWidth=".8" strokeLinecap="round">
+        <path d="M16 1h32" strokeWidth="1.6" strokeOpacity=".7" />
+        <path d="M18 1.5 25 14M32 1.5V13M46 1.5 39 14" />
+      </g>
+      <g className={A} style={{ animationName: 'seal-sway', animationDuration: '4.8s', transformOrigin: '32px 2px' }}>
+        <circle cx="32" cy="26" r="13" fill="#3b2447" />
+        <circle cx="32" cy="26.6" r="11.6" fill="#f8efe9" stroke="#d9c4d6" strokeWidth=".9" />
+        <path d="M20.4 25c-1.4-12.6 24.8-12.6 23.2 0-2.6-5-6.6-6.4-11.6-4.4-5-2-9 -.6-11.6 4.4Z" fill="#3b2447" />
+        <g><path d="M20.6 13.2c-4.2-3.4-5.4 3.8-1 3.4 .2 3.2 4.2 1.4 3.4-1.8Z" fill="#f9a8d4" /><circle cx="21.2" cy="14.8" r="1.4" fill="#be5a86" /></g>
+        <ellipse cx="27" cy="27.4" rx="2" ry="2.6" fill="#2a1b3d" /><ellipse cx="37" cy="27.4" rx="2" ry="2.6" fill="#2a1b3d" />
+        <circle cx="27.6" cy="26.4" r=".8" fill="#fff" /><circle cx="37.6" cy="26.4" r=".8" fill="#fff" />
+        <path d="M25.2 25.6l-1.8-.9M38.8 25.6l1.8-.9" stroke="#2a1b3d" strokeWidth=".9" strokeLinecap="round" />
+        <circle cx="23.2" cy="31.4" r="2.3" fill="#f4a3c0" fillOpacity=".55" /><circle cx="40.8" cy="31.4" r="2.3" fill="#f4a3c0" fillOpacity=".55" />
+        <path d="M29.8 33.6q2.2 1.7 4.4 0" fill="none" stroke="#c0577a" strokeWidth="1" strokeLinecap="round" />
+        <path d="M42.6 22.4l-1.6 2.6 1.8 1.8-1.2 2.4" fill="none" stroke="#8d7a9e" strokeWidth=".8" strokeLinecap="round" strokeLinejoin="round" />
+      </g>
     </g>
   ),
   Estrella: () => <g color="#fde047" className={A} style={{ animationName: 'seal-breathe', transformOrigin: '32px 22px' }}><path d="M32 8l4.2 9 9.8 1.2-7.2 6.8 1.9 9.7L32 29.8 23.3 34.7l1.9-9.7L18 18.2 27.8 17Z" fill="currentColor" /></g>,

@@ -5,6 +5,7 @@
 //   • Uso: const h = startEntry(effect, canvas, {paletteId, loop:true}); h.stop()
 import { rng } from '../core/util.js'
 import { makePalette, mix, lt, dk, rot } from '../core/color.js'
+import { flagD } from '../avatar/dmArt.js'
 
 const TAU = Math.PI * 2
 const heart = (c, s) => { c.beginPath(); c.moveTo(0, s * 0.92); c.bezierCurveTo(-s * 1.15, s * 0.1, -s, -s * 0.95, -s * 0.46, -s * 0.95); c.bezierCurveTo(-s * 0.2, -s * 0.95, 0, -s * 0.72, 0, -s * 0.46); c.bezierCurveTo(0, -s * 0.72, s * 0.2, -s * 0.95, s * 0.46, -s * 0.95); c.bezierCurveTo(s, -s * 0.95, s * 1.15, s * 0.1, 0, s * 0.92); c.closePath() }
@@ -288,6 +289,65 @@ def({
     const fog = system({ rate: 6, ambient: 1.4, max: 22, spawn: (R, e) => ({ x: A(-20, e.W + 20, R), y: A(e.H * 0.3, e.H + 20, R), r: A(50, 100, R), vx: A(-16, 16, R), vy: A(-14, -4, R), a: A(0.12, 0.26, R) }), step: (p, dt, t, e) => { p.x += p.vx * dt; p.y += p.vy * dt; return p.y > -80 }, draw: (c, p, e) => puff(c, p.x, p.y, p.r, e.P.d1, p.a) })(env)
     const stars = system({ rate: 9, ambient: 2, max: 34, spawn: (R, e) => ({ x: A(10, e.W - 10, R), y: e.H + 12, s: A(5, 12, R), vy: A(-60, -26, R), ph: A(0, 6, R), r: A(0, 6, R), vr: A(-1.2, 1.2, R), tw: R() < 0.4 }), step: (p, dt, t, e) => { p.y += p.vy * dt; p.x += Math.sin(t * 1.3 + p.ph) * 14 * dt; p.r += p.vr * dt; return p.y > -20 }, draw: (c, p, e, t) => { c.save(); c.translate(p.x, p.y); c.rotate(p.r); c.shadowColor = e.P.d1; c.shadowBlur = 8; c.strokeStyle = e.P.d3; c.lineWidth = 1.6; c.lineJoin = 'round'; if (p.tw) { c.fillStyle = e.P.d3; c.globalAlpha = 0.5 + 0.5 * Math.sin(t * 5 + p.ph); star(c, 4, p.s, p.s * 0.2); c.fill() } else { star(c, 5, p.s, p.s * 0.42); c.stroke() } c.restore(); c.globalAlpha = 1 } })(env)
     return { update(dt, t) { fog.update(dt, t); stars.update(dt, t) }, draw(c, t) { fog.draw(c, t); stars.draw(c, t); c.strokeStyle = env.P.d3; c.globalAlpha = 0.3; c.lineWidth = 1; c.save(); c.translate(env.W / 2, env.H * 0.45); c.rotate(-0.25); c.beginPath(); c.ellipse(0, 0, env.W * 0.48, env.H * 0.14, 0, 0, TAU); c.stroke(); c.restore(); c.globalAlpha = 1 } }
+  },
+})
+
+
+// ───────── Día de Muertos (1.5.10) — colores: cempasúchil · magenta · morado · turquesa (mismos ids que las decoraciones)
+const DM4 = P4([['cempasuchil', 'Cempasúchil', '#FF9A1F', '#140A06', '#FFD27A', '#E0307A'], ['magenta', 'Magenta', '#E0307A', '#14060E', '#FFB3D4', '#FFB020'], ['morado', 'Morado noche', '#9A5CFF', '#0C0818', '#E0CCFF', '#FF9A1F'], ['turquesa', 'Turquesa', '#2EC4C0', '#04100F', '#BFF5F0', '#FF8A3D']])
+const FLAGS = {}
+const flagPath = (v) => FLAGS[v] || (FLAGS[v] = new Path2D(flagD(v)))
+// pétalo redondo de cempasúchil
+const mgPetal = (c, s) => { c.beginPath(); c.moveTo(0, 0); c.bezierCurveTo(-s * 0.9, -s * 0.3, -s * 0.85, -s * 1.05, 0, -s * 1.1); c.bezierCurveTo(s * 0.85, -s * 1.05, s * 0.9, -s * 0.3, 0, 0); c.closePath() }
+// flor plana de cempasúchil (cabeza)
+const mgHead = (c, r, col, edge) => { c.fillStyle = edge; c.beginPath(); c.arc(0, 0, r, 0, TAU); c.fill(); for (const [n, rr, pr, k] of [[12, 0.72, 0.32, 0], [9, 0.46, 0.27, 0.18], [6, 0.24, 0.2, 0.5]]) { c.fillStyle = mix(col, '#FFF1B8', k); for (let i = 0; i < n; i++) { const a = (i / n) * TAU + k; c.beginPath(); c.arc(Math.cos(a) * r * rr, Math.sin(a) * r * rr, r * pr, 0, TAU); c.fill() } } }
+// monarca: wing = aleteo 0..1
+const monarchDraw = (c, s, wing, col, ink) => {
+  c.save(); c.scale(s, s); c.lineJoin = 'round'
+  for (const sg of [1, -1]) {
+    c.save(); c.scale(sg * Math.max(0.18, wing), 1)
+    c.fillStyle = col; c.strokeStyle = ink; c.lineWidth = 1.5
+    c.beginPath(); c.moveTo(1, 1); c.bezierCurveTo(10, 1, 23, 2, 26, 8); c.bezierCurveTo(28, 15, 20, 20, 12, 17); c.bezierCurveTo(6, 14, 2, 8, 1, 3); c.closePath(); c.fill(); c.stroke()
+    c.beginPath(); c.moveTo(1, -3); c.bezierCurveTo(4, -15, 20, -25, 32, -17); c.bezierCurveTo(37, -12, 33, -4, 25, -1); c.bezierCurveTo(17, 2, 8, 2, 1, 1); c.closePath(); c.fill(); c.stroke()
+    c.strokeStyle = ink; c.lineWidth = 1; c.beginPath(); c.moveTo(2, -1); c.lineTo(28, -14); c.moveTo(3, 1); c.lineTo(22, 12); c.moveTo(3, -2); c.lineTo(18, -9); c.stroke()
+    c.fillStyle = '#fff6df'; for (const [x, y] of [[28, -11], [31, -15], [22, -19], [24, 11], [19, 15]]) { c.beginPath(); c.arc(x, y, 1.3, 0, TAU); c.fill() }
+    c.restore()
+  }
+  c.fillStyle = ink; c.beginPath(); c.ellipse(0, 3, 1.8, 9, 0, 0, TAU); c.fill(); c.beginPath(); c.arc(0, -7, 2.3, 0, TAU); c.fill()
+  c.restore()
+}
+
+def({
+  slug: 'lluvia-de-papel-picado', name: 'Lluvia de papel picado', rarity: 'comun', price: 900, dur: 4.5, tint: 0, coll: 'muertos', palettes: DM4,
+  create: system({ rate: 0, ambient: 0, burst: 46, intro: 4,
+    spawn: (R, e, t, i) => { const F = [e.P.d1, e.P.d4, e.P.rot(e.P.d1, 150), e.P.rot(e.P.d4, 140), e.P.rot(e.P.d1, -75), e.P.lt(e.P.d3, 0.15)]; return { x: A(0, e.W, R), y: A(-60, -8, R), vy: A(26, 60, R), r: A(-0.6, 0.6, R), ph: A(0, 6, R), s: A(0.7, 1.35, R), v: i % 3, c: F[i % 6], d: A(0, 1.6, R) } },
+    step: (p, dt, t, e) => { if (t < p.d) return true; p.y += Math.min(p.vy + (t - p.d) * 12, 70) * dt; p.x += Math.sin(t * 1.7 + p.ph) * 28 * dt; p.r = Math.sin(t * 2.2 + p.ph) * 0.7; return p.y < e.H + 30 },
+    draw: (c, p, e, t) => { if (t < p.d) return; c.save(); c.translate(p.x, p.y); c.rotate(p.r); c.scale(p.s, p.s * (0.8 + 0.2 * Math.cos(t * 3 + p.ph))); c.fillStyle = p.c; c.fill(flagPath(p.v), 'evenodd'); c.strokeStyle = 'rgba(0,0,0,.28)'; c.lineWidth = 0.6; c.stroke(flagPath(p.v)); c.restore() } }),
+})
+def({
+  slug: 'petalos-de-cempasuchil', name: 'Pétalos de cempasúchil', rarity: 'raro', price: 1700, dur: 0, tint: 0.1, coll: 'muertos', palettes: DM4,
+  create: system({ rate: 22, ambient: 5, max: 64,
+    spawn: (R, e) => ({ x: A(-10, e.W + 10, R), y: A(-16, -4, R), s: A(5, 10, R), vy: A(26, 64, R), vx: A(-10, 14, R), ph: A(0, 6, R), r: A(0, 6, R), vr: A(-2.2, 2.2, R), k: R(), head: R() < 0.12 }),
+    step: (p, dt, t, e) => { p.y += p.vy * dt; p.x += (p.vx + Math.sin(t * 1.6 + p.ph) * 22) * dt; p.r += p.vr * dt; return p.y < e.H + 20 },
+    draw: (c, p, e, t) => { c.save(); c.translate(p.x, p.y); c.rotate(p.r); const flip = Math.cos(t * 3 + p.ph); c.scale(1, 0.35 + 0.65 * Math.abs(flip)); if (p.head) { mgHead(c, p.s * 1.3, e.P.d1, e.P.dk(e.P.d1, 0.55)) } else { c.fillStyle = [e.P.d1, e.P.mix(e.P.d1, e.P.d3, 0.35), e.P.lt(e.P.d1, 0.1)][Math.floor(p.k * 3)]; mgPetal(c, p.s); c.fill(); c.strokeStyle = e.P.dk(e.P.d1, 0.5); c.globalAlpha = 0.5; c.lineWidth = 0.8; c.stroke(); c.globalAlpha = 1 } c.restore() } }),
+})
+def({
+  slug: 'luces-de-velas', name: 'Luces de velas', rarity: 'raro', price: 1800, dur: 0, tint: 0.14, coll: 'muertos', palettes: DM4,
+  create: system({ rate: 12, ambient: 4, max: 34,
+    spawn: (R, e) => ({ x: A(8, e.W - 8, R), y: e.H + 12, s: A(5, 10, R), vy: A(18, 46, R), ph: A(0, 6, R), life: 0, ttl: A(5, 9, R) }),
+    step: (p, dt, t, e) => { p.life += dt; p.y -= p.vy * dt; p.x += Math.sin(t * 1.1 + p.ph) * 14 * dt; return p.life < p.ttl && p.y > -20 },
+    draw: (c, p, e) => { const k = Math.min(1, p.life / 0.8) * Math.min(1, (p.ttl - p.life) / 1.2), fl = 0.75 + 0.25 * Math.sin(p.life * 11 + p.ph), s = p.s; c.globalCompositeOperation = 'lighter'; glow(c, p.x, p.y, s * 5.5, e.P.d1, 0.5 * k * fl); c.globalCompositeOperation = 'source-over'; c.save(); c.translate(p.x, p.y); c.rotate(Math.sin(p.life * 7 + p.ph) * 0.08); c.globalAlpha = k; c.fillStyle = e.P.d1; c.beginPath(); c.moveTo(0, -s * 1.3); c.bezierCurveTo(s * 0.9, -s * 0.5, s * 0.9, s * 0.2, 0, s * 0.5); c.bezierCurveTo(-s * 0.9, s * 0.2, -s * 0.9, -s * 0.5, 0, -s * 1.3); c.fill(); c.fillStyle = '#fffbe2'; c.beginPath(); c.moveTo(0, -s * 0.6); c.bezierCurveTo(s * 0.4, -s * 0.2, s * 0.4, s * 0.15, 0, s * 0.3); c.bezierCurveTo(-s * 0.4, s * 0.15, -s * 0.4, -s * 0.2, 0, -s * 0.6); c.fill(); c.restore(); c.globalAlpha = 1 } }),
+})
+def({
+  slug: 'vuelo-de-monarcas', name: 'Vuelo de monarcas', rarity: 'epico', price: 3200, dur: 5, tint: 0.12, coll: 'muertos', palettes: DM4,
+  create: (env) => {
+    const R = env.R, N = 10
+    const fl = Array.from({ length: N }, (_, i) => ({ x: A(-60, env.W * 0.4, R) - i * 30, y: env.H * A(0.15, 0.95, R), sp: A(40, 90, R), ph: A(0, 6, R), s: A(0.45, 0.95, R), w: A(7, 12, R), bob: A(10, 26, R), d: i * 0.28 }))
+    const dust = system({ rate: 10, ambient: 2, max: 30, spawn: (R2, e) => ({ x: A(0, e.W, R2), y: A(0, e.H, R2), r: A(1, 2.4, R2), life: 0, ttl: A(2, 4, R2), ph: A(0, 6, R2) }), step: (p, dt) => { p.life += dt; p.y -= 6 * dt; return p.life < p.ttl }, draw: (c, p, e) => { const k = Math.sin((p.life / p.ttl) * Math.PI); c.globalCompositeOperation = 'lighter'; glow(c, p.x, p.y, p.r * 4, e.P.d3, 0.5 * k); c.globalCompositeOperation = 'source-over' } })(env)
+    return {
+      update(dt, t) { dust.update(dt, t); for (const m of fl) { if (t < m.d) continue; m.x += m.sp * dt; m.y -= Math.sin(t * 0.9 + m.ph) * 6 * dt; if (m.x > env.W + 60) { m.x = -60; m.y = env.H * A(0.15, 0.95, R) } } },
+      draw(c, t) { dust.draw(c, t); for (const m of fl) { if (t < m.d) continue; c.save(); c.translate(m.x, m.y + Math.sin(t * 1.6 + m.ph) * m.bob * 0.4); c.rotate(-0.22 + Math.sin(t * 1.2 + m.ph) * 0.12); c.globalAlpha = Math.min(1, (t - m.d) / 0.6); c.shadowColor = env.P.d1; c.shadowBlur = 10; monarchDraw(c, m.s, 0.45 + 0.55 * Math.abs(Math.sin(t * m.w + m.ph)), env.P.d1, '#160b07'); c.restore() } },
+    }
   },
 })
 

@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import ItemPicker, { btnCls, btnPrimary, inputCls } from './ItemPicker'
 import { SaleHeader } from '../components/shop/SaleBanner'
-import { SHOP_THEMES } from '../components/shop/shopThemes'
+import BannerPicker from './BannerPicker'
 import { SALE_KIND_LABEL, TYPE_LABEL, type ShopSale } from '../lib/cosmetics'
 import { formatNumber } from '../lib/economy'
 import {
@@ -138,10 +138,7 @@ function Editor({ draft: d, setDraft, items, byId, collections, busy, onSave, on
           <p className="text-xs text-neutral-400 mb-1.5">Tipo (cambia la etiqueta y propone una duración)</p>
           <div className="flex flex-wrap gap-2">{(Object.keys(SALE_KIND_LABEL) as AdminSale['kind'][]).map((k) => <button key={k} type="button" onClick={() => setKind(k)} className={`rounded-full border px-3 py-1 text-sm ${d.kind === k ? 'bg-garnet-600 border-garnet-500 text-white' : 'bg-ink-800 border-ink-700 text-neutral-300 hover:bg-ink-700'}`}>{SALE_KIND_LABEL[k]}</button>)}</div>
         </div>
-        <div>
-          <p className="text-xs text-neutral-400 mb-1.5">Colores del banner</p>
-          <div className="flex flex-wrap gap-2">{SHOP_THEMES.map((t) => <button key={t.id} type="button" onClick={() => up({ theme: t.id })} aria-label={t.label} title={t.label} className={`h-9 px-3 rounded-lg border-2 text-xs font-medium text-white ${d.theme === t.id ? 'border-white' : 'border-transparent opacity-80 hover:opacity-100'}`} style={{ background: `linear-gradient(135deg, ${t.a}, ${t.b} 55%, ${t.c})` }}>{t.label}</button>)}</div>
-        </div>
+        <BannerPicker value={d.theme} onChange={(id) => up({ theme: id })} label="Banner de la oferta" />
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="text-xs text-neutral-400">Empieza
             {d.id ? <input type="datetime-local" value={d.starts} onChange={(e) => up({ starts: e.target.value })} className={`${inputCls} mt-1`} /> : (

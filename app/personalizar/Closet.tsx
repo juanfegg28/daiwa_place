@@ -107,18 +107,46 @@ function useIsDesktop(): boolean {
   )
 }
 
+/** v1.5.10 · tamaño de las prendas: «Grande» (por defecto) o «Compacta»; se recuerda en este navegador */
+type Density = 'grande' | 'compacta'
+function useDensity(): [Density, (d: Density) => void] {
+  const [d, setD] = useState<Density>('grande')
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      try {
+        if (window.localStorage.getItem('daiwa_closet_density') === 'compacta') setD('compacta')
+      } catch {
+        /* sin almacenamiento */
+      }
+    }, 0)
+    return () => window.clearTimeout(t)
+  }, [])
+  const set = (v: Density) => {
+    setD(v)
+    try {
+      window.localStorage.setItem('daiwa_closet_density', v)
+    } catch {
+      /* sin almacenamiento */
+    }
+  }
+  return [d, set]
+}
+
 /** Altura real de un elemento fijo (para dejar ese espacio libre al final de la página) */
-function useHeight(ref: React.RefObject<HTMLElement | null>): number {
+function useHeight(ref: React.RefObject<HTMLElement | null>, paused?: React.RefObject<boolean>): number {
   const [h, setH] = useState(120)
   useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
-    const read = () => setH(el.offsetHeight)
+    const read = () => {
+      if (paused?.current) return // mientras arrastras el cajón no se recalcula nada (así no se traba)
+      setH(el.offsetHeight)
+    }
     read()
     const ro = new ResizeObserver(read)
     ro.observe(el)
     return () => ro.disconnect()
-  }, [ref])
+  }, [ref, paused])
   return h
 }
 
@@ -190,21 +218,22 @@ function ColorBody({ draft, onDraft, cardMode }: { draft: Draft; onDraft: (p: Pa
 }
 
 // ───────── Una prenda del clóset ─────────
-function Tile({ i, on, worn, me, balance, locked, onPick }: { i: CatalogItem; on: boolean; worn: boolean; me: PreviewSubject; balance: number; locked: boolean; onPick: (i: CatalogItem) => void }) {
+function Tile({ i, on, worn, me, balance, locked, onPick, minH }: { i: CatalogItem; on: boolean; worn: boolean; me: PreviewSubject; balance: number; locked: boolean; onPick: (i: CatalogItem) => void; minH: number }) {
   // quieta; con el cursor encima se anima (PC). En celular se anima la prenda elegida (una sola a la vez).
   const { playing, bind } = useHoverPlay(on)
   const rar = RARITY_STYLE[i.rarity].split(' ')[0]
   return (
     <button type="button" onClick={() => onPick(i)} aria-pressed={on} aria-label={`${i.name}${i.owned ? ', tuyo' : ''}${worn ? ', puesto' : ''}`} {...bind}
+      style={{ contentVisibility: 'auto', containIntrinsicSize: `auto ${minH + 52}px` }}
       className={`group relative rounded-2xl border text-left overflow-hidden bg-ink-900/70 transition ${on ? 'border-garnet-400 ring-2 ring-garnet-400/50' : `${rar} hover:brightness-125`}`}>
-      <div className="relative min-h-[112px] bg-ink-950/60 flex items-center justify-center overflow-hidden">
+      <div className="relative bg-ink-950/60 flex items-center justify-center overflow-hidden" style={{ minHeight: minH }}>
         <ItemPreview type={i.type} slug={i.slug} me={me} compact lazy playing={playing} />
         {worn && <span className="absolute top-1.5 left-1.5 rounded-full bg-emerald-500/90 text-ink-950 text-[9px] font-bold px-1.5 py-0.5">Puesto</span>}
         {on && <span className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-garnet-500 text-white text-[11px] font-bold flex items-center justify-center" aria-hidden="true">✓</span>}
       </div>
       <div className="px-2 pt-1.5 pb-2">
-        <p className="text-[11.5px] leading-tight text-neutral-100 font-medium truncate">{i.name}</p>
-        <p className="text-[10px] mt-0.5 tabular-nums truncate">
+        <p className="text-[12.5px] leading-tight text-neutral-100 font-medium truncate">{i.name}</p>
+        <p className="text-[11px] mt-0.5 tabular-nums truncate">
           {locked ? <span className="text-fuchsia-300">Lo que viene</span>
             : i.owned ? <span className="text-emerald-400">Tuyo</span>
             : i.price > 0 ? <span className={i.price <= balance ? 'text-amber-300' : 'text-neutral-500'}>{formatNumber(i.price)} ☾</span>
@@ -244,6 +273,7 @@ function ClosetBody({ tab, items, look, savedLook, me, balance, lockedIds, onPic
   const [sub, setSub] = useState<'efecto' | 'fuente'>('efecto')
   const [view, setView] = useState<'mio' | 'probar'>('mio')
   const [coll, setColl] = useState('')
+  const [density, setDensity] = useDensity()
   const type: CosmeticType = tab === 'nombre' && sub === 'fuente' ? 'font' : slot.type
 
   const list = useMemo(
@@ -257,6 +287,24 @@ function ClosetBody({ tab, items, look, savedLook, me, balance, lockedIds, onPic
   const base = effView === 'mio' ? mine : rest
   const colls = useMemo(() => [...new Set(base.map((i) => i.collection).filter(Boolean))], [base])
   const shown = useMemo(() => (coll ? base.filter((i) => i.collection === coll) : base), [base, coll])
+
+  // v1.5.10 · las prendas se pintan por lotes (antes todas a la vez: era lo que trababa el celular)
+  const sig = `${type}|${effView}|${coll}`
+  const [lot, setLot] = useState({ sig, n: 18 })
+  const count = lot.sig === sig ? lot.n : 18
+  const sentinel = useRef<HTMLDivElement>(null)
+  const more = () => setLot({ sig, n: count + 18 })
+  useEffect(() => {
+    const el = sentinel.current
+    if (!el || typeof IntersectionObserver === 'undefined') return
+    const io = new IntersectionObserver((e) => { if (e[0]?.isIntersecting) setLot((v) => ({ sig, n: (v.sig === sig ? v.n : 18) + 18 })) }, { rootMargin: '300px' })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [sig, shown.length, count])
+  const wide = tab === 'tarjeta' || tab === 'fondo'
+  const big = density === 'grande'
+  const minCol = big ? (wide ? 160 : 138) : wide ? 130 : 100
+  const minH = big ? (wide ? 150 : 132) : wide ? 116 : 100
 
   const curSlug = type === 'font' ? (look.font ?? 'clasica') : (look[slot.key] as Equip | null)?.id
   const curEq = type === 'font' ? null : (look[slot.key] as Equip | null)
@@ -308,6 +356,7 @@ function ClosetBody({ tab, items, look, savedLook, me, balance, lockedIds, onPic
       <div className="flex flex-wrap items-center gap-2 mb-3">
         <Segmented value={effView} onChange={(v) => { setView(v); setColl('') }}
           options={[{ id: 'mio', label: `Lo mío (${mine.length})` }, { id: 'probar', label: `Para probar (${rest.length})` }]} />
+        <span className="ml-auto"><Segmented value={density} onChange={setDensity} options={[{ id: 'grande', label: 'Grande' }, { id: 'compacta', label: 'Compacta' }]} /></span>
         {colls.length > 1 && (
           <select value={coll} onChange={(e) => setColl(e.target.value)} aria-label="Colección" className="rounded-full bg-ink-800 border border-ink-700 text-neutral-200 text-xs px-3 py-1.5 max-w-[10.5rem]">
             <option value="">Todas las colecciones</option>
@@ -319,11 +368,18 @@ function ClosetBody({ tab, items, look, savedLook, me, balance, lockedIds, onPic
       {shown.length === 0 ? (
         <p className="text-sm text-neutral-500 py-6 text-center">{list.length === 0 ? 'Todavía no hay nada de esto.' : effView === 'mio' ? 'Aquí todavía no tienes nada. Mira «Para probar» o pásate por la tienda.' : 'No hay nada con ese filtro.'}</p>
       ) : (
-        <div className="grid grid-cols-3 gap-2">
-          {shown.map((i) => (
-            <Tile key={i.id} i={i} on={curSlug === i.slug} worn={savedSlug === i.slug && !!savedSlug && savedSlug !== 'clasica'} me={me} balance={balance} locked={lockedIds.has(i.id)} onPick={(it) => onPick(it)} />
-          ))}
-        </div>
+        <>
+          <div className="grid gap-2.5" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${minCol}px), 1fr))` }}>
+            {shown.slice(0, count).map((i) => (
+              <Tile key={i.id} i={i} minH={minH} on={curSlug === i.slug} worn={savedSlug === i.slug && !!savedSlug && savedSlug !== 'clasica'} me={me} balance={balance} locked={lockedIds.has(i.id)} onPick={(it) => onPick(it)} />
+            ))}
+          </div>
+          {shown.length > count && (
+            <div ref={sentinel} className="pt-3 text-center">
+              <button type="button" onClick={more} className="press rounded-full border border-ink-600 px-4 py-2 text-xs text-neutral-300 hover:bg-ink-800 transition">Ver más ({shown.length - count})</button>
+            </div>
+          )}
+        </>
       )}
       {effView === 'probar' && <p className="text-[11px] text-neutral-600 mt-3">Tocar algo que no es tuyo lo prueba sin gastar nada.</p>}
     </div>
@@ -345,7 +401,7 @@ function Drawers({ tab, onTab, look, draft, trying }: { tab: Tab; onTab: (t: Tab
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     // el cajón elegido siempre queda a la vista en la fila deslizable del celular
-    ref.current?.querySelector<HTMLElement>('[aria-selected="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' })
+    ref.current?.querySelector<HTMLElement>('[aria-selected="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'auto' })
   }, [tab])
   return (
     <div ref={ref} role="tablist" aria-label="Cajones del clóset" className="flex lg:grid lg:grid-cols-7 gap-1.5 overflow-x-auto lg:overflow-visible pb-1 -mx-1 px-1 snap-x [scrollbar-width:none]">
@@ -436,7 +492,7 @@ function ActionBar({ p }: { p: ClosetViewProps }) {
   const { trying, tryBuy, tryLocked, balance, busy, dirty } = p
   return (
     <div className="px-3 sm:px-4 py-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom,0px))]">
-      <div className="max-w-5xl mx-auto flex flex-wrap items-center gap-x-3 gap-y-2">
+      <div className="max-w-[1500px] mx-auto flex flex-wrap items-center gap-x-3 gap-y-2">
         {trying.length > 0 ? (
           <>
             <p className="text-sm text-neutral-200 flex-1 min-w-[10rem]">
@@ -465,28 +521,73 @@ function ActionBar({ p }: { p: ClosetViewProps }) {
 }
 
 // ───────── Todo junto ─────────
+type Snap = 'min' | 'half' | 'full'
 export default function ClosetView(p: ClosetViewProps) {
   const desktop = useIsDesktop()
-  const [open, setOpen] = useState(true)
+  // v1.5.10 · el cajón del celular se ARRASTRA (cerrado · mitad · alto) en vez de solo abrir y cerrar con un toque
+  const [snap, setSnap] = useState<Snap>('half')
+  const [vh, setVh] = useState(720)
+  useEffect(() => {
+    const read = () => setVh(window.innerHeight)
+    const t = window.setTimeout(read, 0)
+    window.addEventListener('resize', read)
+    return () => {
+      window.clearTimeout(t)
+      window.removeEventListener('resize', read)
+    }
+  }, [])
+  const H: Record<Snap, number> = { min: 0, half: Math.min(Math.round(vh * 0.36), 340), full: Math.round(vh * 0.66) }
   const dockRef = useRef<HTMLDivElement>(null)
-  const dockH = useHeight(dockRef)
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const dragging = useRef(false)
+  const drag0 = useRef({ y: 0, h: 0, t: 0 })
+  const dockH = useHeight(dockRef, dragging)
   const cardMode = !!p.look.card
 
   const selectTab = (t: Tab) => {
     p.onTab(t)
-    setOpen(true)
+    setSnap((s) => (s === 'min' ? 'half' : s))
+  }
+  const onDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    dragging.current = true
+    drag0.current = { y: e.clientY, h: bodyRef.current?.offsetHeight ?? 0, t: performance.now() }
+    e.currentTarget.setPointerCapture(e.pointerId)
+    if (bodyRef.current) bodyRef.current.style.transition = 'none'
+  }
+  const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragging.current || !bodyRef.current) return
+    const h = Math.max(0, Math.min(H.full, drag0.current.h - (e.clientY - drag0.current.y)))
+    bodyRef.current.style.height = `${h}px`
+  }
+  const onUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragging.current) return
+    dragging.current = false
+    const el = bodyRef.current
+    if (!el) return
+    el.style.transition = ''
+    const moved = Math.abs(e.clientY - drag0.current.y)
+    let target: Snap
+    if (moved < 6) {
+      target = snap === 'min' ? 'half' : 'min' // un toque abre o cierra
+    } else {
+      const vel = (drag0.current.y - e.clientY) / Math.max(1, performance.now() - drag0.current.t) // px/ms, positivo = hacia arriba
+      const want = el.offsetHeight + vel * 160
+      target = (['min', 'half', 'full'] as Snap[]).reduce((best, k) => (Math.abs(H[k] - want) < Math.abs(H[best] - want) ? k : best), 'half' as Snap)
+    }
+    el.style.height = `${H[target]}px`
+    setSnap(target)
   }
   const body = p.tab === 'color'
     ? <ColorBody draft={p.draft} onDraft={p.onDraft} cardMode={cardMode} />
     : <ClosetBody key={p.tab} tab={p.tab} items={p.items} look={p.look} savedLook={p.savedLook} me={p.me} balance={p.balance} lockedIds={p.lockedIds} onPick={p.onPick} onClear={p.onClear} />
 
   return (
-    <div className="max-w-5xl mx-auto px-3 sm:px-4 pt-5" style={{ paddingBottom: desktop ? 112 : dockH + 20 }}>
+    <div className="max-w-[1500px] mx-auto px-3 sm:px-5 pt-5" style={{ paddingBottom: desktop ? 112 : dockH + 20 }}>
       <MoonRain show={p.rain} onDone={p.onRainDone} />
       <div className="flex items-end justify-between gap-3 mb-4">
         <div>
-          <h1 className="font-display text-2xl font-semibold text-neutral-50 leading-tight">Mi clóset</h1>
-          <p className="text-xs text-neutral-500">Elige, pruébate y guarda. Lo guardado lo ve todo el mundo en tu perfil.</p>
+          <h1 className="font-display text-2xl sm:text-3xl font-semibold text-neutral-50 leading-tight">Mi clóset</h1>
+          <p className="text-xs sm:text-sm text-neutral-500">Elige, pruébate y guarda. Lo guardado lo ve todo el mundo en tu perfil.</p>
         </div>
         {p.links !== false && (
           <div className="flex items-center gap-4 text-sm shrink-0">
@@ -496,28 +597,35 @@ export default function ClosetView(p: ClosetViewProps) {
         )}
       </div>
 
-      <div className="grid lg:grid-cols-[minmax(0,1fr)_400px] gap-5 items-start">
-        <Stage props={p} />
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(440px,38%)] xl:grid-cols-[minmax(0,1fr)_580px] gap-5 xl:gap-7 items-start">
+        <div className="min-w-0 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-8.5rem)] lg:overflow-y-auto lg:rounded-2xl [scrollbar-width:thin]">
+          <Stage props={p} />
+        </div>
 
-        {/* PC: el clóset es una columna fija a la derecha */}
+        {/* PC: el clóset es una columna fija a la derecha, más ancha para que las prendas se vean grandes */}
         {desktop && (
-          <aside className="min-w-0 rounded-2xl border border-ink-700 bg-ink-900/50 p-3.5 lg:sticky lg:top-4 flex flex-col max-h-[calc(100dvh-8.5rem)]" aria-label="Clóset">
+          <aside className="min-w-0 rounded-2xl border border-ink-700 bg-ink-900/50 p-4 lg:sticky lg:top-4 flex flex-col max-h-[calc(100dvh-8.5rem)]" aria-label="Clóset">
             <Drawers tab={p.tab} onTab={p.onTab} look={p.look} draft={p.draft} trying={p.trying} />
             <div className="mt-3 overflow-y-auto pr-1 -mr-1 min-h-0">{body}</div>
           </aside>
         )}
       </div>
 
-      {/* Fijo abajo: en celular lleva el cajón del clóset; en todos, probador y guardar */}
-      <div ref={dockRef} className="fixed inset-x-0 bottom-0 z-40 border-t border-ink-700 bg-ink-950/95 backdrop-blur">
+      {/* Fijo abajo: en celular lleva el cajón del clóset; en todos, probador y guardar (sin blur: el blur fijo es pesado en celular) */}
+      <div ref={dockRef} className="fixed inset-x-0 bottom-0 z-40 border-t border-ink-700 bg-ink-950">
         {!desktop && (
           <div aria-label="Clóset">
-            <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} aria-label={open ? 'Cerrar el clóset' : 'Abrir el clóset'} className="w-full flex items-center justify-center pt-1.5 pb-0.5">
-              <span className="block w-10 h-1 rounded-full bg-ink-600" />
-              <span className="sr-only">{open ? 'Cerrar el clóset' : 'Abrir el clóset'}</span>
-            </button>
+            <div
+              role="separator" aria-orientation="horizontal" aria-label={snap === 'min' ? 'Abrir el clóset (o arrástralo hacia arriba)' : 'Cerrar el clóset (o arrástralo hacia abajo)'}
+              onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
+              className="flex items-center justify-center pt-2.5 pb-2 cursor-grab active:cursor-grabbing select-none" style={{ touchAction: 'none' }}
+            >
+              <span className="block w-12 h-1.5 rounded-full bg-ink-500" />
+            </div>
             <div className="px-3 pb-2"><Drawers tab={p.tab} onTab={selectTab} look={p.look} draft={p.draft} trying={p.trying} /></div>
-            {open && <div className="px-3 pb-3 overflow-y-auto overscroll-contain h-[min(42dvh,400px)] border-t border-ink-800 pt-3">{body}</div>}
+            <div ref={bodyRef} className="px-3 overflow-y-auto overscroll-contain border-t border-ink-800 transition-[height] duration-200 ease-out" style={{ height: H[snap], paddingTop: snap === 'min' ? 0 : 12, paddingBottom: snap === 'min' ? 0 : 12, borderTopWidth: snap === 'min' ? 0 : 1 }}>
+              {body}
+            </div>
           </div>
         )}
         <div className="border-t border-ink-800"><ActionBar p={p} /></div>

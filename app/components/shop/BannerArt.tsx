@@ -1,7 +1,8 @@
 'use client'
 
-import { memo } from 'react'
+import { memo, useId } from 'react'
 import { themeOf } from './shopThemes'
+import { Aurora, Atardecer, Bosque, Cosmos, Invierno, Muertos, Neon, Otono, Oceano, Sakura, Velvet } from './BannerScenes'
 
 // Posiciones fijas (nada de Math.random: el dibujo es idéntico en cada render y no parpadea)
 const STARS: [number, number, number][] = [[60, 40, 2], [140, 90, 1.5], [230, 30, 2.2], [330, 70, 1.4], [420, 28, 1.8], [510, 85, 1.3], [610, 36, 2], [700, 66, 1.5], [790, 24, 1.8], [980, 50, 2.2], [1070, 92, 1.4], [1150, 34, 2], [900, 110, 1.3], [380, 130, 1.2], [1110, 150, 1.6]]
@@ -93,9 +94,26 @@ function Generic({ id }: { id: string }) {
   )
 }
 
-/** Fondo ilustrado de los banners. Halloween es una escena propia; el resto, degradados con detalles suaves. */
+/** Fondo ilustrado de los banners. Cada tema trae su escena (Halloween, Día de Muertos, Sakura, Aurora…); el resto, degradados con detalles suaves. */
 const BannerArt = memo(function BannerArt({ theme }: { theme: string }) {
   const c = themeOf(theme)
-  return <div className="absolute inset-0 overflow-hidden" style={{ background: c.a }}>{c.id === 'halloween' ? <Halloween c={c} /> : <Generic id={c.id} />}</div>
+  const u = useId().replace(/[^a-zA-Z0-9]/g, '')
+  let art: React.ReactNode
+  switch (c.scene) {
+    case 'halloween': art = <Halloween c={c} />; break
+    case 'muertos': art = <Muertos c={c} u={u} />; break
+    case 'sakura': art = <Sakura c={c} u={u} />; break
+    case 'aurora': art = <Aurora c={c} u={u} />; break
+    case 'neon': art = <Neon c={c} u={u} />; break
+    case 'otono': art = <Otono c={c} u={u} />; break
+    case 'invierno': art = <Invierno c={c} u={u} />; break
+    case 'velvet': art = <Velvet c={c} u={u} />; break
+    case 'oceano': art = <Oceano c={c} u={u} />; break
+    case 'bosque': art = <Bosque c={c} u={u} />; break
+    case 'cosmos': art = <Cosmos c={c} u={u} />; break
+    case 'atardecer': art = <Atardecer c={c} u={u} />; break
+    default: art = <Generic id={c.id} />
+  }
+  return <div className="absolute inset-0 overflow-hidden" style={{ background: c.a }}>{art}</div>
 })
 export default BannerArt

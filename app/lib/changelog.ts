@@ -15,6 +15,58 @@ export const RELEASE_STAGE: 'beta' | 'stable' = 'stable'
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.5.10',
+    date: '2026-10-30',
+    title: 'Día de Muertos, novedades que brillan y un clóset más grande',
+    sections: [
+      {
+        heading: 'Día de Muertos 💀🌼',
+        items: [
+          'Llega la colección «Ofrenda de Día de Muertos»: marcos de avatar, tarjetas de perfil, fondos, entradas, títulos y una insignia. Todo con tradición, cariño y nada de terror.',
+          'La tienda estrena su banner ilustrado de Día de Muertos: papel picado, velas, cempasúchil, mariposas monarca y un altar.',
+          'Banners nuevos para selecciones y ofertas: Sakura, Aurora, Neón, Otoño, Invierno, Terciopelo, Océano, Bosque Fae, Cosmos y Atardecer. En el panel de admin se eligen viendo una vista previa de cada uno.',
+        ],
+      },
+      {
+        heading: 'Novedades que se ven ✨',
+        items: [
+          'Cuando hay una confesión nueva, junto a «Susurros» en la barra lateral aparece «Nueva confesión» en letra brillante, con el color de tu tema. Al entrar se apaga y no vuelve hasta que haya otra.',
+          'En la tienda sale «Novedad» cuando hay una colección u oferta nueva: en la barra lateral, en la pestaña que corresponde y en la tarjeta nueva. Los íconos no cambian de tamaño y también se apaga al entrar.',
+        ],
+      },
+      {
+        heading: 'Mi clóset 👗',
+        items: [
+          'Más espacio: el clóset es más ancho, las prendas y las tarjetas se ven MUCHO más grandes y hay un interruptor «Grande / Compacta» (se recuerda).',
+          'En PC, al entrar al clóset la barra lateral arranca minimizada para que tengas más lugar (puedes abrirla cuando quieras; no cambia lo que elegiste para el resto de la página).',
+          'En celular, el cajón del clóset se arrastra: suéltalo cerrado, a la mitad o alto. Se quitó el efecto de desenfoque y las prendas se cargan por tandas, así que ya no va trabado.',
+        ],
+      },
+      {
+        heading: 'Perfil e identidad 🪪',
+        items: [
+          'La identidad «Doll» tiene un sello nuevo: una muñeca de porcelana colgada de hilos de marioneta.',
+          'La vista previa de Editar perfil (y del registro) ahora muestra tu identidad con su detalle especial, quién la ve y tu canción, igual que en el perfil real.',
+          'Ningún marco tapa ya el nombre: el perfil deja el espacio que cada marco necesita debajo del avatar. Los marcos «Corazones de vida» y «Barra de XP» ahora van dentro del círculo.',
+        ],
+      },
+      {
+        heading: 'Historias 📸',
+        items: [
+          'El editor es más claro: los botones de arriba llevan su nombre (Texto, Stickers, Música, Fondo) y una pista te dice qué puedes hacer en cada momento.',
+          'Mover, agrandar y girar cosas en el editor va fluido (se procesa una vez por cuadro) y el visor de historias gasta menos batería.',
+        ],
+      },
+      {
+        heading: 'Arreglos 🛠️',
+        items: [
+          'Arreglado en celular: el aviso de «Misión lista» salía corrido a la izquierda y tapado. Además, si reclamabas desde el panel salían dos avisos a la vez.',
+          'Menos desenfoques pesados en la cabecera, el menú y las tarjetas de la tienda: la página se siente más ligera en celular.',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.5.9',
     date: '2026-10-27',
     title: 'Misiones al instante y pantalla que ya no se pega',
@@ -806,4 +858,4 @@ export const CHANGELOG: Release[] = [
 
 export const LATEST_RELEASE = CHANGELOG[0]
 // Versión que se muestra en la app. Si un parche pequeño (1.0.x) no lleva notas en el changelog, igual se sube este número a mano.
-export const APP_VERSION = '1.5.9'
+export const APP_VERSION = '1.5.10'

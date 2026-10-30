@@ -91,7 +91,7 @@ const ReplyBar = forwardRef<
   if (blockedMessage) {
     return (
       <div className="flex items-center gap-2 px-3 pb-3 pt-2" onPointerDown={(e) => e.stopPropagation()}>
-        <p className="flex-1 text-center text-[12.5px] text-white/80 rounded-full border border-white/25 px-4 py-3 bg-black/25 backdrop-blur">{blockedMessage}</p>
+        <p className="flex-1 text-center text-[12.5px] text-white/80 rounded-full border border-white/25 px-4 py-3 bg-black/25">{blockedMessage}</p>
         {heart}
       </div>
     )
@@ -100,7 +100,7 @@ const ReplyBar = forwardRef<
   return (
     <div className="px-3 pb-3 pt-2" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
       {status && (
-        <p role="status" className="mb-2 mx-auto w-max max-w-full rounded-full bg-black/60 backdrop-blur text-white text-[12px] px-3 py-1.5">
+        <p role="status" className="mb-2 mx-auto w-max max-w-full rounded-full bg-black/60 text-white text-[12px] px-3 py-1.5">
           {status}
         </p>
       )}
@@ -120,7 +120,7 @@ const ReplyBar = forwardRef<
         </div>
       )}
       <div className="flex items-center gap-1.5">
-        <div className="flex-1 min-w-0 flex items-center rounded-full border border-white/35 bg-black/35 backdrop-blur h-12 pl-4 pr-1.5">
+        <div className="flex-1 min-w-0 flex items-center rounded-full border border-white/35 bg-black/35 h-12 pl-4 pr-1.5">
           <input
             ref={inputRef}
             value={text}

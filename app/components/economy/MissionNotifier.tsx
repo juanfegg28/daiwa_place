@@ -12,6 +12,8 @@ import { CloseIcon, MoonCoinIcon } from '../icons'
 type Notice = { id: string; text: string; reward: number; more: number; state: 'ready' | 'claiming' | 'done' | 'error'; msg?: string }
 
 export const MISSIONS_CHANGED = 'daiwa:missions-changed'
+/** v1.5.10 · se emite cuando una misión se reclama desde el panel del Inicio o desde /misiones */
+export const MISSION_CLAIMED = 'daiwa:mission-claimed'
 
 export default function MissionNotifier({ userId }: { userId: string | null | undefined }) {
   const [notice, setNotice] = useState<Notice | null>(null)
@@ -58,6 +60,16 @@ export default function MissionNotifier({ userId }: { userId: string | null | un
     })
   }, [userId, announce])
 
+  // v1.5.10 · si la misión se reclama desde el panel o la página de Misiones, este aviso sobra (antes salían los dos a la vez)
+  useEffect(() => {
+    const onClaimed = () => {
+      window.clearTimeout(hideTimer.current)
+      setNotice(null)
+    }
+    window.addEventListener(MISSION_CLAIMED, onClaimed)
+    return () => window.removeEventListener(MISSION_CLAIMED, onClaimed)
+  }, [])
+
   // al hacer algo: se vuelve a leer el resumen (con un pequeño margen para juntar varias acciones seguidas)
   useEffect(() => {
     if (!userId) return
@@ -103,7 +115,7 @@ export default function MissionNotifier({ userId }: { userId: string | null | un
     <div
       role="status"
       aria-live="polite"
-      className="fixed z-[130] left-1/2 -translate-x-1/2 w-[min(92vw,380px)] rounded-2xl border border-amber-400/50 bg-ink-900/95 backdrop-blur shadow-2xl shadow-black/60 p-3.5 mission-notice-in"
+      className="fixed z-[130] inset-x-0 mx-auto w-[min(92vw,380px)] rounded-2xl border border-amber-400/50 bg-ink-900 shadow-2xl shadow-black/60 p-3.5 mission-notice-in"
       style={{ top: 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
       onMouseEnter={() => window.clearTimeout(hideTimer.current)}
       onMouseLeave={() => notice.state === 'ready' && autoHide(5000)}

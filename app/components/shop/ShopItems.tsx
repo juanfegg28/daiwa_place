@@ -47,7 +47,7 @@ export function MiniItem({ item, size = 'md' }: { item: CatalogItem; size?: 'sm'
   const h = size === 'sm' ? 'h-[92px] sm:h-[104px]' : 'h-[112px] sm:h-[150px]'
   return (
     <button type="button" onClick={() => shop.open(item)} {...bind} aria-label={`${item.name}: ver detalle`}
-      className={`press group relative ${w} shrink-0 text-left rounded-2xl border bg-ink-950/75 backdrop-blur-sm overflow-hidden hover:bg-ink-950/90 transition ${RARITY_STYLE[item.rarity].split(' ')[0]}`}>
+      className={`press group relative ${w} shrink-0 text-left rounded-2xl border bg-ink-950/75 overflow-hidden hover:bg-ink-950/90 transition ${RARITY_STYLE[item.rarity].split(' ')[0]}`}>
       <div className={`relative ${h} overflow-hidden`}>
         <ItemPreview type={item.type} slug={item.slug} me={shop.me} compact playing={playing} />
         {onSale(item) && <SalePill pct={salePct(item)} className="absolute top-1.5 left-1.5" />}

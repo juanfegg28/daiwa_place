@@ -11,7 +11,7 @@ import {
   type DayMissions, type Mission, type StreakState, type WeekMissions,
 } from '../lib/economy'
 import { effectiveReward } from '../lib/economy'
-import { MISSIONS_CHANGED } from '../components/economy/MissionNotifier'
+import { MISSIONS_CHANGED, MISSION_CLAIMED } from '../components/economy/MissionNotifier'
 import MoonRain from '../components/economy/MoonRain'
 import Toast from '../components/economy/Toast'
 
@@ -186,6 +186,7 @@ function MisionesContent() {
       return loadAll()
     }
     const r = data as { reward: number; bonus: number }
+    window.dispatchEvent(new Event(MISSION_CLAIMED)) // v1.5.10: el aviso flotante sobra si ya reclamaste desde aquí
     setRain(true)
     say(r.bonus > 0 ? `¡+${r.reward} ☾ y bono de +${r.bonus} ☾ por las 3 del día!` : `¡Misión lista! +${r.reward} ☾`)
     refreshWallet(true)

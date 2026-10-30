@@ -11,6 +11,7 @@ import { supabase } from '../../lib/supabaseClient'
 import { refreshWallet, subscribeWallet, type WalletSummary } from '../../lib/economy'
 import { shopFeaturesActive, shopSalesActive, shopWishToggle, type CatalogItem, type ShopCollection, type ShopFeature, type ShopSale } from '../../lib/cosmetics'
 import { featureItems } from './shopUtil'
+import { allShopKeys, markShopEntered, readSeenTabs, shopKeysFrom, type ShopNoveltyKeys } from '../../lib/novelty'
 
 export type ShopCtx = {
   userId: string | null
@@ -25,6 +26,10 @@ export type ShopCtx = {
   sales: ShopSale[]
   features: ShopFeature[]
   newIds: Set<string>
+  /** v1.5.10 · «llaves» de lo que hay de nuevo (selecciones, ofertas y colecciones) */
+  noveltyKeys: ShopNoveltyKeys
+  /** v1.5.10 · lo que estaba sin ver al abrir la tienda (se queda fijo durante la visita para que las tarjetas muestren su «NOVEDAD») */
+  freshKeys: Set<string>
   wallet: WalletSummary | null
   balance: number
   loading: boolean
@@ -116,6 +121,23 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     for (const f of features) for (const i of featureItems(f, shelf)) s.add(i.id)
     return s
   }, [features, shelf])
+  const noveltyKeys = useMemo(() => shopKeysFrom(features, sales, collections), [features, sales, collections])
+  const [freshKeys, setFreshKeys] = useState<Set<string>>(() => new Set())
+  const snapped = useRef(false)
+  useEffect(() => {
+    if (!userId || !ready || collections.length === 0 || snapped.current) return
+    const t = window.setTimeout(() => {
+      snapped.current = true
+      const seen = readSeenTabs(userId)
+      const fresh = allShopKeys(noveltyKeys).filter((x) => !seen.has(x))
+      if (fresh.length) setFreshKeys(new Set(fresh))
+    }, 0)
+    return () => window.clearTimeout(t)
+  }, [userId, ready, collections.length, noveltyKeys])
+  // v1.5.10 · entrar a la tienda apaga el brillito «Novedad» de la barra lateral
+  useEffect(() => {
+    if (userId && ready && collections.length > 0) markShopEntered(userId, noveltyKeys)
+  }, [userId, ready, collections.length, noveltyKeys])
   const wishCount = useMemo(() => catalog.filter((i) => i.wished && !i.owned).length, [catalog])
 
   const toggleWish = useCallback(async (i: CatalogItem) => {
@@ -134,7 +156,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
 
   const balance = wallet?.balance ?? 0
   const value: ShopCtx = {
-    userId, me, worn, catalog, shelf, collections, collName, sales, features, newIds, wallet, balance, loading, ready, error, reload,
+    userId, me, worn, catalog, shelf, collections, collName, sales, features, newIds, noveltyKeys, freshKeys, wallet, balance, loading, ready, error, reload,
     open: setOpenItem, toggleWish, wishCount, rain: () => setRaining(true), isWorn, search, setSearch,
   }
   // La hoja abierta lee la versión más nueva del ítem (por si cambió la oferta o el deseo mientras estaba abierta)

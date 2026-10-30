@@ -6,13 +6,14 @@ import { MoonCoinIcon } from '../icons'
 import ItemPreview, { type PreviewSubject } from '../cosmetics/ItemPreview'
 import { RARITY_STYLE } from '../../lib/cosmetics'
 import { CollectionBadge } from '../cosmetics/lazy'
+import NewTag from '../NewTag'
 import { SalePill } from './ShopBits'
 import { formatNumber } from '../../lib/economy'
 import { shopBuyPack, type CatalogItem, type ShopCollection } from '../../lib/cosmetics'
 
 /** Colecciones: progreso, pack con descuento y premio por completarlas */
-export default function CollectionsView({ collections, catalog, balance, onChanged, onRain, newIds, me, onOpen }: {
-  collections: ShopCollection[]; catalog: CatalogItem[]; balance: number; onChanged: () => void; onRain: () => void; newIds?: Set<string>
+export default function CollectionsView({ collections, catalog, balance, onChanged, onRain, newIds, freshKeys, me, onOpen }: {
+  collections: ShopCollection[]; catalog: CatalogItem[]; balance: number; onChanged: () => void; onRain: () => void; newIds?: Set<string>; freshKeys?: Set<string>
   /** para dibujar las decoraciones sobre tu foto y abrirlas al tocarlas */
   me: PreviewSubject; onOpen: (i: CatalogItem) => void
 }) {
@@ -34,7 +35,7 @@ export default function CollectionsView({ collections, catalog, balance, onChang
         const inPack = catalog.filter((i) => !i.owned && i.obtainable === 'tienda' && ((i.collection === c.id && i.type === 'avatar_decoration') || (i.type === 'profile_card' && i.slug === c.pack_card) || (i.type === 'entry_effect' && i.slug === c.pack_effect)))
         const save = c.pack_full_price - c.pack_price
         const packPct = c.pack_full_price > 0 ? Math.round((save * 100) / c.pack_full_price) : 0
-        const isNew = !!newIds && catalog.some((i) => i.collection === c.id && newIds.has(i.id))
+        const isNew = !!freshKeys?.has(`c:${c.id}`) || (!!newIds && catalog.some((i) => i.collection === c.id && newIds.has(i.id)))
         return (
           <article key={c.id} className="min-w-0 rounded-2xl border border-ink-700 bg-ink-900/60 p-4">
             <div className="flex items-start gap-3">
@@ -42,7 +43,7 @@ export default function CollectionsView({ collections, catalog, balance, onChang
               <div className="min-w-0 flex-1">
                 <h3 className="font-display font-semibold text-neutral-50 leading-tight flex items-center gap-2">
                   <Link href={`/tienda/coleccion/${c.id}`} className="hover:text-garnet-300">{c.name}</Link>
-                  {isNew && <span className="rounded-md bg-garnet-600 text-white text-[10px] font-bold px-1.5 py-0.5 uppercase tracking-wide">Nuevo</span>}
+                  {isNew && <NewTag>Novedad</NewTag>}
                 </h3>
                 {c.theme && <p className="text-xs text-neutral-500 truncate">{c.theme}</p>}
               </div>

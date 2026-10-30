@@ -29,21 +29,27 @@ export const PIXEL = [
   },
   // ───────────────────────── Corazones de vida
   {
-    slug: 'corazones-de-vida', name: 'Corazones de vida', rarity: 'comun', price: 450, coll: 'pixel', min: 40, palettes: PAL,
+    slug: 'corazones-de-vida', name: 'Corazones de vida', rarity: 'comun', price: 450, coll: 'pixel', min: 44, palettes: PAL,
     css: `.ph-b{transform-box:fill-box;transform-origin:50% 50%;animation:ph-b 1.4s steps(2) infinite}${KF('ph-b', '0%{transform:scale(1)}50%{transform:scale(1.2)}')}`,
     back: () => '',
     front: (S, P) => {
       const full = { o: P.d2, f: P.d1, h: P.d3 }
       const empty = { o: P.d2, f: P.mix(P.d2, '#8a8a99', 0.4), h: P.mix(P.d2, '#b0b0c0', 0.4) }
       const ring = pxRing(144, 144, 111, 123, 4, [P.lt(P.d1, 0.4), P.d1, P.dk(P.d1, 0.3)], P.d2)
-      const C = 4.6, W = 9 * C
-      const row = [0, 1, 2, 3, 4].map((i) => `<g class="${i === 2 ? 'ph-b' : ''}">${sprite(HEART, i < 3 ? full : empty, 144 - 2.5 * (W + 6) + i * (W + 6) + 3, 250, C)}</g>`).join('')
-      return ring + `<rect x="${f(144 - 2.5 * (W + 6) - 4)}" y="244" width="${f(5 * (W + 6) + 6)}" height="${f(W + 14)}" fill="${P.d2}" stroke="${P.d1}" stroke-width="3" shape-rendering="crispEdges"/>` + row + sparkle(36, 58, 3.6, P.d4, 'k-tw') + sparkle(256, 66, 3, P.d3, 'k-tw').replace('<path', '<path style="animation-delay:-1s"')
+      // v1.5.10 · los corazones van DENTRO del círculo, en un arco abajo de la foto (antes el panel colgaba bajo el avatar y tapaba el nombre en el perfil)
+      const C = 2.7, W = 9 * C, R = 94
+      const arc = (a0, a1, r) => { const [x0, y0] = pol(CX, CY, r, a0); const [x1, y1] = pol(CX, CY, r, a1); return `M${f(x0)} ${f(y0)}A${r} ${r} 0 0 1 ${f(x1)} ${f(y1)}` }
+      const band = `<path d="${arc(38, 142, R)}" fill="none" stroke="${P.d1}" stroke-width="31" stroke-linecap="butt" opacity=".95"/><path d="${arc(38, 142, R)}" fill="none" stroke="${P.d2}" stroke-width="25" stroke-linecap="butt"/>`
+      const row = [0, 1, 2, 3, 4].map((i) => {
+        const [x, y] = pol(CX, CY, R, 90 - (i - 2) * 21)
+        return `<g class="${i === 2 ? 'ph-b' : ''}">${sprite(HEART, i < 3 ? full : empty, x - W / 2, y - W / 2, C)}</g>`
+      }).join('')
+      return ring + band + row
     },
   },
   // ───────────────────────── Barra de XP
   {
-    slug: 'barra-de-xp', name: 'Barra de XP', rarity: 'raro', price: 800, coll: 'pixel', min: 52, palettes: PAL,
+    slug: 'barra-de-xp', name: 'Barra de XP', rarity: 'raro', price: 800, coll: 'pixel', min: 56, palettes: PAL,
     css: `.pb-f{transform-box:fill-box;transform-origin:0 50%;animation:pb-f 5s steps(14) infinite}${KF('pb-f', '0%{transform:scaleX(.08)}85%,100%{transform:scaleX(1)}')}.pb-s{animation:pb-s 1s steps(1) infinite}${KF('pb-s', '0%{opacity:1}50%{opacity:0}')}`,
     back: () => '',
     front: (S, P) => {
@@ -54,7 +60,8 @@ export const PIXEL = [
       const bar = `<g shape-rendering="crispEdges"><rect x="${X0}" y="${Y0}" width="${Wd}" height="28" fill="${P.d2}"/><rect x="${X0 + 4}" y="${Y0 + 4}" width="162" height="20" fill="${P.dk(P.d2, 0.45)}"/><g class="pb-f"><rect x="${X0 + 4}" y="${Y0 + 4}" width="162" height="20" fill="${P.d1}"/><rect x="${X0 + 4}" y="${Y0 + 4}" width="162" height="6" fill="${P.lt(P.d1, 0.5)}"/><rect x="${X0 + 4}" y="${Y0 + 18}" width="162" height="6" fill="${P.dk(P.d1, 0.3)}"/></g><path d="${seg}" stroke="${P.d2}" stroke-width="2" opacity=".55"/></g>`
       const lv = `<g shape-rendering="crispEdges"><rect x="36" y="242" width="52" height="44" fill="${P.d2}"/><rect x="41" y="247" width="42" height="34" fill="${P.d4}"/><rect x="41" y="247" width="42" height="6" fill="${P.lt(P.d4, 0.55)}"/><rect x="41" y="275" width="42" height="6" fill="${P.dk(P.d4, 0.25)}"/></g><text x="62" y="271" text-anchor="middle" font-family="ui-monospace,Menlo,Consolas,monospace" font-weight="900" font-size="17" fill="${P.d2}">LV7</text>`
       const star = `<g class="pb-s">${sprite(['..y..', '.yyy.', 'yyyyy', '.yyy.', '.y.y.'], { y: P.d4 }, 254, 244, 6)}</g>`
-      return ring + bar + lv + star
+      // v1.5.10 · la barra y el nivel van DENTRO del círculo (antes colgaban abajo y tapaban el nombre)
+      return ring + `<g transform="translate(144 214) scale(.66) translate(-144 -264)">${bar}${lv}${star}</g>`
     },
   },
   // ───────────────────────── Cofre pixel

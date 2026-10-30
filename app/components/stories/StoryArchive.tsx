@@ -69,7 +69,7 @@ export default function StoryArchive() {
 
   return (
     <div className="min-h-dvh bg-[#0c0c0f] text-neutral-100">
-      <header className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3 bg-[#0c0c0f]/90 backdrop-blur border-b border-white/10" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
+      <header className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3 bg-[#0c0c0f]/90 border-b border-white/10" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
         <button type="button" onClick={() => (window.history.length > 1 ? router.back() : router.push('/'))} aria-label="Volver" className="w-9 h-9 rounded-full hover:bg-white/10 flex items-center justify-center">
           <ArrowLeftIcon className="w-5 h-5" />
         </button>

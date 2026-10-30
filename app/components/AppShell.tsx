@@ -3,6 +3,8 @@
 import WalletChip from './WalletChip'
 import MissionNotifier from './economy/MissionNotifier'
 import { ClaimDot, useClaimable, useWalletRefreshOnNavigate } from './economy/ClaimDot'
+import NewTag from './NewTag'
+import { markWhispersSeen, useShopNoveltyFlag, useWhisperNovelty } from '../lib/novelty'
 import Avatar from './cosmetics/Avatar'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import Link from 'next/link'
@@ -101,6 +103,8 @@ type NavItem = {
   badge?: number
   /** Puntito dorado (algo por reclamar, p. ej. una misión completada) */
   dot?: boolean
+  /** v1.5.10 · texto brillante de novedad («Nueva confesión», «Novedad»); se quita al entrar a la sección */
+  fresh?: string
 }
 
 function formatBadge(n: number) {
@@ -193,7 +197,20 @@ export default function AppShell({
     }, 0)
     return () => window.clearTimeout(t)
   }, [])
+  // v1.5.10 · en el Clóset la barra arranca minimizada (más espacio para ver las prendas) sin tocar lo que elegiste para el resto de la app
+  const pathname = usePathname()
+  const compactHere = pathname.startsWith('/personalizar')
+  const [railOverride, setRailOverride] = useState<boolean | null>(null)
+  useEffect(() => {
+    const t = window.setTimeout(() => setRailOverride(null), 0)
+    return () => window.clearTimeout(t)
+  }, [compactHere])
+  const collapsedNow = railOverride ?? (compactHere ? true : railCollapsed)
   const toggleRail = () => {
+    if (compactHere) {
+      setRailOverride(!collapsedNow)
+      return
+    }
     setRailCollapsed((v) => {
       const next = !v
       try {
@@ -206,7 +223,6 @@ export default function AppShell({
   }
   const [onlineIds, setOnlineIds] = useState<Set<string>>(new Set())
   const presenceRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
-  const pathname = usePathname()
   // v1.5.9 · Red de seguridad contra «la pantalla se queda pegada»: al cambiar de página, si quedó algún bloqueo de scroll huérfano
   // (visor de historias, chat con teclado…) se limpia solo, sin tener que recargar.
   useEffect(() => {
@@ -441,6 +457,17 @@ export default function AppShell({
 
   // puntito dorado en todos los iconos de Misiones mientras haya algo por reclamar (v1.4.0)
   const { dot: missionDot } = useClaimable(userId)
+  // v1.5.10 · brillito de novedad: confesión nueva (Susurros) y colección/descuento nuevo (Tienda). Entrar a la sección lo apaga.
+  const whisperFlag = useWhisperNovelty(userId)
+  const shopFlag = useShopNoveltyFlag(userId)
+  const inWhispers = pathname.startsWith('/susurros')
+  const inShop = pathname.startsWith('/tienda') || pathname.startsWith('/personalizar')
+  useEffect(() => {
+    if (userId && inWhispers) void markWhispersSeen(userId)
+  }, [userId, inWhispers])
+  const whisperFresh = whisperFlag && !inWhispers ? 'Nueva confesión' : undefined
+  const shopFresh = shopFlag && !inShop ? 'Novedad' : undefined
+  const anyFresh = !!(whisperFresh || shopFresh)
   useWalletRefreshOnNavigate(userId, pathname)
   const isSupreme = isSupremeAdmin(username)
   const canSeeAdmin = isSupreme || hasAnyRole
@@ -518,12 +545,14 @@ export default function AppShell({
             label: 'Tienda',
             icon: StoreIcon,
             match: (p: string) => p.startsWith('/tienda') || p.startsWith('/personalizar'),
+            fresh: shopFresh,
           },
           {
             href: '/susurros',
             label: 'Susurros',
             icon: GhostNavIcon,
             match: (p: string) => p.startsWith('/susurros'),
+            fresh: whisperFresh,
           },
           ...(canSeeAdmin
             ? [
@@ -614,6 +643,7 @@ export default function AppShell({
         </span>
         {item.label}
         {item.dot && <span className="ml-auto text-[10px] font-semibold uppercase tracking-wide text-amber-300">Reclamar</span>}
+        {item.fresh && !item.dot && <NewTag className="ml-auto">{item.fresh}</NewTag>}
       </Link>
     )
   }
@@ -626,10 +656,10 @@ export default function AppShell({
         <aside
           aria-label="Menú principal"
           className={`hidden md:flex md:flex-col md:shrink-0 md:h-screen md:sticky md:top-0 border-r border-ink-800 bg-ink-900/60 overflow-y-auto overflow-x-hidden transition-[width] duration-200 ease-out ${
-            railCollapsed ? 'md:w-[76px] px-2.5 py-4 items-center' : 'md:w-64 lg:w-72 px-4 py-6'
+            collapsedNow ? 'md:w-[76px] px-2.5 py-4 items-center' : 'md:w-64 lg:w-72 px-4 py-6'
           }`}
         >
-          {railCollapsed ? (
+          {collapsedNow ? (
             <>
               {/* Minimizada: solo íconos. La hamburguesa lleva un puntito rojo si hay avisos/mensajes y uno dorado si hay misiones por reclamar */}
               <button
@@ -643,7 +673,7 @@ export default function AppShell({
                 {menuBadge > 0 ? (
                   <span aria-hidden="true" className="absolute top-1 right-1 w-3 h-3 rounded-full bg-red-500 border-2 border-ink-900" />
                 ) : (
-                  missionDot && <ClaimDot className="top-1 right-1 w-3 h-3" label="Tienes misiones por reclamar" />
+                  missionDot ? <ClaimDot className="top-1 right-1 w-3 h-3" label="Tienes misiones por reclamar" /> : anyFresh && <NewTag variant="dot" className="top-1 right-1">Hay novedades</NewTag>
                 )}
               </button>
 
@@ -688,6 +718,7 @@ export default function AppShell({
                     >
                       <Icon filled={active} className="w-5 h-5" />
                       {item.dot && <ClaimDot className="top-1 right-1 w-2.5 h-2.5" label={`${item.label}: tienes premios por reclamar`} />}
+                      {item.fresh && !item.dot && <NewTag variant="dot" className="top-1 right-1">{item.fresh}</NewTag>}
                     </Link>
                   )
                 })}
@@ -849,7 +880,7 @@ export default function AppShell({
         </aside>
 
         {/* Barra superior móvil: las 3 rayitas (con la burbuja roja), el logo y listo. Ya no hay barra de abajo. */}
-        <header className={`${hideMobileChrome ? 'hidden' : 'md:hidden'} sticky top-0 z-30 flex items-center justify-between border-b border-ink-800 bg-ink-950/75 backdrop-blur-xl px-3 pb-2.5 pt-[calc(0.625rem+env(safe-area-inset-top,0px))]`}>
+        <header className={`${hideMobileChrome ? 'hidden' : 'md:hidden'} sticky top-0 z-30 flex items-center justify-between border-b border-ink-800 bg-ink-950/95 px-3 pb-2.5 pt-[calc(0.625rem+env(safe-area-inset-top,0px))]`}>
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
@@ -860,6 +891,7 @@ export default function AppShell({
             <MenuIcon className="w-6 h-6" />
             <CountBubble count={menuBadge} className="absolute top-0.5 right-0" />
             {missionDot && menuBadge === 0 && <ClaimDot className="top-1 right-1 w-3 h-3" label="Tienes misiones por reclamar" />}
+            {anyFresh && menuBadge === 0 && !missionDot && <NewTag variant="dot" className="top-1 right-1">Hay novedades</NewTag>}
           </button>
           <Link href="/" aria-label="Inicio">
             <Logo size="sm" />
@@ -887,7 +919,7 @@ export default function AppShell({
         >
           <div
             onClick={() => setDrawerOpen(false)}
-            className={`absolute inset-0 bg-black/65 backdrop-blur-[2px] transition-opacity duration-300 ${drawerOpen ? 'opacity-100' : 'opacity-0'}`}
+            className={`absolute inset-0 bg-black/65 transition-opacity duration-300 ${drawerOpen ? 'opacity-100' : 'opacity-0'}`}
           />
           <aside
             role="dialog"

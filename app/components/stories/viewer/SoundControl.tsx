@@ -85,7 +85,7 @@ export default function SoundControl({
   return (
     <div className="relative group flex items-center">
       {/* PC: el deslizador sale hacia la izquierda al pasar el ratón */}
-      <div className="hidden md:flex absolute right-full mr-1 items-center h-9 pl-3 pr-2 rounded-full bg-black/50 backdrop-blur w-0 overflow-hidden opacity-0 group-hover:w-[120px] group-hover:opacity-100 group-focus-within:w-[120px] group-focus-within:opacity-100 transition-all duration-200">
+      <div className="hidden md:flex absolute right-full mr-1 items-center h-9 pl-3 pr-2 rounded-full bg-black/50 w-0 overflow-hidden opacity-0 group-hover:w-[120px] group-hover:opacity-100 group-focus-within:w-[120px] group-focus-within:opacity-100 transition-all duration-200">
         <div className="relative w-[96px]">
           {showPct && <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[11px] font-semibold text-white bg-black/70 rounded px-1.5">{pct} %</span>}
           {slider}
@@ -115,7 +115,7 @@ export default function SoundControl({
         }}
         onPointerUp={() => holdTimer.current && window.clearTimeout(holdTimer.current)}
         onPointerLeave={() => holdTimer.current && window.clearTimeout(holdTimer.current)}
-        className={`relative w-9 h-9 rounded-full flex items-center justify-center bg-black/40 backdrop-blur text-white disabled:opacity-40 outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${hint && muted && hasMusic ? 'animate-pulse' : ''}`}
+        className={`relative w-9 h-9 rounded-full flex items-center justify-center bg-black/40 text-white disabled:opacity-40 outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${hint && muted && hasMusic ? 'animate-pulse' : ''}`}
       >
         <VolumeIcon level={level} className="w-[18px] h-[18px]" />
       </button>
@@ -132,7 +132,7 @@ export default function SoundControl({
       </button>
 
       {pop && (
-        <div className="md:hidden absolute top-full right-0 mt-2 w-[170px] rounded-2xl bg-black/75 backdrop-blur px-3.5 py-3 z-30" onPointerDown={armClose}>
+        <div className="md:hidden absolute top-full right-0 mt-2 w-[170px] rounded-2xl bg-black/75 px-3.5 py-3 z-30" onPointerDown={armClose}>
           <div className="flex items-center justify-between text-[11px] text-white/80 mb-1.5">
             <span>Volumen</span>
             <span className="font-semibold text-white">{pct} %</span>
@@ -142,7 +142,7 @@ export default function SoundControl({
       )}
 
       {hint && muted && hasMusic && !disabled && (
-        <span className="absolute top-full right-0 mt-2 whitespace-nowrap rounded-full bg-black/70 backdrop-blur text-white text-[11.5px] font-medium px-3 py-1.5 pointer-events-none">
+        <span className="absolute top-full right-0 mt-2 whitespace-nowrap rounded-full bg-black/70 text-white text-[11.5px] font-medium px-3 py-1.5 pointer-events-none">
           🔈 Toca para activar el sonido
         </span>
       )}

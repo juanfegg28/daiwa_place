@@ -494,6 +494,7 @@ select optgroup {
 @keyframes seal-sweep { 0% { transform: translateX(-120%); } 60%,100% { transform: translateX(220%); } }
 @keyframes seal-glitch { 0%,92%,100% { transform: translate(0); } 94% { transform: translate(-2px,1px); } 96% { transform: translate(2px,-1px); } 98% { transform: translate(-1px,0); } }
 @keyframes seal-blink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }
+@keyframes seal-sway { 0%,100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
 @keyframes seal-wave { 0% { transform: scale(.3); opacity: .7; } 100% { transform: scale(1.6); opacity: 0; } }
 @keyframes seal-drip { 0% { transform: translateY(-4px); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(14px); opacity: 0; } }
 .seal-anim { animation-duration: 3.2s; animation-iteration-count: infinite; animation-timing-function: ease-in-out; }
@@ -558,6 +559,42 @@ html[data-scrolling="1"] .bgl *, html[data-scrolling="1"] .sk-bg *, html[data-sc
 
 
 /* ───────── v1.5.9 · aviso de misión completada ───────── */
-@keyframes missionNoticeIn { from { opacity: 0; transform: translate(-50%, -14px) scale(.97); } to { opacity: 1; transform: translate(-50%, 0) scale(1); } }
+/* v1.5.10 · el aviso se centra con inset-x-0 + mx-auto; la animación solo mueve en vertical (antes sumaba un -50% extra y en celular quedaba medio tapado a la izquierda) */
+@keyframes missionNoticeIn { from { opacity: 0; transform: translateY(-14px) scale(.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
 .mission-notice-in { animation: missionNoticeIn .28s cubic-bezier(.2,.8,.2,1) both; }
 @media (prefers-reduced-motion: reduce) { .mission-notice-in { animation: none; } }
+
+
+/* ───────── v1.5.10 · brillito de «novedad» (color del tema de cada persona) ───────── */
+.new-glow {
+  font-size: 9.5px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; line-height: 1;
+  color: var(--color-garnet-300);
+  text-shadow: 0 0 6px var(--color-garnet-400), 0 0 14px var(--color-garnet-500);
+  animation: newGlow 2.2s ease-in-out infinite;
+}
+@keyframes newGlow {
+  0%, 100% { opacity: .78; text-shadow: 0 0 4px var(--color-garnet-400), 0 0 10px var(--color-garnet-500); }
+  50% { opacity: 1; text-shadow: 0 0 8px var(--color-garnet-300), 0 0 20px var(--color-garnet-400); }
+}
+.new-glow-dot {
+  width: 8px; height: 8px; border-radius: 9999px; background: var(--color-garnet-300);
+  box-shadow: 0 0 8px 2px var(--color-garnet-400); animation: newGlowDot 2.2s ease-in-out infinite;
+}
+@keyframes newGlowDot { 0%, 100% { opacity: .75; transform: scale(.9); } 50% { opacity: 1; transform: scale(1.15); } }
+@media (prefers-reduced-motion: reduce) { .new-glow, .new-glow-dot { animation: none; } }
+
+/* ───────── v1.5.10 · animaciones de las escenas de banners (baratas: solo transform/opacity) ───────── */
+@keyframes shopSway { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+.shop-sway { transform-box: fill-box; transform-origin: 50% 0; animation: shopSway 3.6s ease-in-out infinite; }
+@keyframes shopSwayX { 0%, 100% { transform: translateX(-18px); } 50% { transform: translateX(18px); } }
+.shop-sway-x { animation: shopSwayX 9s ease-in-out infinite; }
+@keyframes shopFlicker { 0%, 100% { transform: scale(1, 1); opacity: 1; } 35% { transform: scale(.92, 1.08); opacity: .88; } 70% { transform: scale(1.05, .95); opacity: 1; } }
+.shop-flicker { transform-box: fill-box; transform-origin: 50% 100%; animation: shopFlicker 1.7s ease-in-out infinite; }
+@keyframes shopFlap { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(.55); } }
+.shop-flap { transform-box: fill-box; transform-origin: 50% 50%; animation: shopFlap 1.3s ease-in-out infinite; }
+@keyframes shopFall { 0% { transform: translate(0, -10px) rotate(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translate(-60px, 120px) rotate(160deg); opacity: 0; } }
+.shop-fall { animation: shopFall 7s linear infinite; }
+@keyframes shopRise { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: .9; } 100% { transform: translateY(-150px); opacity: 0; } }
+.shop-rise { animation: shopRise 6s ease-in infinite; }
+@media (prefers-reduced-motion: reduce) { .shop-sway, .shop-sway-x, .shop-flicker, .shop-flap, .shop-fall, .shop-rise { animation: none !important; } }
+[data-anim="off"] .shop-sway, [data-anim="off"] .shop-sway-x, [data-anim="off"] .shop-flicker, [data-anim="off"] .shop-flap, [data-anim="off"] .shop-fall, [data-anim="off"] .shop-rise { animation: none !important; }

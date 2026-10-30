@@ -429,7 +429,7 @@ export default function StoryViewer({
         goNextRef.current()
         return
       }
-      if (now - lastRender > 60) {
+      if (now - lastRender > 100) {
         lastRender = now
         setProgress(elapsedRef.current / duration)
       }
@@ -947,7 +947,7 @@ export default function StoryViewer({
                     {audio.error && <div className="text-[11px] text-white/70">{audio.error}</div>}
                   </div>
                   <div className="flex items-center gap-1 pointer-events-auto" data-nogesture>
-                    <button type="button" onClick={() => setUserPaused((v) => !v)} aria-label={userPaused ? 'Continuar' : 'Pausar'} className="hidden md:flex w-9 h-9 rounded-full bg-black/40 backdrop-blur items-center justify-center">
+                    <button type="button" onClick={() => setUserPaused((v) => !v)} aria-label={userPaused ? 'Continuar' : 'Pausar'} className="hidden md:flex w-9 h-9 rounded-full bg-black/55 items-center justify-center">
                       {userPaused ? <PlayIcon className="w-4 h-4" /> : <PauseIcon className="w-4 h-4" />}
                     </button>
                     {track && (
@@ -962,13 +962,13 @@ export default function StoryViewer({
                         onDragging={setVolDrag}
                       />
                     )}
-                    <button type="button" onClick={() => setMenuOpen(true)} aria-label="Más opciones" className="w-10 h-10 rounded-full bg-black/40 backdrop-blur flex items-center justify-center touch-manipulation active:scale-95">
+                    <button type="button" onClick={() => setMenuOpen(true)} aria-label="Más opciones" className="w-10 h-10 rounded-full bg-black/55 flex items-center justify-center touch-manipulation active:scale-95">
                       <MoreIcon className="w-5 h-5" />
                     </button>
-                    <button type="button" onClick={() => setShortcutsOpen(true)} aria-label="Atajos de teclado" className="hidden md:flex w-9 h-9 rounded-full bg-black/40 backdrop-blur items-center justify-center text-sm font-semibold">
+                    <button type="button" onClick={() => setShortcutsOpen(true)} aria-label="Atajos de teclado" className="hidden md:flex w-9 h-9 rounded-full bg-black/55 items-center justify-center text-sm font-semibold">
                       ?
                     </button>
-                    <button type="button" onClick={close} aria-label="Cerrar" className="w-10 h-10 rounded-full bg-black/40 backdrop-blur flex items-center justify-center touch-manipulation active:scale-95">
+                    <button type="button" onClick={close} aria-label="Cerrar" className="w-10 h-10 rounded-full bg-black/55 flex items-center justify-center touch-manipulation active:scale-95">
                       <CloseIcon className="w-5 h-5" />
                     </button>
                   </div>

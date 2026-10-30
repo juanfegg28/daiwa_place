@@ -346,7 +346,7 @@ export default function RegisterPage() {
               Todo esto es opcional: puedes completarlo cuando quieras desde Editar perfil. 💫
             </p>
 
-            {(avatarPreview || bannerPreview) && (
+            {(avatarPreview || bannerPreview || bio || identity || grado || birthday || estadoPersonal) && (
               <ProfilePreviewCard
                 displayName={idStudent}
                 username={username}
@@ -356,6 +356,8 @@ export default function RegisterPage() {
                 estadoPersonal={estadoPersonal}
                 avatarPreview={avatarPreview}
                 bannerPreview={bannerPreview}
+                identity={identity}
+                identityDetail={identityDetail}
               />
             )}
 

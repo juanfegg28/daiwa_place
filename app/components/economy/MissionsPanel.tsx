@@ -8,7 +8,7 @@ import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 import { countdown, effectiveReward, refreshWallet, subscribeWallet, type DayMissions, type Mission, type WeekMissions } from '../../lib/economy'
-import { MISSIONS_CHANGED } from './MissionNotifier'
+import { MISSIONS_CHANGED, MISSION_CLAIMED } from './MissionNotifier'
 import { CheckIcon, GiftIcon, MoonCoinIcon, TargetIcon } from '../icons'
 import { ClaimDot } from './ClaimDot'
 import MoonRain from './MoonRain'
@@ -188,6 +188,7 @@ export function useMissionsPanel(userId: string | null | undefined): { state: Mi
         return
       }
       const r = data as { reward: number; bonus: number }
+      window.dispatchEvent(new Event(MISSION_CLAIMED)) // v1.5.10: el aviso flotante sobra si ya reclamaste desde aquí
       setRain(true)
       say(r.bonus > 0 ? `¡+${r.reward} ☾ y bono de +${r.bonus} ☾ por las 3 del día!` : `¡Misión lista! +${r.reward} ☾`)
       void refreshWallet(true)

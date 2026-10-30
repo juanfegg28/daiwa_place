@@ -75,6 +75,16 @@ function useIsDesktop() {
   return d
 }
 
+/** v1.5.10 · botón de herramienta con su nombre debajo (celular) */
+function ToolBtn({ label, aria, onClick, children }: { label: string; aria: string; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button type="button" onClick={onClick} aria-label={aria} className="shrink-0 min-w-[50px] max-[380px]:min-w-[44px] h-[50px] max-[380px]:h-11 rounded-2xl bg-black/60 flex flex-col items-center justify-center gap-0.5 text-white active:scale-95 transition touch-manipulation">
+      {children}
+      <span className="text-[10px] leading-none text-white/85">{label}</span>
+    </button>
+  )
+}
+
 function maxZ(els: StoryElement[]) {
   return els.reduce((m, e) => Math.max(m, e.z), 0)
 }
@@ -479,9 +489,18 @@ export default function StoryEditor() {
     }
   }
 
+  // v1.5.10 · el movimiento se procesa UNA vez por cuadro (antes cada evento del dedo re-dibujaba todo el editor: se trababa en celulares)
+  const rafMove = useRef(0)
   const onPointerMove = (e: React.PointerEvent) => {
     if (!ptrs.current.has(e.pointerId)) return
     ptrs.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    if (rafMove.current) return
+    rafMove.current = requestAnimationFrame(() => {
+      rafMove.current = 0
+      processMove()
+    })
+  }
+  const processMove = () => {
     const g = gest.current
     const r = stageRect()
     if (!g || !r) return
@@ -544,12 +563,17 @@ export default function StoryEditor() {
         y: s.y + ((cy - g.startCenter.y) / r.height) * 100,
       }
     }
-    setGuides(nextGuides)
+    setGuides((pv) => (pv.v === nextGuides.v && pv.h === nextGuides.h && pv.rot === nextGuides.rot ? pv : nextGuides))
     patchEl(g.target, patch, false)
   }
 
   const onPointerUp = (e: React.PointerEvent) => {
     if (!ptrs.current.has(e.pointerId)) return
+    if (rafMove.current) {
+      cancelAnimationFrame(rafMove.current)
+      rafMove.current = 0
+      processMove() // el último movimiento no se pierde
+    }
     ptrs.current.delete(e.pointerId)
     const g = gest.current
     if (ptrs.current.size === 0) {
@@ -940,7 +964,7 @@ export default function StoryEditor() {
   }
 
   // ───────── editor ─────────
-  const iconBtn = 'shrink-0 w-11 h-11 max-[380px]:w-9 max-[380px]:h-9 rounded-full bg-black/45 backdrop-blur flex items-center justify-center text-white disabled:opacity-35 active:scale-95 transition touch-manipulation'
+  const iconBtn = 'shrink-0 w-11 h-11 max-[380px]:w-9 max-[380px]:h-9 rounded-full bg-black/60 flex items-center justify-center text-white disabled:opacity-35 active:scale-95 transition touch-manipulation'
   const tabs: [typeof tab, string][] = [['bg', 'Fondo'], ['text', 'Texto'], ['stickers', 'Stickers'], ['music', 'Música']]
 
   return (
@@ -1015,9 +1039,15 @@ export default function StoryEditor() {
               </StageFrame>
             </div>
 
+            {/* v1.5.10 · pista que cambia según lo que haces (solo celular) */}
+            {!editing && !dragging && (
+              <p className="md:hidden absolute left-4 right-4 bottom-[21%] mx-auto w-max max-w-full rounded-full bg-black/55 text-white/90 text-[11.5px] px-3.5 py-1.5 z-[83] pointer-events-none text-center">
+                {selected ? 'Arrastra para mover · pellizca para agrandar y girar · suéltalo en 🗑 para borrar' : doc.elements.length === 0 ? 'Toca Texto, Stickers o Música (arriba) para empezar' : 'Toca algo para editarlo · arrástralo para moverlo'}
+              </p>
+            )}
             {/* herramientas del elemento seleccionado (celular) */}
             {selected && !editing && (
-              <div className="md:hidden absolute left-1/2 -translate-x-1/2 bottom-[16%] z-[85] flex items-center gap-1 rounded-full bg-black/70 backdrop-blur px-2 py-1.5">
+              <div className="md:hidden absolute left-1/2 -translate-x-1/2 bottom-[16%] z-[85] flex items-center gap-1 rounded-full bg-black/85 px-2 py-1.5">
                 <button type="button" className="px-3 py-1.5 text-[12.5px]" onClick={() => setSheet('inspector')}>Ajustes</button>
                 {(selected.type === 'music' || selected.type === 'location' || selected.type === 'time') && <button type="button" className="px-3 py-1.5 text-[12.5px]" onClick={() => cycleStyle(selected)}>↻ Estilo</button>}
                 {selected.type === 'text' && <button type="button" className="px-3 py-1.5 text-[12.5px]" onClick={() => setEditingId(selected.id)}>Editar</button>}
@@ -1037,10 +1067,10 @@ export default function StoryEditor() {
               </div>
               <div className="flex-1" />
               <div className="flex items-center gap-1.5 pointer-events-auto">
-                <button type="button" onClick={addText} aria-label="Añadir texto" className={iconBtn}><TextAaIcon className="w-5 h-5" /></button>
-                <button type="button" onClick={() => { setView('home'); setSheet('stickers') }} aria-label="Stickers" className={iconBtn}><SmileIcon className="w-5 h-5" /></button>
-                <button type="button" onClick={() => { setPickerOpen(true) }} aria-label="Música" className={iconBtn}><MusicIcon className="w-5 h-5" /></button>
-                <button type="button" onClick={() => setSheet('bg')} aria-label={doc.kind === 'text' ? 'Fondo' : 'Ajustar foto'} className={iconBtn}><PaletteIcon className="w-5 h-5" /></button>
+                <ToolBtn label="Texto" aria="Añadir texto" onClick={addText}><TextAaIcon className="w-[18px] h-[18px]" /></ToolBtn>
+                <ToolBtn label="Stickers" aria="Stickers" onClick={() => { setView('home'); setSheet('stickers') }}><SmileIcon className="w-[18px] h-[18px]" /></ToolBtn>
+                <ToolBtn label="Música" aria="Música" onClick={() => { setPickerOpen(true) }}><MusicIcon className="w-[18px] h-[18px]" /></ToolBtn>
+                <ToolBtn label={doc.kind === 'text' ? 'Fondo' : 'Foto'} aria={doc.kind === 'text' ? 'Fondo' : 'Ajustar foto'} onClick={() => setSheet('bg')}><PaletteIcon className="w-[18px] h-[18px]" /></ToolBtn>
               </div>
             </div>
 
@@ -1076,6 +1106,7 @@ export default function StoryEditor() {
             {editing && <TextControls el={editing} onChange={(p) => patchEl(editing.id, p, false)} />}
             {!selected && !editing && (
               <>
+                <p className="rounded-xl bg-white/5 px-3 py-2 text-[12px] text-neutral-400 leading-relaxed -mt-1">Arrastra para mover · las esquinas cambian el tamaño · suéltalo en la papelera para borrar.</p>
                 {tab === 'bg' && BackgroundPanel}
                 {tab === 'text' && (
                   <div className="space-y-3">

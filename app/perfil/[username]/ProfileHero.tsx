@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { ReactNode } from 'react'
+import { decoOverhang } from '../../components/cosmetics/decoPad'
 import Avatar from '../../components/cosmetics/Avatar'
 import NameText from '../../components/cosmetics/NameText'
 import ProfileActions from '../../components/ProfileActions'
@@ -121,6 +122,9 @@ export default function ProfileHero({
     </span>
   )
 
+  // v1.5.10 · espacio bajo el avatar para lo que el marco deja colgando (así ningún marco tapa el nombre ni el @)
+  const decoGap = cos.deco ? `max(0px, calc(var(--av) * ${decoOverhang(cos.deco.id).toFixed(3)} - 10px))` : '0px'
+
   // ───────── DISPOSICIÓN CON TARJETA DE LA TIENDA (v2: superficie fluida) ─────────
   //   banner del usuario (FUERA, arriba)  →  tarjeta que envuelve: avatar · nombre · bio · canción · identidad · chips · contadores
   if (cos.card) {
@@ -155,7 +159,7 @@ export default function ProfileHero({
             <div className="pb-1.5">{actions}</div>
           </div>
 
-          <div className="mt-3 mb-4">
+          <div className="mt-3 mb-4" style={{ ['--av' as string]: 'clamp(92px,16cqw,150px)', paddingTop: decoGap }}>
             <h1 className="font-semibold flex items-center gap-2 flex-wrap text-neutral-50" style={{ fontSize: 'clamp(22px,3.5cqw,30px)', lineHeight: 1.1 }}>
               <NameText name={label} color={light ? null : profile.name_color} nameStyle={cos.nameStyle} density="full" />
               <RoleBadges username={profile.username} roles={roles} badgeColorOverride={profile.badge_color} />
@@ -188,7 +192,7 @@ export default function ProfileHero({
       </div>
 
       <div className="max-w-2xl mx-auto px-4 sm:px-6">
-        <div className="relative z-10 -mt-14 sm:-mt-16 mb-4 flex justify-between items-end">
+        <div className="relative z-10 -mt-14 sm:-mt-16 mb-4 flex justify-between items-end [--av:7rem] sm:[--av:8rem]">
           <div className="relative shrink-0 w-28 h-28 sm:w-32 sm:h-32">
             <Avatar
               username={profile.username}
@@ -220,7 +224,7 @@ export default function ProfileHero({
           <div className="mb-2">{actions}</div>
         </div>
 
-        <div className="mb-4">
+        <div className="mb-4 [--av:7rem] sm:[--av:8rem]" style={{ paddingTop: decoGap }}>
           <h1 className="text-xl font-semibold text-neutral-50 flex items-center gap-2 flex-wrap">
             <NameText name={label} color={profile.name_color} nameStyle={cos.nameStyle} density="full" />
             <RoleBadges username={profile.username} roles={roles} badgeColorOverride={profile.badge_color} />

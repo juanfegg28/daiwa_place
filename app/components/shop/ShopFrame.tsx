@@ -8,6 +8,8 @@ import { ClaimDot } from '../economy/ClaimDot'
 import { formatNumber } from '../../lib/economy'
 import { useShop } from './ShopProvider'
 import { CATEGORY_SLUGS } from './shopRoutes'
+import NewTag from '../NewTag'
+import { markShopTabSeen, useShopTabNovelty } from '../../lib/novelty'
 
 const Chevron = ({ open }: { open: boolean }) => (
   <svg viewBox="0 0 24 24" className={`w-4 h-4 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
@@ -43,6 +45,17 @@ export default function ShopFrame({ children }: { children: ReactNode }) {
     return () => window.clearTimeout(t)
   }, [path])
 
+  // v1.5.10 · «Novedad» brillante en la pestaña que tenga algo nuevo; se apaga al entrar a esa pestaña
+  const tabNew = useShopTabNovelty(shop.userId, shop.noveltyKeys)
+  useEffect(() => {
+    if (!shop.userId || !shop.ready) return
+    const t = window.setTimeout(() => {
+      if (path === '/tienda' || path.startsWith('/tienda/seleccion')) markShopTabSeen(shop.userId as string, 'features', shop.noveltyKeys)
+      else if (path.startsWith('/tienda/descuentos')) markShopTabSeen(shop.userId as string, 'sales', shop.noveltyKeys)
+      else if (path.startsWith('/tienda/colecciones') || path.startsWith('/tienda/coleccion')) markShopTabSeen(shop.userId as string, 'collections', shop.noveltyKeys)
+    }, 1200)
+    return () => window.clearTimeout(t)
+  }, [path, shop.userId, shop.ready, shop.noveltyKeys])
   const saleCount = shop.shelf.filter((i) => i.sale_id && !i.owned).length
   const on = (href: string, exact = false) => (exact ? path === href : path === href || path.startsWith(href + '/'))
   const tab = (active: boolean) => `relative shrink-0 px-3 sm:px-4 py-3 text-[15px] font-medium whitespace-nowrap transition ${active ? 'text-white' : 'text-neutral-400 hover:text-neutral-100'}`
@@ -84,7 +97,7 @@ export default function ShopFrame({ children }: { children: ReactNode }) {
 
       {/* Pestañas */}
       <nav ref={navRef} aria-label="Secciones de la tienda" className="mt-2 border-b border-ink-700 flex items-center overflow-x-auto sm:overflow-visible -mx-3 px-3 sm:mx-0 sm:px-0 story-scroll-hide scroll-smooth">
-        <Link href="/tienda" data-active={on('/tienda', true) || on('/tienda/seleccion') || on('/tienda/coleccion') ? '1' : undefined} className={tab(on('/tienda', true) || on('/tienda/seleccion') || on('/tienda/coleccion'))} aria-current={on('/tienda', true) ? 'page' : undefined}>Destacado{(on('/tienda', true) || on('/tienda/seleccion')) && bar}</Link>
+        <Link href="/tienda" data-active={on('/tienda', true) || on('/tienda/seleccion') || on('/tienda/coleccion') ? '1' : undefined} className={tab(on('/tienda', true) || on('/tienda/seleccion') || on('/tienda/coleccion'))} aria-current={on('/tienda', true) ? 'page' : undefined}>Destacado{tabNew.features && !(on('/tienda', true) || on('/tienda/seleccion')) && <NewTag className="absolute top-[2px] left-1/2 -translate-x-1/2 whitespace-nowrap">Novedad</NewTag>}{(on('/tienda', true) || on('/tienda/seleccion')) && bar}</Link>
         <div ref={menuRef} className="relative shrink-0">
           <button type="button" data-active={on('/tienda/explorar') ? '1' : undefined} onClick={() => setMenu((m) => !m)} aria-haspopup="menu" aria-expanded={menu} className={`${tab(on('/tienda/explorar'))} inline-flex items-center gap-1`}>
             Explorar <Chevron open={menu} />{on('/tienda/explorar') && bar}
@@ -100,9 +113,9 @@ export default function ShopFrame({ children }: { children: ReactNode }) {
           )}
         </div>
         <Link href="/tienda/descuentos" data-active={on('/tienda/descuentos') ? '1' : undefined} className={`${tab(on('/tienda/descuentos'))} inline-flex items-center gap-1.5`}>
-          Descuentos {saleCount > 0 && <span className="rounded-full bg-emerald-500 text-ink-950 text-[10px] font-extrabold px-1.5 py-0.5 tabular-nums">{saleCount}</span>}{on('/tienda/descuentos') && bar}
+          Descuentos {saleCount > 0 && <span className="rounded-full bg-emerald-500 text-ink-950 text-[10px] font-extrabold px-1.5 py-0.5 tabular-nums">{saleCount}</span>}{tabNew.sales && !on('/tienda/descuentos') && <NewTag className="absolute top-[2px] left-1/2 -translate-x-1/2 whitespace-nowrap">Novedad</NewTag>}{on('/tienda/descuentos') && bar}
         </Link>
-        <Link href="/tienda/colecciones" data-active={on('/tienda/colecciones') ? '1' : undefined} className={tab(on('/tienda/colecciones'))}>Colecciones{on('/tienda/colecciones') && bar}</Link>
+        <Link href="/tienda/colecciones" data-active={on('/tienda/colecciones') ? '1' : undefined} className={tab(on('/tienda/colecciones'))}>Colecciones{tabNew.collections && !on('/tienda/colecciones') && <NewTag className="absolute top-[2px] left-1/2 -translate-x-1/2 whitespace-nowrap">Novedad</NewTag>}{on('/tienda/colecciones') && bar}</Link>
         <Link href="/tienda/inventario" data-active={on('/tienda/inventario') ? '1' : undefined} className={tab(on('/tienda/inventario'))}>Mi inventario{on('/tienda/inventario') && bar}</Link>
         <Link href="/tienda/canjear" data-active={on('/tienda/canjear') ? '1' : undefined} className={tab(on('/tienda/canjear'))}>Canjear código{on('/tienda/canjear') && bar}</Link>
       </nav>

@@ -37,7 +37,7 @@ function Demo() {
   const [opened, setOpened] = useState('')
   const ctx: ShopCtx = {
     userId: 'demo', me: { username: 'ren', name: 'Ren Shiraishi', avatarUrl: PHOTO }, worn: { avatar_deco: null, name_style: null, title_style: null, card_style: null, entry_effect: null, profile_bg: null },
-    catalog, shelf: catalog, collections: colls, collName: new Map(colls.map((c) => [c.id, c.name])), sales, features, newIds, wallet: null, balance: 2095, loading: false, ready: true, error: '',
+    catalog, shelf: catalog, collections: colls, collName: new Map(colls.map((c) => [c.id, c.name])), sales, features, newIds, noveltyKeys: { features: [], sales: [], collections: [] }, freshKeys: new Set<string>(), wallet: null, balance: 2095, loading: false, ready: true, error: '',
     reload: () => {}, open: (i) => setOpened(i.name), toggleWish: (i) => setWish((w) => ({ ...w, [i.id]: !i.wished })), wishCount: catalog.filter((i) => i.wished).length, rain: () => {}, isWorn: () => false, search: '', setSearch: () => {},
   }
   return (

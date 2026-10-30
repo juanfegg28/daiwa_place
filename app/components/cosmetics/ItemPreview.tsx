@@ -123,7 +123,7 @@ function Preview({ type, slug, palette, hue, me, font, compact = false, playing 
     return (
       <div className="relative w-full h-full min-h-[130px] overflow-hidden rounded-xl">
         <BackgroundThumb item={eq} />
-        <div className="absolute inset-x-3 bottom-3 rounded-lg bg-ink-950/60 backdrop-blur-sm px-3 py-2 text-[11px] text-neutral-200">Tu publicación se vería así</div>
+        <div className="absolute inset-x-3 bottom-3 rounded-lg bg-ink-950/60 px-3 py-2 text-[11px] text-neutral-200">Tu publicación se vería así</div>
       </div>
     )
   }
