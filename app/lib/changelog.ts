@@ -15,8 +15,30 @@ export const RELEASE_STAGE: 'beta' | 'stable' = 'stable'
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.5.11',
+    date: '2026-10-31',
+    title: 'DaiwaPlace ya se puede instalar como app 📲',
+    sections: [
+      {
+        heading: 'App en tu celular',
+        items: [
+          'DaiwaPlace ahora se puede instalar como app: con su ícono de luna, a pantalla completa y sin la barra del navegador.',
+          'Nueva página «Descargar app» (la encuentras abajo en la barra lateral y en el menú del celular) con la instalación en Android, la guía para iPhone y, pronto, el APK para descargar.',
+          'En el celular, si todavía no la instalaste, en el Inicio aparece una invitación chiquita para instalarla (con «Ahora no» para esconderla).',
+        ],
+      },
+      {
+        heading: 'Detrás de cámaras',
+        items: [
+          'Si no hay internet, ahora sale una pantalla de «Sin conexión» con un botón de reintentar, en vez del error del navegador.',
+          'La app guarda solo lo que no cambia (código, fuentes e íconos) para abrir más rápido. Tus publicaciones, mensajes y datos siempre se piden en vivo, así que nunca ves información vieja.',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.5.10',
-    date: '2026-10-30',
+    date: '2026-10-31',
     title: 'Día de Muertos, novedades que brillan y un clóset más grande',
     sections: [
       {
@@ -858,4 +880,4 @@ export const CHANGELOG: Release[] = [
 
 export const LATEST_RELEASE = CHANGELOG[0]
 // Versión que se muestra en la app. Si un parche pequeño (1.0.x) no lleva notas en el changelog, igual se sube este número a mano.
-export const APP_VERSION = '1.5.10'
+export const APP_VERSION = '1.5.11'

@@ -841,6 +841,9 @@ export default function AppShell({
                 <span className="w-1.5 h-1.5 rounded-full bg-garnet-500" />
                 v{APP_VERSION} · Novedades
               </Link>
+              <Link href="/descargar" className="mb-3 -mt-1 inline-flex items-center gap-2 self-start px-3 py-1.5 rounded-full text-[11px] text-neutral-500 hover:text-garnet-400 hover:bg-ink-800 transition">
+                📲 Descargar app
+              </Link>
 
               <div className="pt-4 border-t border-ink-800">
                 {loading ? null : userId ? (
@@ -1017,6 +1020,7 @@ export default function AppShell({
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-garnet-500" />v{APP_VERSION} · Novedades
               </Link>
+              <Link href="/descargar" className="text-[11.5px] text-neutral-500 hover:text-garnet-400 transition">📲 Descargar app</Link>
               {userId ? (
                 <button
                   type="button"

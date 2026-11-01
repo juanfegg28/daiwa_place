@@ -1,4 +1,4 @@
-# DaiwaPlace — contexto para continuar en otro chat (estado: v1.5.10 · Día de Muertos listo para lanzar el 31-oct; ver INSTRUCCIONES_V1.5.10.md)
+# DaiwaPlace — contexto para continuar en otro chat (estado: v1.5.11 · app instalable (PWA) + APK por PWABuilder; Día de Muertos listo para lanzar el 31-oct; ver INSTRUCCIONES_V1.5.11.md)
 
 Red social gratuita para miembros de un servidor de rol escolar de Roblox (perfiles, muro, comentarios, historias, mensajes, tienda de cosméticos, Lunas y misiones). Next.js 16 (App Router) + Supabase + Tailwind. Se despliega en Vercel (daiwaplace.vercel.app).
 
@@ -8,6 +8,9 @@ Red social gratuita para miembros de un servidor de rol escolar de Roblox (perfi
 
 ## SQL
 Todos los scripts están en /sql (por versión). La v1.5.8 y la v1.5.9 NO añadieron SQL; los últimos son el de la v1.5.0 y los dos de Día de Muertos (sql/v1.5.10_*).
+
+## Qué se hizo en v1.5.11
+PWA: app/manifest.ts, public/sw.js (solo guarda estáticos), public/offline.html, íconos en public/icons, app/apple-icon.png, página /descargar, InstallBanner en el Inicio, lib/pwa.ts, public/.well-known/assetlinks.json (placeholder) y app/lib/appConfig.ts (APK_URL). Sin SQL.
 
 ## Qué se hizo en v1.5.10
 Día de Muertos (colección + banner ilustrado), 11 banners nuevos con selector visual en el admin, brillito «Nueva confesión»/«Novedad» (lib/novelty.ts + components/NewTag.tsx), arreglo del aviso de misiones en celular, marcos que no tapan el nombre (components/cosmetics/decoPad.ts), clóset rediseñado, mejoras del editor/visor de historias, sello Doll nuevo y vista previa de Editar perfil/registro con identidad. Sin SQL propio.

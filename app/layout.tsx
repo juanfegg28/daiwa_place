@@ -4,6 +4,7 @@ import "./globals.css";
 import { THEME_INIT_SCRIPT } from "./lib/theme";
 import MusicProvider from './components/MusicProvider'
 import CosmeticsStyles from './components/cosmetics/CosmeticsStyles'
+import PwaRegister from './components/PwaRegister'
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, DEFAULT_OG_IMAGE } from './lib/og'
 
 const geistSans = Geist({
@@ -32,7 +33,10 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: SITE_NAME,
+  applicationName: SITE_NAME,
   description: SITE_DESCRIPTION,
+  // v1.5.11 · al «Añadir a pantalla de inicio» en iPhone abre como app (sin barra de Safari)
+  appleWebApp: { capable: true, title: SITE_NAME, statusBarStyle: 'black-translucent' },
   // Tarjeta de enlace por defecto (Discord, WhatsApp, redes): título, descripción y la luna
   openGraph: {
     type: 'website',
@@ -59,6 +63,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <CosmeticsStyles />
       </head>
       <body className="min-h-full flex flex-col bg-ink-950 text-neutral-100" suppressHydrationWarning>
+        <PwaRegister />
         <MusicProvider>{children}</MusicProvider>
       </body>
     </html>
