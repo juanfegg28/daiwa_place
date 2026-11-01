@@ -1,1 +1,8 @@
-[]
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "app.vercel.daiwaplace.twa",
+        "sha256_cert_fingerprints": ["FC:C5:E0:92:E5:59:51:7C:DF:31:9C:21:4A:83:AD:6D:FD:1B:14:F5:C3:8D:3F:A3:6B:F9:F4:24:35:D5:E4:4E"]
+      }
+    }]

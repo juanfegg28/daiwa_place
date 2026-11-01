@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# llave de firma de la app de Android (NUNCA subir a GitHub)
+signing.keystore
+signing-key-info.txt
+*.keystore
+*.aab
