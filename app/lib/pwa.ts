@@ -67,3 +67,7 @@ export function usePwa(): PwaState & { install: () => Promise<'accepted' | 'dism
   }
   return { ...s, install }
 }
+
+/** v1.6.1 · versiones sin hook (para usar fuera de componentes) */
+export const detectPlatformPublic = (): Platform => (typeof navigator === 'undefined' ? 'otro' : readPlatform())
+export const isStandalonePublic = (): boolean => (typeof window === 'undefined' ? false : readStandalone())

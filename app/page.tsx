@@ -9,6 +9,7 @@ import PostCard from './components/PostCard'
 import AnnouncementBanner from './components/AnnouncementBanner'
 import StoriesTray from './components/stories/StoriesTray'
 import InstallBanner from './components/InstallBanner'
+import PushPrompt from './components/PushPrompt'
 import PostImages from './components/PostImages'
 import MentionField, { type MentionFieldHandle } from './components/MentionField'
 import { AtIcon, ImageIcon } from './components/icons'
@@ -384,6 +385,7 @@ function Feed() {
       <div className="w-full min-w-0 max-w-xl mx-auto lg:mx-0 lg:flex-1">
       <AnnouncementBanner />
       <InstallBanner />
+      {username && <PushPrompt />}
 
       {/* Historias de 24 h (v1.2.0): solo personas que sigues, amigos primero */}
       <StoriesTray />

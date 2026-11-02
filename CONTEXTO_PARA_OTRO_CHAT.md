@@ -1,4 +1,4 @@
-# DaiwaPlace — contexto para continuar en otro chat (estado: v1.6.0 · APK de Android puesto en public/daiwaplace.apk · app instalable (PWA) + APK por PWABuilder; Día de Muertos listo para lanzar el 31-oct; ver INSTRUCCIONES_V1.5.11.md)
+# DaiwaPlace — contexto para continuar en otro chat (estado: v1.6.1 · notificaciones push (Web Push/VAPID) · APK de Android puesto en public/daiwaplace.apk · app instalable (PWA) + APK por PWABuilder; Día de Muertos listo para lanzar el 31-oct; ver INSTRUCCIONES_V1.5.11.md)
 
 Red social gratuita para miembros de un servidor de rol escolar de Roblox (perfiles, muro, comentarios, historias, mensajes, tienda de cosméticos, Lunas y misiones). Next.js 16 (App Router) + Supabase + Tailwind. Se despliega en Vercel (daiwaplace.vercel.app).
 
@@ -8,6 +8,9 @@ Red social gratuita para miembros de un servidor de rol escolar de Roblox (perfi
 
 ## SQL
 Todos los scripts están en /sql (por versión). La v1.5.8 y la v1.5.9 NO añadieron SQL; los últimos son el de la v1.5.0 y los dos de Día de Muertos (sql/v1.5.10_*).
+
+## Qué se hizo en v1.6.1
+Web Push: tabla push_subscriptions + push_config, triggers (notifications y messages) que llaman por pg_net a /api/push/send (cabecera x-push-secret = PUSH_WEBHOOK_SECRET); sw.js muestra y abre las notificaciones; Configuración → Notificaciones tiene PushSection; prefs nuevas notif_prefs.dm y notif_prefs.push_preview. Variables en Vercel: NEXT_PUBLIC_VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT, PUSH_WEBHOOK_SECRET. Los avisos del Muro nunca nombran a nadie.
 
 ## Qué se hizo en v1.6.0
 APK de PWABuilder (paquete app.vercel.daiwaplace.twa) en public/daiwaplace.apk, assetlinks.json real en public/.well-known, APK_URL activado. La llave de firma NO está en el proyecto (está en .gitignore). Sin SQL.

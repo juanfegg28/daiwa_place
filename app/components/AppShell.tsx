@@ -4,6 +4,7 @@ import WalletChip from './WalletChip'
 import MissionNotifier from './economy/MissionNotifier'
 import { ClaimDot, useClaimable, useWalletRefreshOnNavigate } from './economy/ClaimDot'
 import NewTag from './NewTag'
+import { syncPush, unlinkPushDevice } from '../lib/push'
 import { markWhispersSeen, useShopNoveltyFlag, useWhisperNovelty } from '../lib/novelty'
 import Avatar from './cosmetics/Avatar'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
@@ -449,7 +450,20 @@ export default function AppShell({
     }
   }, [unreadCount, unreadMessages, userId, pathname])
 
+  // v1.6.1 · si ya diste permiso de notificaciones, este celular queda ligado a la cuenta que está abierta
+  useEffect(() => {
+    if (!userId) return
+    const t = window.setTimeout(() => void syncPush(), 4000)
+    return () => window.clearTimeout(t)
+  }, [userId])
+
   const handleLogout = async () => {
+    await unlinkPushDevice() // este celular deja de recibir los avisos de esta cuenta
+    try {
+      window.sessionStorage.removeItem('daiwa_push_synced')
+    } catch {
+      /* sin almacenamiento */
+    }
     await supabase.auth.signOut()
     applyTheme('dark', null)
     router.push('/login')

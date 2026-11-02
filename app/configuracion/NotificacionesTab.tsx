@@ -3,8 +3,9 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import type { ConfigProfile } from './types'
+import PushSection from './PushSection'
 
-const OPTIONS: { key: keyof ConfigProfile['notif_prefs']; label: string; description: string }[] = [
+const OPTIONS: { key: Exclude<keyof ConfigProfile['notif_prefs'], 'dm' | 'push' | 'push_preview'>; label: string; description: string }[] = [
   { key: 'comments', label: 'Comentarios', description: 'Cuando alguien comenta una de tus publicaciones.' },
   { key: 'mentions', label: 'Respuestas', description: 'Cuando alguien responde uno de tus comentarios.' },
   { key: 'tags', label: 'Etiquetas', description: 'Cuando alguien te etiqueta con @ en una publicación, un comentario o el Muro de los Susurros (incluso si lo hizo de forma anónima).' },
@@ -35,6 +36,7 @@ export default function NotificacionesTab({
 
   return (
     <div className="space-y-6">
+      <PushSection profile={profile} onUpdate={onUpdate} />
       <section className="surface-card rounded-2xl p-5">
         <h2 className="text-base font-semibold text-neutral-50 mb-1">Qué te queremos avisar</h2>
         <p className="text-sm text-neutral-500 mb-4 leading-relaxed max-w-md">

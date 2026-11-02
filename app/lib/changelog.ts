@@ -15,6 +15,30 @@ export const RELEASE_STAGE: 'beta' | 'stable' = 'stable'
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.6.1',
+    date: '2026-11-02',
+    title: 'Notificaciones en el celular 🔔',
+    sections: [
+      {
+        heading: 'Como en WhatsApp',
+        items: [
+          'Ahora DaiwaPlace te avisa en el celular aunque tengas la app cerrada: cuando alguien te escribe un mensaje directo y cuando alguien comenta, te da like, te sigue, te etiqueta o comparte algo tuyo.',
+          'Se activa en Configuración → Notificaciones (o con la invitación que aparece en el Inicio). Funciona en la app de Android, en Chrome y en iPhone si instalaste DaiwaPlace en la pantalla de inicio.',
+          'Tú decides qué te llega: los interruptores de Notificaciones siguen mandando, y hay dos nuevos: «Mensajes directos» y «Mostrar el texto del mensaje» (si lo apagas, solo dice «Te envió un mensaje»).',
+          'Si estás dentro de la app mirándola, no suena ni aparece (ya lo estás viendo). Al tocar una notificación se abre justo ese chat o esa publicación.',
+          'Los avisos del Muro de los Susurros nunca dicen quién fue: siempre «Alguien».',
+        ],
+      },
+      {
+        heading: 'Detalles',
+        items: [
+          'Hay un botón «Enviar notificación de prueba» para comprobar que te llegan.',
+          'Al cerrar sesión, ese celular deja de recibir los avisos de esa cuenta. Si usas otra cuenta en el mismo celular, solo recibe los de la que está abierta.',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.6.0',
     date: '2026-11-01',
     title: 'DaiwaPlace ahora es una app 📲 (Android y iPhone)',
@@ -894,4 +918,4 @@ export const CHANGELOG: Release[] = [
 
 export const LATEST_RELEASE = CHANGELOG[0]
 // Versión que se muestra en la app. Si un parche pequeño (1.0.x) no lleva notas en el changelog, igual se sube este número a mano.
-export const APP_VERSION = '1.6.0'
+export const APP_VERSION = '1.6.1'
