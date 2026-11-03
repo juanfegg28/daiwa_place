@@ -114,7 +114,7 @@ function formatBadge(n: number) {
 
 function MaintenanceScreen({ onLogout }: { onLogout: () => void }) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-ink-950 text-neutral-100 px-4">
+    <div className="min-h-dvh flex items-center justify-center bg-ink-950 text-neutral-100 px-4">
       <div className="max-w-sm text-center">
         <div className="w-14 h-14 rounded-full bg-ink-800 flex items-center justify-center text-garnet-400 mx-auto mb-4">
           <WrenchIcon className="w-6 h-6" />
@@ -664,7 +664,7 @@ export default function AppShell({
 
   return (
     <AppSessionContext.Provider value={sessionValue}>
-      <div className="min-h-screen bg-ink-950 text-neutral-100 md:flex">
+      <div className="min-h-dvh bg-ink-950 text-neutral-100 md:flex">
         <MissionNotifier userId={userId} />
         {/* Sidebar de escritorio (v1.5.8: se puede minimizar con las 3 rayitas; abierta de entrada) */}
         <aside

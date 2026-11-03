@@ -587,6 +587,12 @@ export default function StoryViewer({
       replyRef.current?.blur()
       return
     }
+    // v1.6.2 · tocar un sticker @mención abre el perfil de esa persona
+    const hit = (document.elementsFromPoint(e.clientX, e.clientY) as HTMLElement[]).find((n) => n.dataset?.storyMention)
+    if (hit?.dataset.storyMention) {
+      router.push(`/perfil/${hit.dataset.storyMention}`)
+      return
+    }
     const r = stageRef.current?.getBoundingClientRect()
     const fx = r ? (e.clientX - r.left) / r.width : 0.7
     const fy = r ? (e.clientY - r.top) / r.height : 0.5

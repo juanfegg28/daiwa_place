@@ -89,7 +89,7 @@ export default function ImageLightbox({
         src={current.url}
         alt={`Foto ${index + 1} de ${total}`}
         onClick={(e) => e.stopPropagation()}
-        className="max-w-[94vw] max-h-[88vh] object-contain select-none"
+        className="max-w-[94vw] max-h-[88dvh] object-contain select-none"
         draggable={false}
       />
     </div>

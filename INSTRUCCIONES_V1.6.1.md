@@ -64,6 +64,27 @@ Corre esto en el SQL Editor justo después de mandar el mensaje de prueba:
 - **APK de Android**: el permiso lo pide el navegador de Android por detrás. Si en el APK no aparece nunca el cuadro de permiso, avísame (puede hacer falta volver a generar el APK activando «Enable notifications» en PWABuilder).
 - Para apagar todo de golpe: en Configuración → Notificaciones, «Desactivar en este dispositivo».
 
+## Problemas reales que ya aparecieron (y cómo se arreglaron)
+Estos 3 te pueden pasar de nuevo si algún día cambias una clave o reinstalas algo.
+
+1. **«No se pudo enviar la prueba. Vuelve a intentarlo»** → en Vercel → Logs salía `Vapid subject is not a valid URL`.
+   La variable `VAPID_SUBJECT` estaba con el correo solo. Tiene que llevar `mailto:` delante (`mailto:tucorreo@gmail.com`) o ser la dirección de la página (`https://daiwaplace.vercel.app`). Se corrige la variable y se hace un despliegue nuevo.
+   Parecido: comillas o espacios pegados en `VAPID_PRIVATE_KEY` o en `NEXT_PUBLIC_VAPID_PUBLIC_KEY` hacen el mismo error.
+2. **La prueba llegaba pero los mensajes de otra persona NO** → en Supabase, `net._http_response` mostraba **401 «No autorizado»**.
+   La clave que guardó el SQL 2 (`push_config`) y la `PUSH_WEBHOOK_SECRET` de Vercel no eran idénticas. Como las Secret de Vercel no se pueden leer, la solución es inventar una clave NUEVA y ponerla en los dos lados: `PUSH_WEBHOOK_SECRET` en Vercel y el SQL 2 en Supabase, y hacer un despliegue nuevo. Después, a probar con `select public.push_ping('message', (select id from public.messages order by created_at desc limit 1));` y mirar que salga **200**.
+3. **Llega en Brave pero no en el APK (o al revés)** → cada uno cuenta como un dispositivo distinto: hay que tocar «Activar notificaciones» dentro de cada uno.
+
+Regla de oro: las claves (Private Key, `PUSH_WEBHOOK_SECRET`) no se pegan en chats, Discord ni GitHub. Si una se filtra, se cambia por otra nueva en Vercel y en el SQL 2.
+
+## Cómo desplegar rápido (después de cambiar variables)
+Guarda la variable en Vercel y luego, en la terminal dentro de la carpeta del proyecto:
+`git commit --allow-empty -m "redeploy"`  →  `git push`
+(Las variables solo se toman en un despliegue NUEVO.)
+
+## Guarda estas cosas (copia de seguridad)
+- Tu **clave secreta** y tu **Private Key** (bloc de notas / gestor de contraseñas).
+- `signing.keystore` y `signing-key-info.txt` del APK (ver `INSTRUCCIONES_V1.6.0.md`).
+
 ---------------------------------------------------------------------
 ## Cómo se comporta (lo que pediste: «como WhatsApp»)
 - **Mensajes**: título = el nombre de quien te escribió; texto = el mensaje (o «📷 Foto»). Varios mensajes del mismo chat se juntan en una sola notificación que vuelve a sonar. Las solicitudes de mensaje dicen «Quiere enviarte un mensaje» (sin el texto).
@@ -80,5 +101,6 @@ Corre esto en el SQL Editor justo después de mandar el mensaje de prueba:
 - `sql/v1.6.1_notificaciones_push.sql` y `sql/v1.6.1_conectar_push.sql`. `package.json` y `package-lock.json` suman la librería `web-push`.
 
 ## Verificado y no verificado
+(Actualizado: en tu instalación real ya se confirmó que la prueba y los mensajes de otra cuenta llegan al celular.)
 Verificado aquí: `tsc` y ESLint limpios; el cifrado del aviso (VAPID) funciona; los textos de los 17 tipos de aviso; la ruta de envío rechaza claves malas (401), sin claves VAPID (500) y pedidos inválidos (400).
 NO verificado (no se puede desde aquí): que tu Supabase llame a tu página (SQL contra tu base real), que Google/Apple entreguen el aviso a TU celular y cómo se ve en el APK y en iPhone. Eso lo confirmas con el Paso 6.

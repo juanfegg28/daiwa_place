@@ -29,10 +29,13 @@ import {
   type StoryBg,
   type StoryElement,
   type StoryLocation,
+  type StoryMention,
   type StoryMusicEl,
   type StoryText,
   type StoryTime,
   MUSIC_STYLES,
+  MENTION_STYLES,
+  MAX_MENTIONS,
   LOCATION_STYLES,
   TIME_STYLES,
   untilLabel,
@@ -46,6 +49,8 @@ import TextControls from './editor/TextControls'
 import EmojiPanel from './editor/EmojiPanel'
 import LocationEditor from './editor/LocationEditor'
 import TimeEditor from './editor/TimeEditor'
+import MentionPicker from './editor/MentionPicker'
+import type { MentionPerson } from '../../lib/mentions'
 import MusicClipSheet from './editor/MusicClipSheet'
 import AudienceSheet from './editor/AudienceSheet'
 import Inspector from './editor/Inspector'
@@ -89,7 +94,7 @@ function maxZ(els: StoryElement[]) {
   return els.reduce((m, e) => Math.max(m, e.z), 0)
 }
 
-type StickerView = 'home' | 'emoji' | 'location' | 'time'
+type StickerView = 'home' | 'emoji' | 'location' | 'time' | 'mention'
 type Gesture = {
   target: string | 'bg'
   mode: 'drag' | 'pinch' | 'handle'
@@ -308,7 +313,7 @@ export default function StoryEditor() {
 
   const duplicate = (id: string) => {
     const el = docRef.current.elements.find((e) => e.id === id)
-    if (!el || el.type === 'music') return
+    if (!el || el.type === 'music' || el.type === 'mention') return
     addElement({ ...el, id: newId(), x: Math.min(100, el.x + 4), y: Math.min(100, el.y + 4) })
   }
 
@@ -362,6 +367,20 @@ export default function StoryEditor() {
     void coverColors(track.cover).then((c) => setCoverThemeOk(!!c))
   }
 
+  const mentionCount = doc.elements.filter((e) => e.type === 'mention').length
+  const addMention = (p: MentionPerson) => {
+    if (docRef.current.elements.filter((e) => e.type === 'mention').length >= MAX_MENTIONS) {
+      setToast(`Máximo ${MAX_MENTIONS} menciones por historia.`)
+      window.setTimeout(() => setToast(''), 3000)
+      return
+    }
+    const el: StoryMention = { ...base(), type: 'mention', y: 58, user_id: p.id, username: p.username, style: 'pill', theme: 'light' }
+    if (addElement(el)) {
+      setView('home')
+      setSheet(null)
+    }
+  }
+
   const cycleStyle = (el: StoryElement) => {
     if (el.type === 'music') {
       const i = MUSIC_STYLES.findIndex((s) => s.id === el.style)
@@ -372,6 +391,9 @@ export default function StoryEditor() {
     } else if (el.type === 'time') {
       const i = TIME_STYLES.findIndex((s) => s.id === el.style)
       patchEl(el.id, { style: TIME_STYLES[(i + 1) % TIME_STYLES.length].id } as Partial<StoryTime>)
+    } else if (el.type === 'mention') {
+      const i = MENTION_STYLES.findIndex((s) => s.id === el.style)
+      patchEl(el.id, { style: MENTION_STYLES[(i + 1) % MENTION_STYLES.length].id } as Partial<StoryMention>)
     }
   }
 
@@ -805,7 +827,7 @@ export default function StoryEditor() {
     <div>
       {view === 'home' && (
         <div className="space-y-4">
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-4 gap-2">
             <button type="button" onClick={() => { setPickerOpen(true) }} className="rounded-2xl bg-white/8 hover:bg-white/12 p-3 text-left">
               <MusicIcon className="w-6 h-6 text-garnet-300" />
               <span className="block mt-2 text-[13px] font-semibold">Música</span>
@@ -821,6 +843,11 @@ export default function StoryEditor() {
               <span className="block mt-2 text-[13px] font-semibold">Hora</span>
               <span className="block text-[11px] text-neutral-400">8 estilos</span>
             </button>
+            <button type="button" onClick={() => setView('mention')} className="rounded-2xl bg-white/8 hover:bg-white/12 p-3 text-left">
+              <span className="block w-6 h-6 text-[22px] leading-6 font-bold text-pink-300" aria-hidden="true">@</span>
+              <span className="block mt-2 text-[13px] font-semibold">Mención</span>
+              <span className="block text-[11px] text-neutral-400">{mentionCount > 0 ? `${mentionCount}/${MAX_MENTIONS}` : 'Etiquetar'}</span>
+            </button>
           </div>
           <EmojiPanel onPick={addEmoji} />
         </div>
@@ -830,6 +857,12 @@ export default function StoryEditor() {
           <button type="button" onClick={() => setView('home')} className="text-[13px] text-neutral-400">‹ Volver</button>
           <LocationEditor el={draftLoc} places={places} onChange={(p) => setDraftLoc({ ...draftLoc, ...p })} />
           <button type="button" disabled={!draftLoc.label.trim()} onClick={() => { if (addElement({ ...draftLoc, label: draftLoc.label.trim() })) { setDraftLoc(null); setView('home'); setSheet(null) } }} className="w-full rounded-full bg-garnet-600 py-2.5 text-sm font-medium disabled:opacity-40">Añadir ubicación</button>
+        </div>
+      )}
+      {view === 'mention' && uid && (
+        <div className="space-y-3">
+          <button type="button" onClick={() => setView('home')} className="text-[13px] text-neutral-400">‹ Volver</button>
+          <MentionPicker me={uid} audience={audience} full={mentionCount >= MAX_MENTIONS} onPick={addMention} />
         </div>
       )}
       {view === 'time' && draftTime && (
@@ -1049,7 +1082,7 @@ export default function StoryEditor() {
             {selected && !editing && (
               <div className="md:hidden absolute left-1/2 -translate-x-1/2 bottom-[16%] z-[85] flex items-center gap-1 rounded-full bg-black/85 px-2 py-1.5">
                 <button type="button" className="px-3 py-1.5 text-[12.5px]" onClick={() => setSheet('inspector')}>Ajustes</button>
-                {(selected.type === 'music' || selected.type === 'location' || selected.type === 'time') && <button type="button" className="px-3 py-1.5 text-[12.5px]" onClick={() => cycleStyle(selected)}>↻ Estilo</button>}
+                {(selected.type === 'music' || selected.type === 'location' || selected.type === 'time' || selected.type === 'mention') && <button type="button" className="px-3 py-1.5 text-[12.5px]" onClick={() => cycleStyle(selected)}>↻ Estilo</button>}
                 {selected.type === 'text' && <button type="button" className="px-3 py-1.5 text-[12.5px]" onClick={() => setEditingId(selected.id)}>Editar</button>}
                 <button type="button" aria-label="Borrar" className="px-2.5 py-1.5" onClick={() => removeEl(selected.id)}><TrashIcon className="w-4 h-4" /></button>
               </div>

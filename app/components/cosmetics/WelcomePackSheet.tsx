@@ -40,7 +40,7 @@ export default function WelcomePackSheet({ status, catalog, me, onClose, onDone 
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-label="Pack Bienvenida">
       <button type="button" aria-label="Cerrar" className="absolute inset-0 bg-black/70" onClick={onClose} />
-      <div className="relative w-full sm:max-w-2xl max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl border border-ink-700 bg-ink-900 p-4">
+      <div className="relative w-full sm:max-w-2xl max-h-[92dvh] overflow-y-auto rounded-t-3xl sm:rounded-3xl border border-ink-700 bg-ink-900 p-4">
         <div className="flex justify-between items-start mb-3">
           <div><h2 className="font-display text-xl font-semibold text-neutral-50">Pack Bienvenida</h2><p className="text-sm text-neutral-400">Elige lo que más te guste. Es gratis y solo se reclama una vez.</p></div>
           <button type="button" onClick={onClose} aria-label="Cerrar" className="w-9 h-9 rounded-full hover:bg-ink-800 text-neutral-400 text-xl">×</button>

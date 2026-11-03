@@ -148,7 +148,7 @@ function SusurrosContent() {
 
   if (sessionLoading || !userId || enabled === null) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-dvh flex items-center justify-center">
         <p className="text-neutral-500 text-sm">Cargando...</p>
       </div>
     )

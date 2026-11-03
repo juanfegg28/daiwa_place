@@ -84,6 +84,7 @@ export type NotificationType =
   | 'club_join_accepted'
   | 'repost'
   | 'like_story'
+  | 'mention_story'
 
 export type NotificationItem = {
   id: string

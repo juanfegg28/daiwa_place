@@ -15,6 +15,45 @@ export const RELEASE_STAGE: 'beta' | 'stable' = 'stable'
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.6.2',
+    date: '2026-11-02',
+    title: 'Estado, menciones en historias y sugerencias ✨',
+    sections: [
+      {
+        heading: 'Nuevo: Estado',
+        items: [
+          'Ahora puedes poner un Estado, como en SpaceHey: una frase corta con emoji («Estado: Vegetal», «Estado: Sicosiao»). Lo cambias desde el botón «Estado» de la caja de publicar o desde tu perfil, y tienes ideas rápidas para no empezar en blanco.',
+          'Se ve en tu perfil y, cuando es nuevo, les aparece a quienes te siguen en el Inicio como una tarjetita pequeña entre las publicaciones. Se le puede dar like con un toque.',
+          'Es distinto de las Notas de los mensajes: la Nota es pasajera y vive en Mensajes; el Estado se queda en tu perfil hasta que lo cambies o lo quites.',
+        ],
+      },
+      {
+        heading: 'Menciones (@) en las historias',
+        items: [
+          'En el editor de historias hay un sticker nuevo: «Mención». Buscas a la persona (tus amigos salen primero), eliges el diseño (píldora, vidrio, neón o texto) y el color.',
+          'Quien ve la historia puede tocar la mención para ir al perfil. La persona mencionada recibe un aviso (y una notificación en el celular), y puede ver esa historia aunque no siga a quien la publicó. En una historia «solo amigos», solo la ven los amigos, como siempre.',
+          'Máximo 5 menciones por historia. El interruptor «Etiquetas» de Configuración → Notificaciones también controla estos avisos.',
+        ],
+      },
+      {
+        heading: 'Sugerencias de seguimiento',
+        items: [
+          'De vez en cuando (no siempre), más abajo en el Inicio, aparece «Personas que quizás conozcas»: gente que siguen tus amigos y tú no, gente que ya te sigue, gente de tus clubes y miembros nuevos. Cada tarjeta dice por qué te la sugerimos.',
+          'Con la ✕ de una tarjeta no te vuelve a sugerir a esa persona; con la ✕ de arriba se esconde toda la sección por un día. Nunca salen personas bloqueadas, ocultadas, congeladas ni en Modo Fantasma.',
+        ],
+      },
+      {
+        heading: 'Mejoras en el celular y en la app',
+        items: [
+          'Al tocar un campo para escribir en iPhone, la página ya no hace zoom ni se queda agrandada.',
+          'Las ventanas y pantallas usan bien la altura real del celular (con la barra del navegador y el teclado), así nada queda cortado abajo.',
+          'La app instalada y el APK buscan actualizaciones cada vez que vuelves a abrirlas, sin menú de «mantener pulsado» sobre los botones y con la pantalla de «sin conexión» ajustada a la pantalla.',
+          'Atajos nuevos al mantener pulsado el ícono de la app: «Nueva historia» y «Notificaciones».',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.6.1',
     date: '2026-11-02',
     title: 'Notificaciones en el celular 🔔',
@@ -918,4 +957,4 @@ export const CHANGELOG: Release[] = [
 
 export const LATEST_RELEASE = CHANGELOG[0]
 // Versión que se muestra en la app. Si un parche pequeño (1.0.x) no lleva notas en el changelog, igual se sube este número a mano.
-export const APP_VERSION = '1.6.1'
+export const APP_VERSION = '1.6.2'

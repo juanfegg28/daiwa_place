@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import ProfileHero from './ProfileHero'
+import ProfileStatus from '../../components/ProfileStatus'
 import ProfileCard from '../../components/cosmetics/ProfileCard'
 import IdentitySeal from '../../components/IdentitySeal'
 import { profileThemeVars } from '../../lib/color'
@@ -327,7 +328,7 @@ function ProfileContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-dvh flex items-center justify-center">
         <p className="text-neutral-500 text-sm">Cargando perfil...</p>
       </div>
     )
@@ -341,7 +342,7 @@ function ProfileContent() {
 
   if (notFound || !profile) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="min-h-dvh flex items-center justify-center px-4">
         <div className="text-center">
           <p className="text-lg font-semibold mb-2">Este perfil no existe</p>
           <Link href="/" className="text-garnet-400 underline text-sm">
@@ -391,6 +392,9 @@ function ProfileContent() {
   // Bloques del perfil: sin tarjeta de la tienda van en la tarjeta de color de siempre; con tarjeta, DENTRO de ella
   const profileBlocks = (
     <>
+          {/* v1.6.2 · Estado («Estado: Vegetal») */}
+          {!isBlockedEitherWay && !profile.is_frozen && <ProfileStatus profileId={profile.id} isMine={isMyProfile} />}
+
           {/* Biografía y canción: dentro de una caja con los tokens de la tarjeta (sin tarjeta no cambia nada) */}
           {(profile.bio || !!normalizeTrack(profile.music)) && (
             <div className="pf-box">

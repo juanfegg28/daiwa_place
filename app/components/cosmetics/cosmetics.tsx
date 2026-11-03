@@ -172,7 +172,7 @@ export function ProfileBackground({ background, veil = 0.58 }: { background: Equ
   if (!b) return null
   return (
     <div ref={ref} aria-hidden="true" className="absolute inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 0 }}>
-      <div className="sticky top-0 h-screen w-full overflow-hidden">
+      <div className="sticky top-0 h-dvh w-full overflow-hidden">
         <div className="dpw absolute inset-0" data-live={vis ? '1' : '0'} data-static={animate ? '0' : '1'} dangerouslySetInnerHTML={{ __html: html }} />
         <div className="absolute inset-0 bg-ink-950" style={{ opacity: veil }} />
       </div>

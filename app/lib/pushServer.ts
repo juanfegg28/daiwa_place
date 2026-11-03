@@ -99,6 +99,7 @@ export function notificationText(n: NotifRow, actorName: string, recipientUserna
     case 'follow': return { title: who, body: 'empezó a seguirte', url: actorUsername ? `/perfil/${actorUsername}` : '/', tag }
     case 'like_note': return { title: who, body: 'le dio like a tu nota', url: '/mensajes', tag }
     case 'like_story': return { title: who, body: 'le dio like a tu historia', url: recipientUsername ? `/historias/${recipientUsername}` : '/', tag }
+    case 'mention_story': return { title: who, body: 'te mencionó en su historia', url: actorUsername && n.story_id ? `/historias/${actorUsername}?s=${n.story_id}` : '/notificaciones', tag }
     case 'repost': return { title: who, body: 'compartió tu publicación', url: post, tag }
     case 'mention_post': return { title: who, body: 'te etiquetó en una publicación', url: post, tag }
     case 'mention_comment': return { title: who, body: 'te etiquetó en un comentario', url: withC, tag }

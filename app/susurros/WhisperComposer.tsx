@@ -97,7 +97,7 @@ export default function WhisperComposer({
           onValueChange={(v) => setText(v.slice(0, MAX_WHISPER_LENGTH))}
           rows={6}
           placeholder="Confiesa lo que no te atreves a decir… (puedes etiquetar con @, sin que sepan quién fue)"
-          className="w-full bg-ink-900 border border-ink-700 rounded-xl px-3.5 py-3 text-[15px] leading-relaxed resize-none focus:outline-none focus:border-garnet-600 max-h-[40vh]"
+          className="w-full bg-ink-900 border border-ink-700 rounded-xl px-3.5 py-3 text-[15px] leading-relaxed resize-none focus:outline-none focus:border-garnet-600 max-h-[40dvh]"
         />
         <p className="text-[11px] text-neutral-600 text-right mt-1 mb-3">
           {clean.length < MIN_WHISPER_LENGTH ? `Mínimo ${MIN_WHISPER_LENGTH} caracteres · ` : ''}

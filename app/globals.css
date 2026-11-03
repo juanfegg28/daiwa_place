@@ -598,3 +598,37 @@ html[data-scrolling="1"] .bgl *, html[data-scrolling="1"] .sk-bg *, html[data-sc
 .shop-rise { animation: shopRise 6s ease-in infinite; }
 @media (prefers-reduced-motion: reduce) { .shop-sway, .shop-sway-x, .shop-flicker, .shop-flap, .shop-fall, .shop-rise { animation: none !important; } }
 [data-anim="off"] .shop-sway, [data-anim="off"] .shop-sway-x, [data-anim="off"] .shop-flicker, [data-anim="off"] .shop-flap, [data-anim="off"] .shop-fall, [data-anim="off"] .shop-rise { animation: none !important; }
+
+
+/* ───────── v1.6.2: mejoras para celular y APK ───────── */
+/* Que el navegador no agrande el texto solo al girar el celular */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+/* En pantallas táctiles, los campos de texto van a 16 px: así iPhone/Safari NO hace zoom al tocarlos
+   (antes la página «saltaba» y quedaba ampliada al escribir) */
+@media (hover: none) and (pointer: coarse) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']):not([type='submit']):not([type='button']),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+/* App instalada / APK: sin selección de texto ni menú de «mantener pulsado» sobre botones, íconos e imágenes de la interfaz */
+@media (display-mode: standalone) {
+  button,
+  [role='button'],
+  nav a {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  img {
+    -webkit-touch-callout: none;
+  }
+}
+/* Listas que se desplazan de lado (sugerencias, notas…): no arrastran la página entera al llegar al borde */
+.snap-x {
+  overscroll-behavior-x: contain;
+}

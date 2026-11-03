@@ -1,6 +1,7 @@
 'use client'
 
-import type { StoryElement, StoryEmoji, StoryLocation, StoryMusicEl, StoryText, StoryTime } from '../../../lib/stories'
+import type { StoryElement, StoryEmoji, StoryLocation, StoryMention, StoryMusicEl, StoryText, StoryTime } from '../../../lib/stories'
+import MentionEditor from './MentionEditor'
 import { MUSIC_STYLES, MUSIC_THEMES } from '../../../lib/stories'
 import { TrashIcon } from '../../icons'
 import TextControls from './TextControls'
@@ -85,6 +86,7 @@ export default function Inspector({
 
       {el.type === 'location' && <LocationEditor el={el as StoryLocation} places={places} onChange={(p) => onChange(p)} />}
       {el.type === 'time' && <TimeEditor el={el as StoryTime} onChange={(p) => onChange(p)} />}
+      {el.type === 'mention' && <MentionEditor el={el as StoryMention} onChange={(p) => onChange(p)} />}
     </div>
   )
 }

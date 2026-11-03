@@ -1,7 +1,7 @@
 'use client'
 
 import Avatar from './components/cosmetics/Avatar'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from './lib/supabaseClient'
 import AppShell, { useAppSession } from './components/AppShell'
@@ -12,7 +12,12 @@ import InstallBanner from './components/InstallBanner'
 import PushPrompt from './components/PushPrompt'
 import PostImages from './components/PostImages'
 import MentionField, { type MentionFieldHandle } from './components/MentionField'
-import { AtIcon, ImageIcon } from './components/icons'
+import { AtIcon, ImageIcon, SmileIcon } from './components/icons'
+import StatusCard from './components/StatusCard'
+import StatusSheet from './components/StatusSheet'
+import FollowSuggestions from './components/FollowSuggestions'
+import { STATUS_CHANGED_EVENT, fetchFeedStatuses, fetchStatus, type FeedStatus, type StatusRow } from './lib/status'
+import { suggestionsHidden } from './lib/suggestions'
 import FormatToolbar from './components/FormatToolbar'
 import DailyQuestionCard, { DAILY_TAG } from './components/DailyQuestionCard'
 import { MissionsInline, MissionsSide, useMissionsPanel } from './components/economy/MissionsPanel'
@@ -58,6 +63,18 @@ function Feed() {
   const [postError, setPostError] = useState('')
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const mentionRef = useRef<MentionFieldHandle | null>(null)
+
+  // v1.6.2 · Estado (tarjetitas pequeñas dentro del feed) y sugerencias de seguimiento (de vez en cuando, más abajo)
+  const [statuses, setStatuses] = useState<FeedStatus[]>([])
+  const [myStatus, setMyStatus] = useState<StatusRow | null>(null)
+  const [statusOpen, setStatusOpen] = useState(false)
+  // Se decide UNA vez por visita: ~60 % de las veces sale, entre la 4.ª y la 7.ª publicación
+  const [suggestPlan] = useState(() => ({ show: Math.random() < 0.6, at: 4 + Math.floor(Math.random() * 4) }))
+  const [suggestOk, setSuggestOk] = useState(false)
+  useEffect(() => {
+    const t = window.setTimeout(() => setSuggestOk(!suggestionsHidden()), 0)
+    return () => window.clearTimeout(t)
+  }, [])
   const composerRef = useRef<HTMLFormElement | null>(null)
 
   // Saludo de la caja de publicar según la hora LOCAL de quien abre la página.
@@ -140,6 +157,37 @@ function Feed() {
     await loadPosts()
     setLoadingMoreFeed(false)
   }
+
+  const loadStatuses = useCallback(async () => {
+    if (!userId) return
+    const [list, mine] = await Promise.all([fetchFeedStatuses(20), fetchStatus(userId)])
+    setStatuses(list)
+    setMyStatus(mine)
+  }, [userId])
+  useEffect(() => {
+    const t = window.setTimeout(() => void loadStatuses(), 0)
+    const on = () => void loadStatuses()
+    window.addEventListener(STATUS_CHANGED_EVENT, on)
+    window.addEventListener('focus', on)
+    return () => {
+      window.clearTimeout(t)
+      window.removeEventListener(STATUS_CHANGED_EVENT, on)
+      window.removeEventListener('focus', on)
+    }
+  }, [loadStatuses])
+
+  // Mezcla publicaciones y estados por fecha. Un estado solo entra si es más nuevo que lo último que ya cargaste
+  // (así no aparecen estados viejos «sueltos» arriba de publicaciones que todavía no pediste con «Ver más»).
+  const feedList = useMemo(() => {
+    type Row = { kind: 'post'; at: number; item: FeedItem; idx: number } | { kind: 'status'; at: number; st: FeedStatus }
+    const oldest = items.length > 0 && hasMoreFeed ? new Date(items[items.length - 1].sortAt).getTime() : 0
+    const rows: Row[] = items.map((item, idx) => ({ kind: 'post', at: new Date(item.sortAt).getTime(), item, idx }))
+    for (const st of statuses) {
+      const at = new Date(st.updated_at).getTime()
+      if (at >= oldest) rows.push({ kind: 'status', at, st })
+    }
+    return rows.sort((a, b) => b.at - a.at)
+  }, [items, statuses, hasMoreFeed])
 
   useEffect(() => {
     function run() {
@@ -474,6 +522,16 @@ function Feed() {
                 <AtIcon className="w-5 h-5" />
                 <span className="hidden sm:inline">Etiquetar</span>
               </button>
+              <button
+                type="button"
+                onClick={() => setStatusOpen(true)}
+                disabled={loading}
+                className="flex items-center gap-1.5 text-sm text-neutral-400 hover:text-garnet-400 disabled:opacity-40 rounded-full px-2.5 py-1.5 hover:bg-ink-700 transition"
+                aria-label={myStatus ? 'Cambiar mi estado' : 'Poner un estado'}
+              >
+                <SmileIcon className="w-5 h-5" />
+                <span className="hidden sm:inline">Estado</span>
+              </button>
               <span className="w-px h-5 bg-ink-700 mx-0.5" aria-hidden="true" />
               <FormatToolbar target={mentionRef} disabled={loading} />
               {(drafts.length > 0 || processingImages) && (
@@ -503,6 +561,8 @@ function Feed() {
         </form>
       )}
 
+      <StatusSheet open={statusOpen} current={myStatus} onClose={() => setStatusOpen(false)} onSaved={(st) => setMyStatus(st)} />
+
       {username && <DailyQuestionCard onAnswer={answerDailyQuestion} />}
 
       <div className="space-y-4">
@@ -525,19 +585,26 @@ function Feed() {
             Todavía no hay publicaciones. ¡Sé el primero!
           </p>
         ) : (
-          items.map((item, postIndex) => (
-            <PostCard
-              priorityImages={postIndex === 0}
-              key={item.key}
-              post={item.post}
-              repostedBy={item.repostedBy}
-              onUserHidden={reload}
-              currentUserId={userId}
-              onToggleLike={handleLike}
-              onToggleCommentLike={handleLikeComment}
-              onAddComment={handleAddComment}
-              onRefresh={reload}
-            />
+          feedList.map((row, i) => (
+            <Fragment key={row.kind === 'post' ? row.item.key : `st-${row.st.user_id}`}>
+              {row.kind === 'post' ? (
+                <PostCard
+                  priorityImages={row.idx === 0}
+                  post={row.item.post}
+                  repostedBy={row.item.repostedBy}
+                  onUserHidden={reload}
+                  currentUserId={userId}
+                  onToggleLike={handleLike}
+                  onToggleCommentLike={handleLikeComment}
+                  onAddComment={handleAddComment}
+                  onRefresh={reload}
+                />
+              ) : (
+                <StatusCard key={`${row.st.user_id}-${row.st.updated_at}`} item={row.st} mine={row.st.user_id === userId} onEdit={() => setStatusOpen(true)} />
+              )}
+              {/* v1.6.2 · sugerencias de seguimiento: de vez en cuando y más abajo en el feed (o al final si hay pocas publicaciones) */}
+              {userId && suggestOk && suggestPlan.show && i === Math.min(suggestPlan.at, feedList.length - 1) && feedList.length >= 3 && <FollowSuggestions userId={userId} />}
+            </Fragment>
           ))
         )}
         {hasMoreFeed && !loadingPosts && (

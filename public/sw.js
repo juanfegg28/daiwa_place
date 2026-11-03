@@ -1,11 +1,11 @@
-/* DaiwaPlace · service worker (v1.6.1)
+/* DaiwaPlace · service worker (v1.6.2)
  * Hace dos cosas, nada más:
  *   1) Guarda lo que NO cambia (código con hash, fuentes, íconos) para que la app abra más rápido.
  *   2) Si no hay internet, muestra una pantalla de «sin conexión» en vez del error del navegador.
  * NO guarda páginas, publicaciones, mensajes ni nada que venga de Supabase: lo tuyo siempre se pide al servidor, así que
  * nunca verás datos viejos ni de otra persona.
  *   3) (v1.6.1) Muestra las NOTIFICACIONES push (mensajes y avisos) aunque la app esté cerrada, y las abre al tocarlas. */
-const VERSION = 'v1.6.1'
+const VERSION = 'v1.6.2'
 const CACHE = `daiwa-static-${VERSION}`
 const PRECACHE = ['/offline.html', '/icons/icon-192.png', '/brand-moon.png']
 

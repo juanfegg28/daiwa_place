@@ -10,6 +10,8 @@ import { normalizeTrack, type MusicTrack } from './music'
 export const STORY_BUCKET = 'story-media'
 export const COVER_BUCKET = 'highlight-covers'
 export const MAX_ELEMENTS = 20
+/** v1.6.2 · máximo de menciones (@usuario) por historia */
+export const MAX_MENTIONS = 5
 export const MAX_TEXT_CHARS = 220
 export const MAX_LOCATION_CHARS = 40
 export const STORY_W = 1080
@@ -60,7 +62,11 @@ export type StoryTime = Base & {
   showZone: boolean
   color: string
 }
-export type StoryElement = StoryText | StoryEmoji | StoryMusicEl | StoryLocation | StoryTime
+/** v1.6.2 · mención @usuario: se dibuja como sticker y al tocarla en el visor se abre el perfil */
+export type MentionStyle = 'pill' | 'glass' | 'neon' | 'plain'
+export type MentionTheme = 'light' | 'dark' | 'accent'
+export type StoryMention = Base & { type: 'mention'; user_id: string; username: string; style: MentionStyle; theme: MentionTheme }
+export type StoryElement = StoryText | StoryEmoji | StoryMusicEl | StoryLocation | StoryTime | StoryMention
 
 export type StoryKind = 'photo' | 'text'
 export type StoryAudience = 'followers' | 'friends'
@@ -177,6 +183,12 @@ export const MUSIC_THEMES: { id: MusicTheme; label: string }[] = [
   { id: 'dark', label: 'Oscuro' },
   { id: 'accent', label: 'Acento' },
   { id: 'cover', label: 'Carátula' },
+]
+export const MENTION_STYLES: { id: MentionStyle; label: string }[] = [
+  { id: 'pill', label: 'Píldora' },
+  { id: 'glass', label: 'Vidrio' },
+  { id: 'neon', label: 'Neón' },
+  { id: 'plain', label: 'Texto' },
 ]
 export const LOCATION_STYLES: { id: LocationStyle; label: string }[] = [
   { id: 'pill', label: 'Píldora' },

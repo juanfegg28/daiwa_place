@@ -14,7 +14,7 @@ export default function AppError({ error, reset }: { error: Error & { digest?: s
   }, [error])
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-6 bg-ink-950">
+    <div className="min-h-dvh flex items-center justify-center px-6 bg-ink-950">
       <div className="max-w-sm w-full text-center">
         <div className="w-14 h-14 mx-auto rounded-full border border-ink-600 flex items-center justify-center text-garnet-400 text-2xl mb-4">
           !

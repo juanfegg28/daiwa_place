@@ -11,6 +11,7 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: '/',
     scope: '/',
     display: 'standalone',
+    display_override: ['standalone', 'minimal-ui'],
     orientation: 'portrait',
     background_color: '#0c0c0f',
     theme_color: '#0c0c0f',
@@ -22,6 +23,8 @@ export default function manifest(): MetadataRoute.Manifest {
       { src: '/icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
     shortcuts: [
+      { name: 'Nueva historia', url: '/historias/nueva', icons: [{ src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }] },
+      { name: 'Notificaciones', url: '/notificaciones', icons: [{ src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }] },
       { name: 'Susurros', url: '/susurros', icons: [{ src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }] },
       { name: 'Mensajes', url: '/mensajes', icons: [{ src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }] },
       { name: 'Misiones', url: '/misiones', icons: [{ src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }] },

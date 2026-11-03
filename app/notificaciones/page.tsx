@@ -47,6 +47,7 @@ const ACTION_TEXT: Record<NotificationType, string> = {
   follow: 'empezó a seguirte',
   like_note: 'le dio like a tu nota',
   like_story: 'le dio like a tu historia',
+  mention_story: 'te mencionó en su historia',
   whisper_comment: 'comentó tu confesión en el Muro',
   whisper_reply: 'respondió tu comentario en el Muro',
   mention_post: 'te etiquetó en su publicación',
@@ -65,7 +66,7 @@ const isTeamNotice = (t: NotificationType) => t === 'club_approved' || t === 'cl
 
 function TypeIcon({ type }: { type: NotificationType }) {
   const cls = 'w-3 h-3'
-  if (type === 'mention_post' || type === 'mention_comment' || type === 'whisper_mention' || type === 'whisper_comment_mention')
+  if (type === 'mention_post' || type === 'mention_comment' || type === 'mention_story' || type === 'whisper_mention' || type === 'whisper_comment_mention')
     return <AtIcon className={cls} />
   if (type === 'like_post' || type === 'like_comment' || type === 'like_note' || type === 'like_story') return <HeartIcon filled className={cls} />
   if (type === 'club_approved' || type === 'club_declined' || type === 'club_join_request' || type === 'club_join_accepted')
@@ -82,6 +83,7 @@ function storyAlive(n: NotificationItem): boolean {
 }
 
 function hrefFor(n: NotificationItem, me: string | null): string {
+  if (n.type === 'mention_story') return storyAlive(n) && n.actor ? `/historias/${n.actor.username}?s=${n.story_id}` : '/'
   if (n.type === 'like_story') return storyAlive(n) && me ? `/historias/${me}?s=${n.story_id}&vistas=1` : me ? `/perfil/${me}?historia=vencida` : '/'
   if (n.type === 'club_approved') return n.club_request_id ? `/clubes/configurar/${n.club_request_id}` : '/clubes'
   if (n.type === 'club_declined') return '/clubes'
@@ -233,7 +235,7 @@ function NotificacionesContent() {
 
   // miniaturas de las historias que siguen vivas (enlaces firmados en lote)
   useEffect(() => {
-    const paths = items.filter((n) => n.type === 'like_story' && storyAlive(n) && n.story?.media_path).map((n) => n.story!.media_path as string)
+    const paths = items.filter((n) => (n.type === 'like_story' || n.type === 'mention_story') && storyAlive(n) && n.story?.media_path).map((n) => n.story!.media_path as string)
     if (paths.length === 0) return
     let alive = true
     signedStoryUrls(paths).then((m) => {
@@ -293,7 +295,7 @@ function NotificacionesContent() {
 
   if (sessionLoading || !userId || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-dvh flex items-center justify-center">
         <p className="text-neutral-500 text-sm">Cargando...</p>
       </div>
     )
@@ -404,13 +406,13 @@ function NotificacionesContent() {
                         {snippet}
                       </p>
                     )}
-                    {n.type === 'like_story' && !storyAlive(n) && <p className="mt-1 text-xs text-neutral-500">Esa historia ya venció</p>}
+                    {(n.type === 'like_story' || n.type === 'mention_story') && !storyAlive(n) && <p className="mt-1 text-xs text-neutral-500">Esa historia ya venció</p>}
                     <p className="mt-1 text-[11px] text-neutral-600" title={fullDate(n.created_at)}>
                       {timeAgo(n.created_at)}
                     </p>
                   </div>
 
-                  {n.type === 'like_story' && (
+                  {(n.type === 'like_story' || n.type === 'mention_story') && (
                     <span
                       className="w-11 h-14 rounded-lg overflow-hidden bg-ink-700 shrink-0 flex items-center justify-center text-garnet-400"
                       style={storyAlive(n) && n.story?.kind === 'text' ? { background: bgToCss(n.story.bg as StoryBg) } : undefined}

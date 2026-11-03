@@ -79,7 +79,7 @@ export default function ItemSheet({
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-label={item.name}>
       <button type="button" aria-label="Cerrar" className="absolute inset-0 bg-black/70" onClick={onClose} />
-      <div className="relative w-full sm:max-w-md max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl border border-ink-700 bg-ink-900 p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
+      <div className="relative w-full sm:max-w-md max-h-[92dvh] overflow-y-auto rounded-t-3xl sm:rounded-3xl border border-ink-700 bg-ink-900 p-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="min-w-0">
             <p className="text-[11px] uppercase tracking-[0.16em] text-neutral-500">{TYPE_LABEL[item.type]}</p>

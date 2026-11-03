@@ -8,6 +8,7 @@ import EmojiElement from './elements/EmojiElement'
 import MusicSticker, { type MusicCtx } from './elements/MusicSticker'
 import LocationSticker from './elements/LocationSticker'
 import TimeSticker from './elements/TimeSticker'
+import MentionSticker from './elements/MentionSticker'
 
 /** Estilo de posición de una capa: x/y en % del escenario (referidas al centro), giro y escala */
 export function elementBoxStyle(el: Pick<StoryElement, 'x' | 'y' | 'scale' | 'rotation' | 'z'>): CSSProperties {
@@ -34,6 +35,8 @@ export function StoryElementView({ el, ctx, animate = true }: { el: StoryElement
       return <LocationSticker el={el} />
     case 'time':
       return <TimeSticker el={el} animate={animate} />
+    case 'mention':
+      return <MentionSticker el={el} />
     default:
       return null
   }
