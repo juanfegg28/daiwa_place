@@ -33,6 +33,7 @@ import {
   ClubsIcon,
   TargetIcon,
   StoreIcon,
+  CrescentMoonIcon,
   CloseIcon,
   type IconProps,
 } from './icons'
@@ -579,6 +580,12 @@ export default function AppShell({
             icon: StoreIcon,
             match: (p: string) => p.startsWith('/tienda') || p.startsWith('/personalizar'),
             fresh: shopFresh,
+          },
+          {
+            href: '/apoyar',
+            label: 'Círculo Lunar',
+            icon: CrescentMoonIcon,
+            match: (p: string) => p.startsWith('/apoyar'),
           },
           {
             href: '/susurros',

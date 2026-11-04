@@ -547,6 +547,7 @@ html[data-scrolling="1"] .bgl *, html[data-scrolling="1"] .sk-bg *, html[data-sc
   .shop-bat, .shop-twinkle, .shop-fade-in, .shop-progress { animation: none !important; }
   .shop-progress { transform: scaleX(1); }
 }
+[data-anim="off"] .moon-corona { animation: none !important; }
 [data-anim="off"] .shop-bat, [data-anim="off"] .shop-twinkle, [data-anim="off"] .shop-fade-in { animation: none !important; }
 
 
@@ -631,4 +632,39 @@ html {
 /* Listas que se desplazan de lado (sugerencias, notas…): no arrastran la página entera al llegar al borde */
 .snap-x {
   overscroll-behavior-x: contain;
+}
+
+/* ───────── v1.7.0: Círculo Lunar ───────── */
+.lunar-bg {
+  background:
+    radial-gradient(1.2px 1.2px at 12% 18%, rgba(255,255,255,.85), transparent 60%),
+    radial-gradient(1px 1px at 78% 12%, rgba(255,255,255,.7), transparent 60%),
+    radial-gradient(1.4px 1.4px at 33% 62%, rgba(255,255,255,.6), transparent 60%),
+    radial-gradient(1px 1px at 88% 55%, rgba(255,255,255,.75), transparent 60%),
+    radial-gradient(1.2px 1.2px at 55% 38%, rgba(255,255,255,.5), transparent 60%),
+    radial-gradient(1px 1px at 20% 88%, rgba(255,255,255,.6), transparent 60%),
+    radial-gradient(ellipse at 20% 0%, rgba(124,58,237,.28), transparent 55%),
+    radial-gradient(ellipse at 90% 30%, rgba(163,18,46,.22), transparent 55%),
+    radial-gradient(ellipse at 50% 100%, rgba(76,29,149,.3), transparent 60%),
+    #07060d;
+}
+.lunar-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 28px;
+  border: 1px solid var(--lc, rgba(255,255,255,.18));
+  background: linear-gradient(160deg, rgba(255,255,255,.07), rgba(255,255,255,.02) 55%, rgba(0,0,0,.25));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.03) inset, 0 30px 70px -35px var(--lg, rgba(0,0,0,.8));
+}
+@media (prefers-reduced-motion: no-preference) {
+  .moon-corona {
+    transform-origin: 50% 50%;
+    animation: moon-breathe 5s ease-in-out infinite;
+  }
+}
+@keyframes moon-breathe {
+  0%, 100% { opacity: .85; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
 }

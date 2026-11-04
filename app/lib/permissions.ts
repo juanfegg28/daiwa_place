@@ -25,6 +25,7 @@ export const PERMISSION_KEYS = [
   'manage_codes',
   'adjust_coins',
   'moderate_cosmetics',
+  'manage_supporters',
 ] as const
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number]
@@ -98,6 +99,11 @@ export const PERMISSION_INFO: Record<PermissionKey, { label: string; level: Perm
     label: 'Moderar fondos de perfil y cosméticos',
     level: 2,
     description: 'Revisa fondos de perfil subidos y reportados (llega con la v1.5.0).',
+  },
+  manage_supporters: {
+    label: 'Administrar Supporters (Círculo Lunar)',
+    level: 3,
+    description: 'Ve las membresías y los pagos, aprueba o rechaza pagos manuales de PayPal.Me y da o quita membresías con motivo. Todo queda registrado. No da ningún acceso a información privada.',
   },
   reveal_whisper_authors: {
     label: 'Ver quién escribió un susurro anónimo',

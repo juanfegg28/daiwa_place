@@ -38,6 +38,8 @@ import MusicChip from './MusicChip'
 import MusicField from './MusicField'
 import ImageLightbox from './ImageLightbox'
 import RoleBadges from './RoleBadge'
+import SupporterBadge from './supporters/SupporterBadge'
+import { useSupporterTier } from '../lib/supporters'
 import ClubTags from './ClubTag'
 import { useBlockedIds } from '../lib/useBlocked'
 
@@ -556,6 +558,7 @@ function PostCard({
   const likedByMe = currentUserId ? post.likes.some((l) => l.user_id === currentUserId) : false
   const author = post.profiles
   const isMine = !!currentUserId && post.user_id === currentUserId
+  const supTier = useSupporterTier(post.user_id)   // v1.7.0 · lunita de Supporter
   const blockedIds = useBlockedIds(currentUserId)
   const [repostBusy, setRepostBusy] = useState(false)
   const repostCount = post.reposts?.length ?? 0
@@ -816,6 +819,7 @@ function PostCard({
           size="xs"
           founderStyle="icon"
         />
+        <SupporterBadge tier={supTier} size={15} />
         <ClubTags memberships={author.club_members} size="xs" />
       </div>
       {onProfilePage ? (

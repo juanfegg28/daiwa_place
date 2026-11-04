@@ -336,6 +336,13 @@ function MisionesContent() {
       )}
 
       {!day && !error && <p className="text-sm text-neutral-500">Cargando misiones…</p>}
+
+      {/* v1.7.0 · Apoya a DaiwaPlace */}
+      <Link href="/apoyar" className="mt-6 block rounded-2xl border border-violet-400/30 bg-gradient-to-br from-violet-500/15 via-ink-900/60 to-garnet-600/10 p-4 hover:border-violet-300/60 transition">
+        <p className="text-[11px] uppercase tracking-widest text-violet-300/90">Círculo Lunar</p>
+        <p className="mt-1 text-[15px] font-semibold text-neutral-50">Apoya a DaiwaPlace y recibe Lunas cada semana</p>
+        <p className="mt-0.5 text-[13px] text-neutral-400">Desde $1 al mes · más historias, descuentos en la tienda e insignia. Ver niveles →</p>
+      </Link>
       <p className="text-xs text-neutral-600 text-center mt-6">Las misiones se cuentan solas con lo que haces en DaiwaPlace. Nada se puede completar a mano.</p>
     </div>
   )

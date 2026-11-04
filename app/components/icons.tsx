@@ -1018,3 +1018,14 @@ export function FlameIcon({ className = base }: IconProps) {
   )
 }
 
+
+
+/** v1.7.0 · Luna creciente (Círculo Lunar) */
+export function CrescentMoonIcon({ className = base }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a.5.5 0 0 0-.7-.5A9 9 0 1 0 20.5 15.2a.5.5 0 0 0-.5-.7Z" />
+      <path d="M17.5 3v3M16 4.5h3" />
+    </svg>
+  )
+}

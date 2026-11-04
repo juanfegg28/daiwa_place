@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AppShell, { useAppSession } from '../components/AppShell'
 import { hasAny, type Permissions } from '../lib/permissions'
-import { FlagIcon, ShieldAdminIcon, UserCogIcon, MegaphoneIcon, WrenchIcon, WhisperIcon, MessageIcon, SparklesIcon, ClubsIcon, MoonCoinIcon, StoreIcon } from '../components/icons'
+import { FlagIcon, ShieldAdminIcon, UserCogIcon, MegaphoneIcon, WrenchIcon, WhisperIcon, MessageIcon, SparklesIcon, ClubsIcon, MoonCoinIcon, StoreIcon, CrescentMoonIcon } from '../components/icons'
 import ReportesTab from './ReportesTab'
 import RolesTab from './RolesTab'
 import IdentidadesTab from './IdentidadesTab'
@@ -16,6 +16,7 @@ import MensajesTab from './MensajesTab'
 import ClubesTab from './ClubesTab'
 import TiendaLunasTab from './TiendaLunasTab'
 import TiendaCatalogoTab from './TiendaCatalogoTab'
+import SupportersTab from './SupportersTab'
 
 const TAB_DEFS = [
   {
@@ -78,6 +79,12 @@ const TAB_DEFS = [
     label: 'Catálogo y ofertas',
     icon: StoreIcon,
     check: (p: Permissions, sup: boolean) => sup || hasAny(p, ['manage_shop']),
+  },
+  {
+    id: 'supporters' as const,
+    label: 'Supporters',
+    icon: CrescentMoonIcon,
+    check: (p: Permissions, sup: boolean) => sup || hasAny(p, ['manage_supporters']),
   },
   {
     id: 'sistema' as const,
@@ -170,6 +177,7 @@ function AdminContent() {
           {tab === 'pregunta' && <PreguntaTab />}
           {tab === 'tienda' && <TiendaLunasTab />}
           {tab === 'catalogo' && <TiendaCatalogoTab />}
+          {tab === 'supporters' && <SupportersTab />}
           {tab === 'sistema' && <SistemaTab />}
         </>
       )}

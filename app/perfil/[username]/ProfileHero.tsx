@@ -11,6 +11,8 @@ import Avatar from '../../components/cosmetics/Avatar'
 import NameText from '../../components/cosmetics/NameText'
 import ProfileActions from '../../components/ProfileActions'
 import RoleBadges from '../../components/RoleBadge'
+import SupporterBadge from '../../components/supporters/SupporterBadge'
+import { useSupporterTier } from '../../lib/supporters'
 import ClubTags from '../../components/ClubTag'
 import { RingOverlay, rememberOrigin } from '../../components/stories/StoryRing'
 import type { RingStatus } from '../../lib/stories'
@@ -70,6 +72,7 @@ export default function ProfileHero({
   const fontSlug = cos.nameStyle?.font ?? null
   useCosmeticFont(fontSlug)
   const label = profile.id_student || profile.username
+  const supTier = useSupporterTier(profile.id)   // v1.7.0 · lunita de Supporter
 
   const openStories = (el: HTMLElement) => {
     rememberOrigin(el)
@@ -163,6 +166,7 @@ export default function ProfileHero({
             <h1 className="font-semibold flex items-center gap-2 flex-wrap text-neutral-50" style={{ fontSize: 'clamp(22px,3.5cqw,30px)', lineHeight: 1.1 }}>
               <NameText name={label} color={light ? null : profile.name_color} nameStyle={cos.nameStyle} density="full" />
               <RoleBadges username={profile.username} roles={roles} badgeColorOverride={profile.badge_color} />
+              <SupporterBadge tier={supTier} size={20} />
               <ClubTags memberships={clubTags} max={4} />
               {frozenChip}
             </h1>
@@ -228,6 +232,7 @@ export default function ProfileHero({
           <h1 className="text-xl font-semibold text-neutral-50 flex items-center gap-2 flex-wrap">
             <NameText name={label} color={profile.name_color} nameStyle={cos.nameStyle} density="full" />
             <RoleBadges username={profile.username} roles={roles} badgeColorOverride={profile.badge_color} />
+              <SupporterBadge tier={supTier} size={20} />
             <ClubTags memberships={clubTags} max={4} />
             {frozenChip}
           </h1>

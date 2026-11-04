@@ -15,6 +15,37 @@ export const RELEASE_STAGE: 'beta' | 'stable' = 'stable'
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.7.0',
+    date: '2026-11-04',
+    title: 'Círculo Lunar: apoya a DaiwaPlace 🌙',
+    sections: [
+      {
+        heading: 'Nuevo: Círculo Lunar (Supporters)',
+        items: [
+          'Ahora puedes apoyar a DaiwaPlace con una mensualidad pequeña desde «Círculo Lunar» (menú lateral y Misiones). Hay tres niveles: Luna Creciente ($1), Luna Llena ($2) y Eclipse ($5) al mes.',
+          'Ventajas: Lunas cada semana (500 · 1.000 · 2.500), más historias al día (4 · 5 · 7 en vez de 3), descuento en la tienda (5 % · 10 % · 15 %) y una lunita junto a tu nombre en el perfil y en tus publicaciones.',
+          'Se paga con PayPal como suscripción mensual. La membresía se activa solo cuando PayPal confirma el cobro, y puedes cancelar cuando quieras: conservas tus ventajas hasta que termine el mes pagado.',
+          'Si eres de Colombia, PayPal no permite pagos entre dos cuentas colombianas: escríbele al creador por Discord (@juanfegg28).',
+        ],
+      },
+      {
+        heading: 'Mi membresía',
+        items: [
+          'Una página privada con tu nivel, el estado de la mensualidad, la fecha de renovación, tu próximo bono semanal, tu historial de pagos y la opción de cancelar.',
+          'Puedes ocultar tu insignia de Supporter sin perder ningún beneficio.',
+          'Los beneficios cosméticos exclusivos (decoraciones, tarjetas, efectos y títulos) llegarán en próximas actualizaciones; ya tienen su lugar preparado.',
+        ],
+      },
+      {
+        heading: 'Para el equipo',
+        items: [
+          'Centro de Mando → Supporters: suscriptores, solicitudes de pago manual (PayPal.Me), ajustes manuales con motivo, historial de pagos, bonos y avisos de PayPal. Permiso nuevo: «Administrar Supporters».',
+          'Apoyar nunca da permisos de moderación ni acceso a información privada, ni permite saber quién escribió un Susurro anónimo.',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.6.3',
     date: '2026-11-03',
     title: 'Súper ahorro: DaiwaPlace más liviana ⚡',
@@ -973,4 +1004,4 @@ export const CHANGELOG: Release[] = [
 
 export const LATEST_RELEASE = CHANGELOG[0]
 // Versión que se muestra en la app. Si un parche pequeño (1.0.x) no lleva notas en el changelog, igual se sube este número a mano.
-export const APP_VERSION = '1.6.3'
+export const APP_VERSION = '1.7.0'

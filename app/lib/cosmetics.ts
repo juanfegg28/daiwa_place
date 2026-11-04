@@ -128,7 +128,8 @@ export type PackQuote = {
 
 // ───────── Ofertas (v1.5.0) ─────────
 /** ¿Tiene una oferta vigente? (el servidor ya puso en `price` el precio rebajado) */
-export const onSale = (i: Pick<CatalogItem, 'sale_id' | 'base_price' | 'price'>): boolean => !!i.sale_id && (i.base_price ?? 0) > i.price
+// v1.7.0 · también cuenta el descuento Supporter (el precio vigente queda por debajo del de lista, aunque no haya oferta)
+export const onSale = (i: Pick<CatalogItem, 'sale_id' | 'base_price' | 'price'>): boolean => (i.base_price ?? 0) > i.price
 /** Porcentaje de descuento redondeado (0 si no hay oferta) */
 export function salePct(i: Pick<CatalogItem, 'sale_id' | 'base_price' | 'price'>): number {
   return onSale(i) ? Math.max(1, Math.round(100 - (i.price * 100) / (i.base_price as number))) : 0
