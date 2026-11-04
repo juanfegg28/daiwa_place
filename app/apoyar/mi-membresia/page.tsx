@@ -43,12 +43,14 @@ function Content() {
   const [busy, setBusy] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [note, setNote] = useState('')
+  const [nowMs, setNowMs] = useState(0)
 
   const load = useCallback(async () => {
     const r = await fetchSupporterMe()
     if (r.error) setError(r.error)
     else {
       setError('')
+      setNowMs(Date.now())
       setMe(r.data)
     }
   }, [])
@@ -126,6 +128,15 @@ function Content() {
                   <dd className="text-neutral-100 font-medium">{active ? `${tier.discountPct} %` : '—'}</dd>
                 </div>
               </dl>
+              {active && m.source !== 'paypal' && nowMs > 0 && Date.parse(m.paid_until) - nowMs < 7 * 86400_000 && (
+                <div className="mt-3 rounded-xl border border-amber-400/40 bg-amber-400/10 p-3 text-sm">
+                  <p className="text-amber-100">Tu período termina pronto ({fmtDate(m.paid_until)}). Para seguir con tus ventajas, renueva: los meses nuevos se suman a lo que te quede.</p>
+                  <Link href={`/apoyar?tier=${m.tier}`} className="inline-block mt-2 rounded-full bg-white text-black px-4 py-1.5 text-[13px] font-semibold">Renovar</Link>
+                </div>
+              )}
+              {me.requests.some((r) => r.status === 'pending') && (
+                <p className="mt-3 rounded-xl bg-black/25 p-3 text-sm text-neutral-200">Tienes un pago <b>en revisión</b>. Cuando se compruebe, tu membresía se activa o se extiende.</p>
+              )}
               {active && (
                 <div className="mt-3 rounded-xl bg-black/25 p-3 text-sm flex items-center gap-2">
                   <MoonCoinIcon className="w-5 h-5 text-amber-300 shrink-0" />

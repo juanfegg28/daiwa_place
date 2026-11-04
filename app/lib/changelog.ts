@@ -15,6 +15,28 @@ export const RELEASE_STAGE: 'beta' | 'stable' = 'stable'
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.7.1',
+    date: '2026-11-04',
+    title: 'Apoyo con PayPal.Me: más claro y fácil de renovar',
+    sections: [
+      {
+        heading: 'Círculo Lunar con PayPal.Me',
+        items: [
+          'Ahora el apoyo se hace con PayPal.Me en dos pasos dentro de la tarjeta de cada nivel: pagas el monto exacto y pegas el ID de transacción que te da PayPal. Una persona del equipo comprueba el pago y activa tu membresía.',
+          'Puedes pagar varios meses de una vez (1, 2, 3, 6 o 12). Cada mes pagado son 30 días y los meses nuevos se suman a lo que te quede.',
+          'En «Mi membresía» te avisamos cuando tu período está por terminar y puedes renovar con un toque.',
+        ],
+      },
+      {
+        heading: 'Para el equipo',
+        items: [
+          'Centro de Mando → Supporters: cada solicitud muestra los meses y el monto esperado, y ahora puedes ajustar los meses al aprobar.',
+          'Nueva lista «Por renovar» con quién vence en los próximos días o venció hace poco.',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.7.0',
     date: '2026-11-04',
     title: 'Círculo Lunar: apoya a DaiwaPlace 🌙',
@@ -1004,4 +1026,4 @@ export const CHANGELOG: Release[] = [
 
 export const LATEST_RELEASE = CHANGELOG[0]
 // Versión que se muestra en la app. Si un parche pequeño (1.0.x) no lleva notas en el changelog, igual se sube este número a mano.
-export const APP_VERSION = '1.7.0'
+export const APP_VERSION = '1.7.1'

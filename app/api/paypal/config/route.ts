@@ -6,7 +6,8 @@ import { PAYPAL_ENV, hasSecret, loadPlans, publicClientId, type TierKey } from '
 export async function GET() {
   const headers = { 'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600' }
   const base = { clientId: publicClientId(), env: PAYPAL_ENV }
-  if (!hasSecret() || !process.env.PAYPAL_WEBHOOK_ID || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  // v1.7.1 · el método principal es PayPal.Me (manual). Las suscripciones automáticas quedan APAGADAS salvo que pongas PAYPAL_AUTO=1.
+  if (process.env.PAYPAL_AUTO !== '1' || !hasSecret() || !process.env.PAYPAL_WEBHOOK_ID || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     return NextResponse.json({ mode: 'manual', ...base, plans: {} }, { headers })
   }
   try {

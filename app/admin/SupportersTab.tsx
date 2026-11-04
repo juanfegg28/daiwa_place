@@ -7,14 +7,15 @@ import { TIERS, TIER_KEYS, tierName, type TierKey } from '../lib/supporters'
 // v1.7.0 · Centro de Mando → Supporters. Todo lo que se hace aquí queda en supporter_admin_log.
 type Overview = { active: number; by_tier: Record<string, number>; pending_requests: number; payments_30d: number; events_failed: number }
 type Sub = { user_id: string; username: string; id_student: string | null; tier: TierKey; status: string; source: string; paid_until: string; started_at: string; active: boolean; hide_badge: boolean }
-type Req = { id: string; user_id: string; username: string; id_student: string | null; tier: TierKey; tier_name: string; price_usd: number; reference: string; note: string | null; status: string; created_at: string; reviewed_at: string | null; review_note: string | null }
+type Req = { id: string; user_id: string; username: string; id_student: string | null; tier: TierKey; tier_name: string; price_usd: number; months: number; expected_usd: number; reference: string; note: string | null; status: string; created_at: string; reviewed_at: string | null; review_note: string | null; is_renewal: boolean }
+type Exp = { user_id: string; username: string; id_student: string | null; tier: TierKey; source: string; paid_until: string; days_left: number; pending_request: boolean }
 type Row = Record<string, unknown>
 
 const fmt = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' }) : '—')
 const err = (m?: string) => (m && /Could not find the function|schema cache/i.test(m) ? 'Falta correr el SQL de la v1.7.0 en Supabase.' : m ?? 'Error')
 
 export default function SupportersTab() {
-  const [sub, setSub] = useState<'solicitudes' | 'suscriptores' | 'historial'>('solicitudes')
+  const [sub, setSub] = useState<'solicitudes' | 'por renovar' | 'suscriptores' | 'historial'>('solicitudes')
   const [ov, setOv] = useState<Overview | null>(null)
   const [msg, setMsg] = useState('')
 
@@ -40,11 +41,12 @@ export default function SupportersTab() {
         </div>
       )}
       <div className="flex gap-1.5">
-        {(['solicitudes', 'suscriptores', 'historial'] as const).map((t) => (
+        {(['solicitudes', 'por renovar', 'suscriptores', 'historial'] as const).map((t) => (
           <button key={t} type="button" onClick={() => setSub(t)} className={`rounded-full px-3.5 py-1.5 text-sm capitalize ${sub === t ? 'bg-white text-black' : 'bg-ink-800 text-neutral-300 hover:bg-ink-700'}`}>{t}</button>
         ))}
       </div>
       {sub === 'solicitudes' && <Requests onChanged={loadOv} />}
+      {sub === 'por renovar' && <Expiring />}
       {sub === 'suscriptores' && <Subscribers onChanged={loadOv} />}
       {sub === 'historial' && <Activity />}
     </div>
@@ -55,6 +57,7 @@ function Requests({ onChanged }: { onChanged: () => void }) {
   const [status, setStatus] = useState<'pending' | 'approved' | 'rejected'>('pending')
   const [rows, setRows] = useState<Req[] | null>(null)
   const [notes, setNotes] = useState<Record<string, string>>({})
+  const [months, setMonths] = useState<Record<string, number>>({})
   const [busy, setBusy] = useState<string | null>(null)
   const [msg, setMsg] = useState('')
 
@@ -72,7 +75,7 @@ function Requests({ onChanged }: { onChanged: () => void }) {
     if (busy) return
     setBusy(r.id)
     setMsg('')
-    const { error } = await supabase.rpc('supporter_admin_review', { p_id: r.id, p_approve: approve, p_note: notes[r.id] || null })
+    const { error } = await supabase.rpc('supporter_admin_review', { p_id: r.id, p_approve: approve, p_note: notes[r.id] || null, p_months: approve ? months[r.id] ?? r.months : null })
     setBusy(null)
     if (error) setMsg(err(error.message))
     else {
@@ -83,7 +86,7 @@ function Requests({ onChanged }: { onChanged: () => void }) {
 
   return (
     <div className="space-y-3">
-      <p className="text-[12px] text-neutral-500">Antes de aprobar, abre tu PayPal y comprueba que existe un pago con ese ID de transacción por el monto del nivel. Aprobar da 30 días y el bono de la semana.</p>
+      <p className="text-[12px] text-neutral-500">Antes de aprobar, abre tu PayPal → Actividad, busca el ID de transacción y comprueba que el pago esté <b>Completado</b> y por el <b>monto esperado</b>. Cada mes aprobado da 30 días (se suman a lo que ya tenga) y el bono de la semana.</p>
       <div className="flex gap-1.5 text-[12px]">
         {(['pending', 'approved', 'rejected'] as const).map((s) => (
           <button key={s} type="button" onClick={() => setStatus(s)} className={`rounded-full px-3 py-1 ${status === s ? 'bg-garnet-600 text-white' : 'bg-ink-800 text-neutral-300'}`}>{s === 'pending' ? 'En revisión' : s === 'approved' ? 'Aprobadas' : 'Rechazadas'}</button>
@@ -96,12 +99,15 @@ function Requests({ onChanged }: { onChanged: () => void }) {
             <li key={r.id} className="rounded-xl bg-ink-800 p-3 text-sm space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-neutral-50 font-medium">{r.id_student || r.username} <span className="text-neutral-500 font-normal">@{r.username}</span></span>
-                <span className="text-neutral-300">{r.tier_name} · ${Number(r.price_usd).toFixed(2)}</span>
+                <span className="text-neutral-300">{r.tier_name} · {r.months} {r.months === 1 ? 'mes' : 'meses'} · esperado <b className="text-neutral-50">${Number(r.expected_usd).toFixed(2)} USD</b>{r.is_renewal ? ' · renovación' : ' · nueva'}</span>
               </div>
               <p className="text-neutral-400 text-[12px]">ID de transacción: <span className="font-mono text-neutral-200 select-all">{r.reference}</span> · {fmt(r.created_at)}</p>
               {r.note && <p className="text-[12px] text-neutral-400">Nota: {r.note}</p>}
               {r.status === 'pending' ? (
                 <div className="flex flex-wrap items-center gap-2">
+                  <select value={months[r.id] ?? r.months} onChange={(e) => setMonths((m) => ({ ...m, [r.id]: Number(e.target.value) }))} aria-label="Meses a aprobar" className="rounded-lg bg-ink-900 border border-ink-600 px-2 py-2 text-[16px]">
+                    {[1, 2, 3, 4, 5, 6, 9, 12].map((n) => <option key={n} value={n}>{n} {n === 1 ? 'mes' : 'meses'}</option>)}
+                  </select>
                   <input value={notes[r.id] ?? ''} onChange={(e) => setNotes((n) => ({ ...n, [r.id]: e.target.value.slice(0, 200) }))} placeholder="Nota para la persona (opcional)" className="flex-1 min-w-[10rem] rounded-lg bg-ink-900 border border-ink-600 px-3 py-2 text-[16px]" />
                   <button type="button" disabled={busy === r.id} onClick={() => review(r, true)} className="rounded-full bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 disabled:opacity-60">Aprobar</button>
                   <button type="button" disabled={busy === r.id} onClick={() => review(r, false)} className="rounded-full border border-garnet-600/60 text-garnet-300 px-4 py-2 disabled:opacity-60">Rechazar</button>
@@ -221,6 +227,41 @@ function Activity() {
               {Object.entries(r).filter(([, v]) => v !== null && v !== '').map(([k, v]) => (
                 <span key={k} className="mr-3 inline-block"><span className="text-neutral-500">{k}:</span> {typeof v === 'object' ? JSON.stringify(v) : /_at$/.test(k) ? fmt(String(v)) : String(v)}</span>
               ))}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+
+function Expiring() {
+  const [rows, setRows] = useState<Exp[] | null>(null)
+  const [msg, setMsg] = useState('')
+  useEffect(() => {
+    let alive = true
+    void supabase.rpc('supporter_admin_expiring', { p_days: 10 }).then(({ data, error }) => {
+      if (!alive) return
+      if (error) setMsg(err(error.message))
+      else setRows((data as Exp[]) ?? [])
+    })
+    return () => {
+      alive = false
+    }
+  }, [])
+  return (
+    <div className="space-y-3">
+      <p className="text-[12px] text-neutral-500">Quiénes vencen en los próximos 10 días o vencieron hace poco (14 días). Escríbeles (Discord) para recordarles que renueven; cuando paguen les llegará una solicitud nueva.</p>
+      {msg && <p className="text-sm text-garnet-400">{msg}</p>}
+      {rows === null ? <p className="text-sm text-neutral-500">Cargando…</p> : rows.length === 0 ? <p className="text-sm text-neutral-500">Nadie vence pronto. 🌙</p> : (
+        <ul className="space-y-1.5">
+          {rows.map((r) => (
+            <li key={r.user_id} className="rounded-xl bg-ink-800 px-3 py-2.5 text-sm flex flex-wrap items-center justify-between gap-2">
+              <span className="text-neutral-100">{r.id_student || r.username} <span className="text-neutral-500">@{r.username}</span> · {tierName(r.tier)}</span>
+              <span className={`text-[12px] ${r.days_left < 0 ? 'text-garnet-400' : r.days_left <= 3 ? 'text-amber-300' : 'text-neutral-400'}`}>
+                {r.days_left < 0 ? `venció hace ${Math.abs(r.days_left)} d` : r.days_left === 0 ? 'vence hoy' : `vence en ${r.days_left} d`} · {fmt(r.paid_until)}{r.pending_request ? ' · ya envió un pago' : ''}
+              </span>
             </li>
           ))}
         </ul>

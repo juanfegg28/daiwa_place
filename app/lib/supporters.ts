@@ -116,8 +116,8 @@ export async function setHideBadge(hide: boolean): Promise<string | null> {
   return error ? friendly(error.message) : null
 }
 
-export async function submitManualRequest(tier: TierKey, reference: string, note: string): Promise<string | null> {
-  const { error } = await supabase.rpc('supporter_manual_submit', { p_tier: tier, p_reference: reference, p_note: note || null })
+export async function submitManualRequest(tier: TierKey, reference: string, note: string, months = 1): Promise<string | null> {
+  const { error } = await supabase.rpc('supporter_manual_submit', { p_tier: tier, p_reference: reference, p_note: note || null, p_months: months })
   return error ? friendly(error.message) : null
 }
 

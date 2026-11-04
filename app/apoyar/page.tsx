@@ -7,19 +7,20 @@ import Logo from '../components/Logo'
 import MoonArt from '../components/supporters/MoonArt'
 import PayPalSubscribe from '../components/supporters/PayPalSubscribe'
 import ManualPayment from '../components/supporters/ManualPayment'
+import ManualSteps from '../components/supporters/ManualSteps'
 import ColombiaNotice, { looksColombian } from '../components/supporters/ColombiaNotice'
 import { supabase } from '../lib/supabaseClient'
 import { TIERS, TIER_KEYS, fetchPaypalConfig, type PaypalConfig, type TierKey } from '../lib/supporters'
 
 const FAQ: { q: string; a: string }[] = [
   { q: '¿Qué es el Círculo Lunar?', a: 'Es la forma de apoyar a DaiwaPlace con una mensualidad pequeña. Ese dinero ayuda a mantener el proyecto (servidores, almacenamiento y mejoras) y a cambio recibes ventajas y detalles exclusivos.' },
-  { q: '¿Cómo se paga?', a: 'Con PayPal, como suscripción mensual: PayPal cobra solo cada mes y DaiwaPlace activa tu membresía cuando PayPal confirma el pago (no cuando vuelves a la página). También hay un pago manual con PayPal.Me que revisa una persona del equipo.' },
-  { q: '¿Puedo cancelar cuando quiera?', a: 'Sí. Desde «Mi membresía» o desde tu cuenta de PayPal. Si cancelas, conservas tus ventajas hasta que termine el mes que ya pagaste.' },
-  { q: '¿Qué pasa si cancelo?', a: 'Al terminar el mes dejas de recibir el bono semanal, los descuentos y el límite ampliado de historias. Los cosméticos exclusivos que ya hayas reclamado se quedan contigo.' },
-  { q: '¿Y si un pago falla?', a: 'PayPal lo reintenta unos días. Mientras tanto conservas lo que ya pagaste. Si no se logra cobrar, la membresía termina al acabar el período pagado.' },
-  { q: '¿Soy de Colombia, qué hago?', a: 'PayPal no permite pagos entre dos cuentas de residentes en Colombia. Escríbele al creador por Discord (@juanfegg28) y buscamos otra vía.' },
+  { q: '¿Cómo se paga?', a: 'Con PayPal.Me, en dos pasos: pagas el monto del nivel (por uno o varios meses) y pegas aquí el ID de transacción que te da PayPal. Una persona del equipo comprueba el pago en PayPal y activa tu membresía; por eso puede tardar un poco. Nada se activa sin comprobar el pago.' },
+  { q: '¿Se renueva sola?', a: 'No. Cada mes pagado son 30 días. Antes de que termine, en «Mi membresía» te avisamos y puedes pagar de nuevo (o varios meses juntos). Los meses se suman a lo que te quede.' },
+  { q: '¿Puedo dejar de pagar cuando quiera?', a: 'Sí. Como no hay cobro automático, basta con no renovar. Conservas tus ventajas hasta que termine el período que ya pagaste.' },
+  { q: '¿Qué pasa cuando termina mi período?', a: 'Dejas de recibir el bono semanal, los descuentos y el límite ampliado de historias. Los cosméticos exclusivos que ya hayas reclamado se quedan contigo.' },
+  { q: '¿Soy de Colombia, qué hago?', a: 'PayPal no permite pagos entre dos cuentas de residentes en Colombia, así que desde aquí no podrías pagar. Escríbele al creador por Discord (@juanfegg28) y buscamos otra vía.' },
   { q: '¿Apoyar me da poderes o acceso a información privada?', a: 'No. Ser Supporter nunca da permisos de administración o moderación ni acceso a datos privados. Tampoco permite saber quién escribió un Susurro anónimo: eso es imposible para cualquiera por pagar.' },
-  { q: '¿Hay reembolsos?', a: 'Si PayPal reembolsa o revierte un pago, la membresía de ese pago se corta. Si tuviste un problema con un cobro, escríbeme por Discord y lo revisamos.' },
+  { q: '¿Hay reembolsos?', a: 'Si hubo un error con tu pago (monto incorrecto, pago doble), escríbeme por Discord y lo revisamos. Si un pago se reembolsa o se revierte, la membresía de ese pago se quita.' },
 ]
 
 export default function ApoyarPage() {
@@ -69,14 +70,20 @@ function ApoyarContent({ userId }: { userId: string | null }) {
     let alive = true
     const t = window.setTimeout(() => setColombian(looksColombian()), 0)
     void fetchPaypalConfig().then((c) => alive && setCfg(c))
+    const pre = new URLSearchParams(window.location.search).get('tier')
+    const t2 = window.setTimeout(() => {
+      if (pre === 'creciente' || pre === 'llena' || pre === 'eclipse') setOpen(pre)
+    }, 0)
     return () => {
       alive = false
       window.clearTimeout(t)
+      window.clearTimeout(t2)
     }
   }, [])
 
   const onDone = useCallback((r: { status: 'active' | 'pending' }) => setDone(r.status), [])
   const hideButtons = colombian && !forceButtons
+  const auto = cfg?.mode === 'auto'
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 sm:py-12">
@@ -138,16 +145,14 @@ function ApoyarContent({ userId }: { userId: string | null }) {
                   <p className="mt-3 text-xs text-amber-200">Escríbeme por Discord para apoyar (arriba).</p>
                 ) : !userId ? (
                   <Link href="/login" className="mt-3 inline-flex w-full justify-center rounded-full py-2.5 text-sm font-semibold text-black" style={{ background: t.accent }}>Inicia sesión para apoyar</Link>
-                ) : open === k && canAuto && cfg ? (
-                  <PayPalSubscribe clientId={cfg.clientId} planId={planId!} userId={userId} onDone={onDone} />
-                ) : canAuto ? (
-                  <button type="button" onClick={() => setOpen(k)} className="mt-3 w-full rounded-full py-2.5 text-sm font-semibold text-black transition hover:brightness-110" style={{ background: t.accent }}>
-                    Unirme a {t.short}
-                  </button>
-                ) : cfg ? (
-                  <p className="mt-3 text-xs text-neutral-400">Los pagos automáticos todavía no están listos. Mientras tanto puedes usar el pago manual de abajo.</p>
-                ) : (
+                ) : !cfg ? (
                   <p className="mt-3 text-xs text-neutral-500">Cargando…</p>
+                ) : open === k ? (
+                  canAuto ? <PayPalSubscribe clientId={cfg.clientId} planId={planId!} userId={userId} onDone={onDone} /> : <ManualSteps tier={k} />
+                ) : (
+                  <button type="button" onClick={() => setOpen(k)} className="mt-3 w-full rounded-full py-2.5 text-sm font-semibold text-black transition hover:brightness-110" style={{ background: t.accent }}>
+                    Apoyar con {t.short}
+                  </button>
                 )}
               </div>
             </article>
@@ -163,10 +168,23 @@ function ApoyarContent({ userId }: { userId: string | null }) {
       )}
 
       <section className="mt-10 max-w-3xl mx-auto space-y-4">
-        <ManualPayment signedIn={!!userId} />
+        {auto ? (
+          <ManualPayment signedIn={!!userId} />
+        ) : (
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-5 text-sm text-neutral-300">
+            <p className="font-semibold text-neutral-50 mb-2">Cómo funciona</p>
+            <ol className="list-decimal pl-5 space-y-1.5 leading-relaxed">
+              <li>Elige un nivel y cuántos meses quieres pagar.</li>
+              <li>Paga el monto exacto en PayPal.Me y copia el <b className="text-neutral-100">ID de transacción</b>.</li>
+              <li>Pégalo en la tarjeta del nivel y envía. Una persona del equipo comprueba el pago en PayPal.</li>
+              <li>Al aprobarlo, tu membresía se activa y recibes tu primer bono de Lunas. Verás todo en <Link href="/apoyar/mi-membresia" className="underline underline-offset-2">Mi membresía</Link>.</li>
+              <li>Cada mes pagado son 30 días. Para seguir, vuelve a pagar antes de que termine: los meses se suman.</li>
+            </ol>
+          </div>
+        )}
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-5 text-[13px] text-neutral-400 leading-relaxed">
-          El pago se procesa en PayPal; DaiwaPlace nunca ve ni guarda los datos de tu tarjeta. La membresía se activa solo cuando PayPal confirma el cobro.
-          Cada mes de suscripción son ~30 días. Ser Supporter no da permisos de moderación ni de administración, ni acceso a información privada.
+          El pago se hace en PayPal; DaiwaPlace nunca ve ni guarda los datos de tu tarjeta. La membresía se activa solo cuando una persona del equipo comprueba el pago.
+          Cada mes pagado son 30 días. Ser Supporter no da permisos de moderación ni de administración, ni acceso a información privada.
         </div>
       </section>
 
