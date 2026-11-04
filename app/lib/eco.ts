@@ -121,7 +121,7 @@ export function onWake(fn: () => void, gap: number = ECO.wakeGapMs): () => void 
  * y además una vez al volver a la pestaña. `skip()` (opcional) permite saltarse los turnos del temporizador
  * (por ejemplo, cuando Realtime está conectado); al volver a la pestaña igual se actualiza.
  */
-export function startPoll(fn: () => void | Promise<void>, ms: number, skip?: () => boolean): () => void {
+export function startPoll(fn: () => unknown, ms: number, skip?: () => boolean): () => void {
   if (typeof window === 'undefined') return () => {}
   ensureStarted()
   let stopped = false
