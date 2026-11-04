@@ -7,6 +7,7 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { supabase } from '../../lib/supabaseClient'
+import { ECO, startPoll } from '../../lib/eco'
 import { countdown, effectiveReward, refreshWallet, subscribeWallet, type DayMissions, type Mission, type WeekMissions } from '../../lib/economy'
 import { MISSIONS_CHANGED, MISSION_CLAIMED } from './MissionNotifier'
 import { CheckIcon, GiftIcon, MoonCoinIcon, TargetIcon } from '../icons'
@@ -138,7 +139,8 @@ export function useMissionsPanel(userId: string | null | undefined): { state: Mi
     // v1.5.9 · el primer pedido espera un poquito para que el feed cargue primero (antes competían y todo tardaba)
     const first = window.setTimeout(() => void load(), 700)
     const onFocus = () => void load()
-    const iv = window.setInterval(() => document.visibilityState === 'visible' && void load(), 90000)
+    // v1.6.3 · cada 5 min (solo si estás mirando y activo) y al volver a la pestaña
+    const stopPoll = startPoll(() => load(), ECO.missionsMs)
     const clock = window.setInterval(() => tick((n) => n + 1), 60000)
     // si algo cambia el resumen del saldo (una misión se completó o se reclamó en otra pantalla), se vuelve a leer
     let lastClaimable = -1
@@ -147,14 +149,12 @@ export function useMissionsPanel(userId: string | null | undefined): { state: Mi
       if (lastClaimable !== -1 && c !== lastClaimable) void load()
       lastClaimable = c
     })
-    window.addEventListener('focus', onFocus)
     window.addEventListener(MISSIONS_CHANGED, onFocus)
     return () => {
       window.removeEventListener(MISSIONS_CHANGED, onFocus)
       window.clearTimeout(first)
-      window.clearInterval(iv)
+      stopPoll()
       window.clearInterval(clock)
-      window.removeEventListener('focus', onFocus)
       unsub()
     }
   }, [userId, load])

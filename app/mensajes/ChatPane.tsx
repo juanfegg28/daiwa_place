@@ -5,6 +5,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabaseClient'
+import { ECO, onWake, startPoll } from '../lib/eco'
 import { useAppSession } from '../components/AppShell'
 import KebabMenu, { type MenuItem } from '../components/KebabMenu'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -180,7 +181,7 @@ export default function ChatPane({ convId, me, friendIds }: Props) {
     const channel = supabase
       .channel(`chat-${convId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'messages', filter: `conversation_id=eq.${convId}` }, onMessage)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'message_reactions' }, refetchReactions)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'message_reactions', filter: `conversation_id=eq.${convId}` }, refetchReactions) // v1.6.3 · solo las reacciones de ESTE chat
       .on('broadcast', { event: 'read' }, (msg) => {
         const at = (msg.payload as { at?: string } | undefined)?.at
         if (at) setOtherReadAt(at)
@@ -208,16 +209,13 @@ export default function ChatPane({ convId, me, friendIds }: Props) {
       const { data } = await supabase.rpc('dm_other_read_at', { p_conv: convId })
       if (data) setOtherReadAt(data as string)
     }
-    const interval = window.setInterval(refresh, 15000)
-    const onFocus = () => {
-      refresh()
-      scheduleMarkRead()
-    }
-    window.addEventListener('focus', onFocus)
+    // v1.6.3 · si Realtime está conectado NO se vuelve a pedir nada cada 15 s; solo al volver a la pestaña (y cada 60 s si se cayó)
+    const stopPoll = startPoll(refresh, ECO.chatFallbackMs, () => channel.state === 'joined')
+    const offWake = onWake(scheduleMarkRead)
 
     return () => {
-      window.clearInterval(interval)
-      window.removeEventListener('focus', onFocus)
+      stopPoll()
+      offWake()
       if (markTimer.current) window.clearTimeout(markTimer.current)
       channelRef.current = null
       supabase.removeChannel(channel)

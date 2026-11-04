@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { HeartIcon, SearchIcon, StarIcon, TrashIcon } from '../../icons'
 import Sheet from '../Sheet'
+import { ECO, startPoll } from '../../../lib/eco'
 import { fetchActivityCounts, fetchViewers, storyAgo, ownerLabel, type Viewer } from '../../../lib/stories'
 
 function Row({ v, liked }: { v: Viewer; liked: boolean }) {
@@ -65,10 +66,7 @@ export default function ViewersSheet({
       void refresh()
     }
     run()
-    const id = window.setInterval(() => {
-      if (document.visibilityState === 'visible') void refresh()
-    }, 10000)
-    return () => window.clearInterval(id)
+    return startPoll(() => refresh(), ECO.viewersMs) // v1.6.3 · cada 20 s (antes 10), solo con la pestaña a la vista y activo
   }, [open, refresh])
 
   const loadMore = async () => {

@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { MoonCoinIcon } from './icons'
 import { ClaimDot } from './economy/ClaimDot'
 import { formatNumber, refreshWallet, subscribeWallet, type WalletSummary } from '../lib/economy'
+import { ECO, startPoll } from '../lib/eco'
 
 /** Chip de saldo (☾ 1 250). Lleva a la tienda; con puntito si hay misiones por reclamar. */
 export default function WalletChip({ userId, compact = false, rail = false }: { userId: string | null; compact?: boolean; /** barra lateral de PC minimizada: ícono arriba y saldo abajo */ rail?: boolean }) {
@@ -23,13 +24,11 @@ export default function WalletChip({ userId, compact = false, rail = false }: { 
       if (val) last.current = val.balance
     })
     refreshWallet()
-    const onFocus = () => refreshWallet()
-    window.addEventListener('focus', onFocus)
-    const iv = setInterval(() => document.visibilityState === 'visible' && refreshWallet(true), 60000)
+    // v1.6.3 · cada 5 min (solo si estás mirando y activo) y al volver a la pestaña
+    const stop = startPoll(() => refreshWallet(true), ECO.walletMs)
     return () => {
       unsub()
-      window.removeEventListener('focus', onFocus)
-      clearInterval(iv)
+      stop()
     }
   }, [userId])
 

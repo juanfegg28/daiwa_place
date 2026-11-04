@@ -5,6 +5,7 @@ import MissionNotifier from './economy/MissionNotifier'
 import { ClaimDot, useClaimable, useWalletRefreshOnNavigate } from './economy/ClaimDot'
 import NewTag from './NewTag'
 import { syncPush, unlinkPushDevice } from '../lib/push'
+import { ECO, onWake, startPoll } from '../lib/eco'
 import { markWhispersSeen, useShopNoveltyFlag, useWhisperNovelty } from '../lib/novelty'
 import Avatar from './cosmetics/Avatar'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
@@ -232,16 +233,23 @@ export default function AppShell({
   }, [pathname])
   const router = useRouter()
 
+  const loadedRef = useRef<{ id: string | null; at: number }>({ id: null, at: 0 })
+  const maintRef = useRef(0)
   const load = async () => {
-    const { data: settingsRow } = await supabase
-      .from('app_settings')
-      .select('value')
-      .eq('key', 'maintenance_mode')
-      .maybeSingle()
-    setMaintenanceOn(settingsRow?.value === true)
+    // v1.6.3 · el modo mantenimiento se mira como mucho una vez cada 2 min (antes, en cada carga)
+    if (Date.now() - maintRef.current > 120_000) {
+      maintRef.current = Date.now()
+      const { data: settingsRow } = await supabase
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'maintenance_mode')
+        .maybeSingle()
+      setMaintenanceOn(settingsRow?.value === true)
+    }
 
-    const { data: authData } = await supabase.auth.getUser()
-    const user = authData.user
+    // v1.6.3 · sesión local (sin ir al servidor de Auth en cada carga): la seguridad real la sigue poniendo RLS
+    const { data: authData } = await supabase.auth.getSession()
+    const user = authData.session?.user ?? null
     if (!user) {
       setUserId(null)
       setUsername(null)
@@ -253,11 +261,26 @@ export default function AppShell({
       return
     }
     setUserId(user.id)
-    const { data: profile } = await supabase
+    loadedRef.current = { id: user.id, at: Date.now() }
+    // v1.6.3 · UNA sola consulta de perfil (antes eran 3). Si falta alguna columna de SQL viejos, se usa el camino de siempre.
+    let profile: { username?: string | null; avatar_url?: string | null; id_student?: string | null; theme?: string | null; accent_color?: string | null; show_online_status?: boolean | null; show_read_receipts?: boolean | null } | null = null
+    const full = await supabase
       .from('profiles')
-      .select('username, avatar_url, id_student, theme, accent_color')
+      .select('username, avatar_url, id_student, theme, accent_color, show_online_status, show_read_receipts')
       .eq('id', user.id)
       .maybeSingle()
+    if (!full.error) {
+      profile = full.data
+      setShowOnline(profile?.show_online_status !== false)
+      setShowReadReceipts(profile?.show_read_receipts !== false)
+    } else {
+      const base = await supabase.from('profiles').select('username, avatar_url, id_student, theme, accent_color').eq('id', user.id).maybeSingle()
+      profile = base.data
+      const { data: onlineRow } = await supabase.from('profiles').select('show_online_status').eq('id', user.id).maybeSingle()
+      setShowOnline(onlineRow?.show_online_status !== false)
+      const { data: receiptsRow } = await supabase.from('profiles').select('show_read_receipts').eq('id', user.id).maybeSingle()
+      setShowReadReceipts(receiptsRow?.show_read_receipts !== false)
+    }
     setUsername(profile?.username ?? null)
     setAvatarUrl(profile?.avatar_url ?? null)
     setIdStudent(profile?.id_student ?? null)
@@ -275,22 +298,6 @@ export default function AppShell({
     setPermissions(merged)
     setHasAnyRole((roleRows ?? []).length > 0)
 
-    // Se pide aparte: si todavía no se corrió el SQL de la v0.12.0, esto no tumba el resto de la sesión
-    const { data: onlineRow } = await supabase
-      .from('profiles')
-      .select('show_online_status')
-      .eq('id', user.id)
-      .maybeSingle()
-    setShowOnline(onlineRow?.show_online_status !== false)
-
-    // Igual: aparte, para que falte o no el SQL de la v0.13.5 no se rompa nada
-    const { data: receiptsRow } = await supabase
-      .from('profiles')
-      .select('show_read_receipts')
-      .eq('id', user.id)
-      .maybeSingle()
-    setShowReadReceipts(receiptsRow?.show_read_receipts !== false)
-
     setLoading(false)
   }
 
@@ -299,7 +306,10 @@ export default function AppShell({
       load()
     }
     run()
-    const { data: sub } = supabase.auth.onAuthStateChange(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      // v1.6.3 · renovar el token (cada hora) o volver a la pestaña NO vuelve a cargar todo el perfil
+      if (event === 'TOKEN_REFRESHED') return
+      if (event === 'SIGNED_IN' && session?.user?.id && session.user.id === loadedRef.current.id && Date.now() - loadedRef.current.at < 10 * 60_000) return
       load()
     })
     return () => sub.subscription.unsubscribe()
@@ -346,17 +356,19 @@ export default function AppShell({
         bump
       )
       .subscribe()
-    const interval = window.setInterval(recount, 60000)
-    window.addEventListener('focus', bump)
+    // v1.6.3 · respaldo cada 5 min (solo si estás mirando la pestaña y activo) y al volver a ella
+    const stop = startPoll(recount, ECO.notifRecountMs, () => channel.state === 'joined')
+    const offWake = onWake(bump)
     return () => {
       window.clearTimeout(timer)
-      window.clearInterval(interval)
-      window.removeEventListener('focus', bump)
+      stop()
+      offWake()
       supabase.removeChannel(channel)
     }
   }, [userId])
 
-  const countDm = async () => {
+  const dmSig = useRef('')
+  const countDm = async (): Promise<boolean> => {
     const { data } = await supabase.rpc('dm_unread_summary')
     const row = (Array.isArray(data) ? data[0] : data) as
       | { unread_conversations?: number; pending_requests?: number }
@@ -364,6 +376,10 @@ export default function AppShell({
       | undefined
     setUnreadMessages(row?.unread_conversations ?? 0)
     setMessageRequests(row?.pending_requests ?? 0)
+    const sig = `${row?.unread_conversations ?? 0}:${row?.pending_requests ?? 0}`
+    const changed = sig !== dmSig.current
+    dmSig.current = sig
+    return changed
   }
 
   const refreshDm = () => {
@@ -371,36 +387,39 @@ export default function AppShell({
     setDmVersion((v) => v + 1)
   }
 
-  // Mensajes y notas en vivo (Realtime) + respaldo por si se corta la conexión
+  // Mensajes en vivo (Realtime) + respaldo por si se corta la conexión.
+  // v1.6.3 · Antes se escuchaban TODAS las filas de messages, conversations, message_reactions, notes y note_likes de TODA la app
+  // (cada mensaje de cualquiera se revisaba contra cada persona conectada: muchísimo CPU). Ahora solo se escuchan TUS conversaciones:
+  // cada mensaje nuevo actualiza `conversations.last_message_at` por un disparador, así que basta con eso.
   useEffect(() => {
     if (!userId) return
+    const id = userId
     function recount() {
-      countDm()
+      void countDm()
     }
-    // v1.5.8 · una conversación activa dispara muchos eventos (mensaje, lectura, reacción…): se juntan en una sola recarga
+    // varios eventos seguidos (mensaje, lectura…) se juntan en UNA sola recarga
     let timer: number | undefined
     function bump() {
       window.clearTimeout(timer)
       timer = window.setTimeout(() => {
-        countDm()
+        void countDm()
         setDmVersion((v) => v + 1)
       }, 350)
     }
+    // respaldo: solo recarga la bandeja si los contadores cambiaron
+    async function soft() {
+      if (await countDm()) setDmVersion((v) => v + 1)
+    }
     recount()
     const channel = supabase
-      .channel(`dm-live-${userId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, bump)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, bump)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'message_reactions' }, bump)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notes' }, bump)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'note_likes' }, bump)
+      .channel(`dm-live-${id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations', filter: `user_a=eq.${id}` }, bump)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations', filter: `user_b=eq.${id}` }, bump)
       .subscribe()
-    const interval = window.setInterval(bump, 45000)
-    window.addEventListener('focus', bump)
+    const stop = startPoll(soft, ECO.dmRecountMs, () => channel.state === 'joined')
     return () => {
       window.clearTimeout(timer)
-      window.clearInterval(interval)
-      window.removeEventListener('focus', bump)
+      stop()
       supabase.removeChannel(channel)
     }
   }, [userId])

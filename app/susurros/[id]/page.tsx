@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabaseClient'
+import { ECO, startPoll } from '../../lib/eco'
 import AppShell, { useAppSession } from '../../components/AppShell'
 import { ArrowLeftIcon, WhisperIcon } from '../../components/icons'
 import {
@@ -82,12 +83,9 @@ function SusurroDetalle() {
       load()
     }
     run()
-    const interval = window.setInterval(run, 30000)
-    window.addEventListener('focus', run)
-    return () => {
-      window.clearInterval(interval)
-      window.removeEventListener('focus', run)
-    }
+    // v1.6.3 · cada 90 s (antes 30 s), solo si estás mirando y activo, y al volver a la pestaña
+    const stop = startPoll(run, ECO.whisperThreadMs)
+    return () => stop()
   }, [userId, load])
 
   // Llegada desde una notificación: /susurros/ID?c=COMMENT_ID → baja hasta ese comentario y lo resalta

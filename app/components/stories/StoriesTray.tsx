@@ -4,6 +4,7 @@ import Avatar from '../cosmetics/Avatar'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAppSession } from '../AppShell'
+import { ECO, startPoll } from '../../lib/eco'
 import { ChevronLeftIcon, ChevronRightIcon, LockIcon, PlusIcon } from '../icons'
 import StoryRing, { rememberOrigin } from './StoryRing'
 import {
@@ -81,19 +82,13 @@ export default function StoriesTray() {
       void load()
     }
     run()
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') void load()
-    }
     const onChanged = () => void load()
-    document.addEventListener('visibilitychange', onVisible)
     window.addEventListener(STORIES_CHANGED_EVENT, onChanged)
-    const interval = window.setInterval(() => {
-      if (document.visibilityState === 'visible') void load()
-    }, 60000)
+    // v1.6.3 · cada 3 min (solo si estás mirando y activo) y al volver a la pestaña
+    const stop = startPoll(() => load(), ECO.storiesMs)
     return () => {
-      document.removeEventListener('visibilitychange', onVisible)
       window.removeEventListener(STORIES_CHANGED_EVENT, onChanged)
-      window.clearInterval(interval)
+      stop()
     }
   }, [load])
 

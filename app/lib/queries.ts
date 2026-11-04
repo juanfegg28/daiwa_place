@@ -91,7 +91,9 @@ export async function fetchFeedItems(
   limit: number,
   userId: string | null,
   fallback: (limit: number) => Promise<{ posts: Post[]; error: string }>,
-  profileView = false
+  profileView = false,
+  /** v1.6.3 · publicaciones que ya tienes cargadas: no se vuelven a pedir completas (solo las nuevas), así «Ver más» no repite todo el feed */
+  known?: Map<string, Post>
 ): Promise<{ items: FeedItem[]; hasMore: boolean; error: string }> {
   const { data, error } = await supabase.rpc('feed_items', { p_scope: scope, p_user: scope === 'profile' ? userId : null, p_limit: limit + 1 })
   if (error) {
@@ -109,13 +111,15 @@ export async function fetchFeedItems(
   const page = rows.slice(0, limit)
   const ids = Array.from(new Set(page.map((r) => r.post_id)))
   const reposterIds = Array.from(new Set(page.map((r) => r.reposter_id).filter((x): x is string => !!x)))
-  const [{ posts, error: postsError }, reposters] = await Promise.all([
-    fetchPostsByIds(ids, profileView),
+  const needIds = known ? ids.filter((id) => !known.has(id)) : ids
+  const [{ posts: fetched, error: postsError }, reposters] = await Promise.all([
+    fetchPostsByIds(needIds, profileView),
     reposterIds.length
       ? supabase.from('profiles').select('id, username, id_student').in('id', reposterIds)
       : Promise.resolve({ data: [] as { id: string; username: string; id_student: string | null }[] }),
   ])
-  const postById = new Map(posts.map((p) => [p.id, p]))
+  const postById = new Map<string, Post>(fetched.map((p): [string, Post] => [p.id, p]))
+  if (known) for (const id of ids) if (!postById.has(id) && known.has(id)) postById.set(id, known.get(id)!)
   const reposterById = new Map(((reposters.data as { id: string; username: string; id_student: string | null }[] | null) ?? []).map((r) => [r.id, r]))
   const items: FeedItem[] = []
   for (const r of page) {

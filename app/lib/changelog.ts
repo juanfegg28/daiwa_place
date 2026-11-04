@@ -15,6 +15,22 @@ export const RELEASE_STAGE: 'beta' | 'stable' = 'stable'
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.6.3',
+    date: '2026-11-03',
+    title: 'Súper ahorro: DaiwaPlace más liviana ⚡',
+    sections: [
+      {
+        heading: 'Más rápida y ligera',
+        items: [
+          'La página ahora pide muchísimos menos datos al servidor: deja de actualizar cosas cada pocos segundos y solo lo hace cuando estás mirando la pantalla y activo.',
+          '«Ver más» en el Inicio trae solo las publicaciones nuevas en vez de volver a cargar todo el muro, y la tienda recuerda un rato el catálogo para abrir más rápido.',
+          'Los mensajes siguen llegando al instante, pero ahora la app solo escucha TUS conversaciones.',
+          'Las notas de Mensajes se actualizan al entrar, cada 5 minutos y al volver a la pestaña.',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.6.2',
     date: '2026-11-02',
     title: 'Estado, menciones en historias y sugerencias ✨',
@@ -957,4 +973,4 @@ export const CHANGELOG: Release[] = [
 
 export const LATEST_RELEASE = CHANGELOG[0]
 // Versión que se muestra en la app. Si un parche pequeño (1.0.x) no lleva notas en el changelog, igual se sube este número a mano.
-export const APP_VERSION = '1.6.2'
+export const APP_VERSION = '1.6.3'

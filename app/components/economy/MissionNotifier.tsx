@@ -6,6 +6,7 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabaseClient'
+import { ECO } from '../../lib/eco'
 import { effectiveReward, refreshWallet, subscribeWallet, type DayMissions, type Mission, type WeekMissions } from '../../lib/economy'
 import { CloseIcon, MoonCoinIcon } from '../icons'
 
@@ -74,7 +75,7 @@ export default function MissionNotifier({ userId }: { userId: string | null | un
   useEffect(() => {
     if (!userId) return
     const run = () => {
-      const wait = Math.max(500, 2500 - (Date.now() - lastCheck.current))
+      const wait = Math.max(800, ECO.actionRefreshMs - (Date.now() - lastCheck.current))
       window.clearTimeout(checkTimer.current)
       checkTimer.current = window.setTimeout(() => {
         lastCheck.current = Date.now()

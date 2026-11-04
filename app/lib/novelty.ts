@@ -5,6 +5,7 @@
 // Al entrar a la sección se quita y no vuelve hasta que haya otra novedad.
 import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
+import { ECO, startPoll } from './eco'
 import { shopCollections, shopFeaturesActive, shopSalesActive, type ShopCollection, type ShopFeature, type ShopSale } from './cosmetics'
 
 const EVT = 'daiwa:novelty'
@@ -53,7 +54,7 @@ function useNoveltyTick(): number {
 // ───────── Susurros ─────────
 const whisperLatest = { at: 0, value: null as string | null }
 async function fetchLatestWhisper(force = false): Promise<string | null> {
-  if (!force && Date.now() - whisperLatest.at < 60_000) return whisperLatest.value
+  if (!force && Date.now() - whisperLatest.at < 120_000) return whisperLatest.value
   const { data, error } = await supabase.from('whispers').select('created_at').eq('status', 'visible').order('created_at', { ascending: false }).limit(1)
   if (error) return whisperLatest.value
   whisperLatest.at = Date.now()
@@ -80,13 +81,11 @@ export function useWhisperNovelty(userId: string | null | undefined): boolean {
       if (!off) setLatest(v)
     }
     const first = window.setTimeout(run, 2500)
-    const iv = window.setInterval(run, 120_000)
-    window.addEventListener('focus', run)
+    const stop = startPoll(run, ECO.noveltyWhisperMs) // v1.6.3 · cada 10 min (antes 2) y al volver a la pestaña
     return () => {
       off = true
       window.clearTimeout(first)
-      window.clearInterval(iv)
-      window.removeEventListener('focus', run)
+      stop()
     }
   }, [userId])
   // primera vez en este navegador: lo que ya hay no cuenta como nuevo
@@ -116,7 +115,7 @@ const allKeys = (n: ShopNoveltyKeys) => [...n.features, ...n.sales, ...n.collect
 
 const shopCache = { at: 0, keys: null as ShopNoveltyKeys | null, pending: null as Promise<ShopNoveltyKeys | null> | null }
 async function fetchShopKeys(): Promise<ShopNoveltyKeys | null> {
-  if (shopCache.keys && Date.now() - shopCache.at < 300_000) return shopCache.keys
+  if (shopCache.keys && Date.now() - shopCache.at < 600_000) return shopCache.keys
   if (shopCache.pending) return shopCache.pending
   shopCache.pending = (async () => {
     const [f, s, c] = await Promise.all([shopFeaturesActive(), shopSalesActive(), shopCollections()])
@@ -143,13 +142,11 @@ export function useShopNoveltyFlag(userId: string | null | undefined): boolean {
       if (!off) setKeys(v)
     }
     const first = window.setTimeout(run, 3500)
-    const iv = window.setInterval(run, 300_000)
-    window.addEventListener('focus', run)
+    const stop = startPoll(run, ECO.noveltyShopMs) // v1.6.3 · cada 15 min (antes 5) y al volver a la pestaña
     return () => {
       off = true
       window.clearTimeout(first)
-      window.clearInterval(iv)
-      window.removeEventListener('focus', run)
+      stop()
     }
   }, [userId])
   void tick

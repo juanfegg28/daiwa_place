@@ -1,5 +1,6 @@
 // Lunas ☾, misiones y códigos (v1.3.0). El servidor decide todo: aquí solo se pide y se muestra.
 import { supabase } from './supabaseClient'
+import { ECO } from './eco'
 
 export type WalletSummary = {
   balance: number
@@ -128,7 +129,7 @@ function publish(value: WalletSummary | null) {
 /** Lee el resumen. `touch` marca el día de entrada (racha) y asigna misiones; se limita a una vez cada 5 minutos. */
 export async function refreshWallet(force = false): Promise<WalletSummary | null> {
   const now = Date.now()
-  if (!force && cached && now - cached.at < 20000) return cached.value
+  if (!force && cached && now - cached.at < ECO.walletCacheMs) return cached.value
   const doTouch = now - lastTouch > 5 * 60 * 1000
   if (doTouch) lastTouch = now
   const { data, error } = doTouch ? await supabase.rpc('economy_touch') : await supabase.rpc('wallet_summary')

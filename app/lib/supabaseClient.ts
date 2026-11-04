@@ -28,4 +28,5 @@ const watchedFetch: typeof fetch = async (input, init) => {
   return res
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, { global: { fetch: watchedFetch } })
+// v1.6.3 · eventsPerSecond limita los mensajes que ESTE navegador manda por Realtime (presencia, «visto»…)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, { global: { fetch: watchedFetch }, realtime: { params: { eventsPerSecond: 5 } } })

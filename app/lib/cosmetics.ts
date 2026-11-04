@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabaseClient'
 import { FONT_META } from './cosmeticFonts'
+import { ECO } from './eco'
 
 // ───────── Lo que lleva puesta una persona (viaja en las mismas consultas que su avatar y su nombre) ─────────
 export type Equip = { id: string; palette?: string; hue?: number }
@@ -168,20 +169,50 @@ export function cleanError(msg: string): string {
   return msg.replace(/^.*?ERROR:\s*/, '')
 }
 
-export const shopCatalog = () => rpc<CatalogItem[]>('shop_catalog')
-export const shopCollections = () => rpc<ShopCollection[]>('shop_collections')
-export const shopSalesActive = () => rpc<ShopSale[]>('shop_sales_active')
-export const shopFeaturesActive = () => rpc<ShopFeature[]>('shop_features_active')
+// v1.6.3 · Caché corta del catálogo, colecciones, ofertas e inventario (3 min). Antes cada pantalla de la tienda volvía a pedir TODO el catálogo.
+// Se borra sola al comprar, reclamar, guardar el look, tocar el corazón o cambiar de cuenta, así nunca se ve algo viejo de otra persona.
+const shopCache = new Map<string, { at: number; p: Promise<unknown> }>()
+let shopCacheUser: string | null | undefined
+if (typeof window !== 'undefined') {
+  supabase.auth.onAuthStateChange((_e, session) => {
+    const uid = session?.user?.id ?? null
+    if (shopCacheUser !== undefined && uid !== shopCacheUser) shopCache.clear()
+    shopCacheUser = uid
+  })
+}
+export function invalidateShopCache() {
+  shopCache.clear()
+}
+function cachedRpc<T>(key: string, fn: string): Rpc<T> {
+  const hit = shopCache.get(key)
+  if (hit && Date.now() - hit.at < ECO.shopCacheMs) return hit.p as Rpc<T>
+  const p = rpc<T>(fn)
+  shopCache.set(key, { at: Date.now(), p })
+  void p.then((r) => {
+    if (r.error && shopCache.get(key)?.p === p) shopCache.delete(key) // los errores no se guardan
+  })
+  return p
+}
+async function mutate<T>(run: () => Rpc<T>): Rpc<T> {
+  const r = await run()
+  shopCache.clear()
+  return r
+}
+
+export const shopCatalog = () => cachedRpc<CatalogItem[]>('catalog', 'shop_catalog')
+export const shopCollections = () => cachedRpc<ShopCollection[]>('collections', 'shop_collections')
+export const shopSalesActive = () => cachedRpc<ShopSale[]>('sales', 'shop_sales_active')
+export const shopFeaturesActive = () => cachedRpc<ShopFeature[]>('features', 'shop_features_active')
 /** Corazón: devuelve true si quedó en la lista de deseos */
-export const shopWishToggle = (item: string) => rpc<boolean>('shop_wish_toggle', { p_item: item })
+export const shopWishToggle = (item: string) => mutate(() => rpc<boolean>('shop_wish_toggle', { p_item: item }))
 export const shopPackQuote = (collection: string) => rpc<PackQuote | null>('shop_pack_quote', { p_collection: collection })
-export const myInventory = () => rpc<InventoryItem[]>('my_inventory')
+export const myInventory = () => cachedRpc<InventoryItem[]>('inventory', 'my_inventory')
 /** Solo devuelve filas para la cuenta del equipo con acceso total; para el resto, vacío. */
 export const staffPreviewItems = () => rpc<CatalogItem[]>('staff_preview_items')
-export const shopBuy = (item: string, expected: number) => rpc<{ ok: boolean; balance: number; name: string }>('shop_buy', { p_item: item, p_expected_price: expected, p_key: crypto.randomUUID() })
-export const shopBuyPack = (collection: string, expected: number) => rpc<{ ok: boolean; balance: number; items: number }>('shop_buy_pack', { p_collection: collection, p_expected_price: expected, p_key: crypto.randomUUID() })
+export const shopBuy = (item: string, expected: number) => mutate(() => rpc<{ ok: boolean; balance: number; name: string }>('shop_buy', { p_item: item, p_expected_price: expected, p_key: crypto.randomUUID() }))
+export const shopBuyPack = (collection: string, expected: number) => mutate(() => rpc<{ ok: boolean; balance: number; items: number }>('shop_buy_pack', { p_collection: collection, p_expected_price: expected, p_key: crypto.randomUUID() }))
 export const welcomePackStatus = () => rpc<{ claimed: boolean; decos: number; fonts: number; titles: number }>('welcome_pack_status')
-export const welcomePackClaim = (items: string[]) => rpc<{ ok: boolean; items: number }>('welcome_pack_claim', { p_items: items })
+export const welcomePackClaim = (items: string[]) => mutate(() => rpc<{ ok: boolean; items: number }>('welcome_pack_claim', { p_items: items }))
 export const profileBadges = (user: string) => rpc<{ slug: string; name: string }[]>('profile_badges', { p_user: user })
 
 export type LookConfig = {
@@ -193,7 +224,7 @@ export type LookConfig = {
   entry?: Equip | null
   background?: Equip | null
 }
-export const saveLook = (config: LookConfig) => rpc<ProfileCosmetics>('cosmetic_save_look', { p_config: config })
+export const saveLook = (config: LookConfig) => mutate(() => rpc<ProfileCosmetics>('cosmetic_save_look', { p_config: config }))
 
 // ───────── Preferencias de movimiento (solo en este dispositivo) ─────────
 export type AnimPref = 'todas' | 'perfiles' | 'ninguna'

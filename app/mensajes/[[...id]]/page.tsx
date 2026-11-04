@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabaseClient'
+import { ECO, onWake, startPoll } from '../../lib/eco'
 import AppShell, { useAppSession } from '../../components/AppShell'
 import { MessageIcon } from '../../components/icons'
 import InboxPane, { type InboxTab } from '../InboxPane'
@@ -91,11 +92,11 @@ function MensajesContent({ convId }: { convId: string | null }) {
       setFriendIds(friends)
     }
     run()
-    const onFocus = () => run()
-    window.addEventListener('focus', onFocus)
+    // v1.6.3 · los seguidores casi no cambian: se vuelve a mirar como mucho cada 2 min al volver a la pestaña
+    const offWake = onWake(run, 120_000)
     return () => {
       cancelled = true
-      window.removeEventListener('focus', onFocus)
+      offWake()
     }
   }, [userId])
 
@@ -112,10 +113,13 @@ function MensajesContent({ convId }: { convId: string | null }) {
       if (!cancelled) setNotes((data as unknown as NoteItem[]) ?? [])
     }
     run()
+    // v1.6.3 · las notas ya NO se recargan con cada mensaje (dmVersion); solo al entrar, cada 5 min y al volver a la pestaña
+    const stop = startPoll(run, ECO.notesMs)
     return () => {
       cancelled = true
+      stop()
     }
-  }, [userId, dmVersion])
+  }, [userId])
 
   const reloadNotes = async () => {
     const { data } = await supabase

@@ -18,6 +18,7 @@ import StatusSheet from './components/StatusSheet'
 import FollowSuggestions from './components/FollowSuggestions'
 import { STATUS_CHANGED_EVENT, fetchFeedStatuses, fetchStatus, type FeedStatus, type StatusRow } from './lib/status'
 import { suggestionsHidden } from './lib/suggestions'
+import { ECO, onWake, startPoll } from './lib/eco'
 import FormatToolbar from './components/FormatToolbar'
 import DailyQuestionCard, { DAILY_TAG } from './components/DailyQuestionCard'
 import { MissionsInline, MissionsSide, useMissionsPanel } from './components/economy/MissionsPanel'
@@ -30,7 +31,7 @@ import { MusicIcon } from './components/icons'
 import { normalizeTrack, toStoredTrack } from './lib/music'
 import type { Post, PostImage, FeedItem } from './lib/types'
 
-const FEED_PAGE = 15
+const FEED_PAGE = 12 // v1.6.3 · 12 (antes 15): cada publicación trae sus comentarios y likes, así que cada una pesa
 
 type DraftImage = {
   id: string
@@ -141,8 +142,14 @@ function Feed() {
 
   // El feed lo arma la base de datos (feed_items): publicaciones + compartidos, sin lo que ocultaste y
   // según tu preferencia de Configuración (Todos / Siguiendo / Amigos).
-  const loadPosts = async () => {
-    const res = await fetchFeedItems('home', feedLimit.current, null, loadLegacyPosts)
+  // v1.6.3 · con `reuse` solo se piden completas las publicaciones que todavía no tienes (publicar, «Ver más»); sin `reuse`, todo se renueva.
+  const itemsRef = useRef<FeedItem[]>([])
+  useEffect(() => {
+    itemsRef.current = items
+  }, [items])
+  const loadPosts = async (reuse = false) => {
+    const known = reuse && itemsRef.current.length > 0 ? new Map<string, Post>(itemsRef.current.map((it): [string, Post] => [it.post.id, it.post])) : undefined
+    const res = await fetchFeedItems('home', feedLimit.current, null, loadLegacyPosts, false, known)
     if (res.error) console.error('Error cargando posts:', res.error)
     setHasMoreFeed(res.hasMore)
     setItems(res.items)
@@ -154,7 +161,7 @@ function Feed() {
   const loadMoreFeed = async () => {
     setLoadingMoreFeed(true)
     feedLimit.current += FEED_PAGE
-    await loadPosts()
+    await loadPosts(true)
     setLoadingMoreFeed(false)
   }
 
@@ -168,11 +175,11 @@ function Feed() {
     const t = window.setTimeout(() => void loadStatuses(), 0)
     const on = () => void loadStatuses()
     window.addEventListener(STATUS_CHANGED_EVENT, on)
-    window.addEventListener('focus', on)
+    const offWake = onWake(on, 120_000)
     return () => {
       window.clearTimeout(t)
       window.removeEventListener(STATUS_CHANGED_EVENT, on)
-      window.removeEventListener('focus', on)
+      offWake()
     }
   }, [loadStatuses])
 
@@ -197,25 +204,31 @@ function Feed() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Aviso de "hay publicaciones nuevas": se revisa cada 45 s y al volver a la pestaña (sin mover lo que estás leyendo)
+  // Aviso de "hay publicaciones nuevas".
+  // v1.6.3 · Primero una mirada BARATA a la fecha de la última publicación/compartido; solo si hay algo más nuevo que lo que ya cargaste
+  // se llama a la función pesada feed_items (que respeta ocultos y tu preferencia). Se revisa cada 3 min y solo con la pestaña a la vista.
+  const confirmedHead = useRef<string | null>(null)
   useEffect(() => {
     async function check() {
+      if (!newestSeen.current) return
+      const [p, r] = await Promise.all([
+        supabase.from('posts').select('created_at').order('created_at', { ascending: false }).limit(1),
+        supabase.from('reposts').select('created_at').order('created_at', { ascending: false }).limit(1),
+      ])
+      if (p.error) return
+      const heads = [p.data?.[0]?.created_at, r.error ? undefined : r.data?.[0]?.created_at].filter((x): x is string => !!x)
+      if (heads.length === 0) return
+      const head = heads.reduce((a, b) => (new Date(a).getTime() >= new Date(b).getTime() ? a : b))
+      if (new Date(head).getTime() <= new Date(newestSeen.current).getTime()) return
+      if (confirmedHead.current === head) return // ya se comprobó: es de alguien que tienes oculto o fuera de tu preferencia
+      confirmedHead.current = head
       const { data: feedHead, error: feedErr } = await supabase.rpc('feed_items', { p_scope: 'home', p_user: null, p_limit: 1 })
-      let latest = (feedHead as { sort_at: string }[] | null)?.[0]?.sort_at as string | undefined
-      if (feedErr) {
-        const { data } = await supabase.from('posts').select('created_at').order('created_at', { ascending: false }).limit(1)
-        latest = data?.[0]?.created_at as string | undefined
-      }
+      const latest = feedErr ? head : ((feedHead as { sort_at: string }[] | null)?.[0]?.sort_at as string | undefined)
       if (latest && newestSeen.current && new Date(latest).getTime() > new Date(newestSeen.current).getTime()) {
         setNewPostsAvailable(true)
       }
     }
-    const interval = window.setInterval(check, 45000)
-    window.addEventListener('focus', check)
-    return () => {
-      window.clearInterval(interval)
-      window.removeEventListener('focus', check)
-    }
+    return startPoll(check, ECO.feedCheckMs)
   }, [])
 
   const handlePickImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -337,7 +350,7 @@ function Feed() {
     setContent('')
     setPostMusic(null)
     setLoading(false)
-    loadPosts()
+    loadPosts(true)
   }
 
   // v1.5.8 · Manejadores ESTABLES (useCallback + ref a loadPosts) para que las tarjetas del feed no se repinten con cada tecla que
