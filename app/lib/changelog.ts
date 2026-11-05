@@ -15,6 +15,27 @@ export const RELEASE_STAGE: 'beta' | 'stable' = 'stable'
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.7.2',
+    date: '2026-11-04',
+    title: 'Ahora también puedes apoyar con Ko-fi',
+    sections: [
+      {
+        heading: 'Círculo Lunar con Ko-fi',
+        items: [
+          'Además de PayPal.Me, ahora puedes apoyar dando una propina en Ko-fi. En la tarjeta de cada nivel elige «Ko-fi»: te damos un código, lo pegas en el mensaje de tu propina y nos avisas.',
+          'Una persona del equipo comprueba la propina y activa tu membresía, igual que con PayPal.Me. Puedes pagar 1, 2, 3, 6 o 12 meses de una vez.',
+          'En «Mi membresía» verás con qué método pagaste cada vez.',
+        ],
+      },
+      {
+        heading: 'Para el equipo',
+        items: [
+          'Centro de Mando → Supporters → Solicitudes: cada solicitud muestra su método (PayPal.Me o Ko-fi), se puede filtrar por método y el resumen cuenta cuántas esperan de cada uno.',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.7.1',
     date: '2026-11-04',
     title: 'Apoyo con PayPal.Me: más claro y fácil de renovar',
@@ -1026,4 +1047,4 @@ export const CHANGELOG: Release[] = [
 
 export const LATEST_RELEASE = CHANGELOG[0]
 // Versión que se muestra en la app. Si un parche pequeño (1.0.x) no lleva notas en el changelog, igual se sube este número a mano.
-export const APP_VERSION = '1.7.1'
+export const APP_VERSION = '1.7.2'

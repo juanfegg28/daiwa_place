@@ -2,17 +2,19 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
-import { TIERS, TIER_KEYS, tierName, type TierKey } from '../lib/supporters'
+import { PAY_METHOD_LABEL, TIERS, TIER_KEYS, tierName, type PayMethod, type TierKey } from '../lib/supporters'
 
 // v1.7.0 · Centro de Mando → Supporters. Todo lo que se hace aquí queda en supporter_admin_log.
-type Overview = { active: number; by_tier: Record<string, number>; pending_requests: number; payments_30d: number; events_failed: number }
+// v1.7.2 · Las solicitudes pueden ser de PayPal.Me o de Ko-fi (cada una se comprueba en su sitio).
+type Overview = { active: number; by_tier: Record<string, number>; pending_requests: number; pending_paypalme?: number; pending_kofi?: number; payments_30d: number; events_failed: number }
 type Sub = { user_id: string; username: string; id_student: string | null; tier: TierKey; status: string; source: string; paid_until: string; started_at: string; active: boolean; hide_badge: boolean }
-type Req = { id: string; user_id: string; username: string; id_student: string | null; tier: TierKey; tier_name: string; price_usd: number; months: number; expected_usd: number; reference: string; note: string | null; status: string; created_at: string; reviewed_at: string | null; review_note: string | null; is_renewal: boolean }
+type Req = { id: string; user_id: string; username: string; id_student: string | null; tier: TierKey; tier_name: string; price_usd: number; months: number; expected_usd: number; reference: string; note: string | null; status: string; created_at: string; reviewed_at: string | null; review_note: string | null; is_renewal: boolean; method: PayMethod }
 type Exp = { user_id: string; username: string; id_student: string | null; tier: TierKey; source: string; paid_until: string; days_left: number; pending_request: boolean }
 type Row = Record<string, unknown>
 
 const fmt = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' }) : '—')
-const err = (m?: string) => (m && /Could not find the function|schema cache/i.test(m) ? 'Falta correr el SQL de la v1.7.0 en Supabase.' : m ?? 'Error')
+const err = (m?: string) => (m && /Could not find the function|schema cache/i.test(m) ? 'Falta correr el SQL más reciente (v1.7.2) en Supabase.' : m ?? 'Error')
+const METHOD_CLS: Record<PayMethod, string> = { paypalme: 'bg-[#FFC439]/20 text-[#FFD675]', kofi: 'bg-[#FF5E5B]/20 text-[#FF9C9A]' }
 
 export default function SupportersTab() {
   const [sub, setSub] = useState<'solicitudes' | 'por renovar' | 'suscriptores' | 'historial'>('solicitudes')
@@ -35,7 +37,7 @@ export default function SupportersTab() {
       {ov && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
           <div className="rounded-xl bg-ink-800 p-3"><p className="text-neutral-500 text-[12px]">Supporters activos</p><p className="text-xl font-semibold text-neutral-50">{ov.active}</p><p className="text-[11px] text-neutral-500">{TIER_KEYS.map((k) => `${TIERS[k].short} ${ov.by_tier[k] ?? 0}`).join(' · ')}</p></div>
-          <div className="rounded-xl bg-ink-800 p-3"><p className="text-neutral-500 text-[12px]">Solicitudes manuales</p><p className={`text-xl font-semibold ${ov.pending_requests > 0 ? 'text-amber-300' : 'text-neutral-50'}`}>{ov.pending_requests}</p></div>
+          <div className="rounded-xl bg-ink-800 p-3"><p className="text-neutral-500 text-[12px]">Solicitudes manuales</p><p className={`text-xl font-semibold ${ov.pending_requests > 0 ? 'text-amber-300' : 'text-neutral-50'}`}>{ov.pending_requests}</p>{ov.pending_paypalme !== undefined && <p className="text-[11px] text-neutral-500">PayPal.Me {ov.pending_paypalme} · Ko-fi {ov.pending_kofi ?? 0}</p>}</div>
           <div className="rounded-xl bg-ink-800 p-3"><p className="text-neutral-500 text-[12px]">Pagos últimos 30 días</p><p className="text-xl font-semibold text-neutral-50">${Number(ov.payments_30d).toFixed(2)}</p></div>
           <div className="rounded-xl bg-ink-800 p-3"><p className="text-neutral-500 text-[12px]">Avisos de PayPal con error (7 d)</p><p className={`text-xl font-semibold ${ov.events_failed > 0 ? 'text-garnet-400' : 'text-neutral-50'}`}>{ov.events_failed}</p></div>
         </div>
@@ -55,6 +57,7 @@ export default function SupportersTab() {
 
 function Requests({ onChanged }: { onChanged: () => void }) {
   const [status, setStatus] = useState<'pending' | 'approved' | 'rejected'>('pending')
+  const [filter, setFilter] = useState<'all' | PayMethod>('all')
   const [rows, setRows] = useState<Req[] | null>(null)
   const [notes, setNotes] = useState<Record<string, string>>({})
   const [months, setMonths] = useState<Record<string, number>>({})
@@ -84,24 +87,42 @@ function Requests({ onChanged }: { onChanged: () => void }) {
     }
   }
 
+  const shown = rows && filter !== 'all' ? rows.filter((r) => r.method === filter) : rows
+  const count = (m: PayMethod) => (rows ?? []).filter((r) => r.method === m).length
+
   return (
     <div className="space-y-3">
-      <p className="text-[12px] text-neutral-500">Antes de aprobar, abre tu PayPal → Actividad, busca el ID de transacción y comprueba que el pago esté <b>Completado</b> y por el <b>monto esperado</b>. Cada mes aprobado da 30 días (se suman a lo que ya tenga) y el bono de la semana.</p>
+      <div className="text-[12px] text-neutral-500 space-y-1">
+        <p><b className="text-neutral-300">PayPal.Me:</b> abre tu PayPal → Actividad, busca el ID de transacción y comprueba que el pago esté <b>Completado</b> y por el <b>monto esperado</b>.</p>
+        <p><b className="text-neutral-300">Ko-fi:</b> abre tu Ko-fi (tu actividad de propinas, o el correo que Ko-fi te manda por cada una) y busca una propina que tenga <b>el código</b> de la solicitud en su mensaje y sea por el <b>monto esperado</b> (en USD).</p>
+        <p>Cada mes aprobado da 30 días (se suman a lo que ya tenga) y el bono de la semana.</p>
+      </div>
       <div className="flex gap-1.5 text-[12px]">
         {(['pending', 'approved', 'rejected'] as const).map((s) => (
           <button key={s} type="button" onClick={() => setStatus(s)} className={`rounded-full px-3 py-1 ${status === s ? 'bg-garnet-600 text-white' : 'bg-ink-800 text-neutral-300'}`}>{s === 'pending' ? 'En revisión' : s === 'approved' ? 'Aprobadas' : 'Rechazadas'}</button>
         ))}
       </div>
+      <div className="flex flex-wrap gap-1.5 text-[12px]" aria-label="Filtrar por método">
+        <button type="button" onClick={() => setFilter('all')} className={`rounded-full px-3 py-1 ${filter === 'all' ? 'bg-white text-black' : 'bg-ink-800 text-neutral-300'}`}>Todos{rows ? ` (${rows.length})` : ''}</button>
+        {(['paypalme', 'kofi'] as const).map((m) => (
+          <button key={m} type="button" onClick={() => setFilter(m)} className={`rounded-full px-3 py-1 ${filter === m ? 'bg-white text-black' : 'bg-ink-800 text-neutral-300'}`}>{PAY_METHOD_LABEL[m]}{rows ? ` (${count(m)})` : ''}</button>
+        ))}
+      </div>
       {msg && <p className="text-sm text-garnet-400">{msg}</p>}
-      {rows === null ? <p className="text-sm text-neutral-500">Cargando…</p> : rows.length === 0 ? <p className="text-sm text-neutral-500">No hay solicitudes aquí.</p> : (
+      {shown === null ? <p className="text-sm text-neutral-500">Cargando…</p> : shown.length === 0 ? <p className="text-sm text-neutral-500">No hay solicitudes aquí.</p> : (
         <ul className="space-y-2">
-          {rows.map((r) => (
+          {shown.map((r) => (
             <li key={r.id} className="rounded-xl bg-ink-800 p-3 text-sm space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-neutral-50 font-medium">{r.id_student || r.username} <span className="text-neutral-500 font-normal">@{r.username}</span></span>
+                <span className="text-neutral-50 font-medium">
+                  {r.id_student || r.username} <span className="text-neutral-500 font-normal">@{r.username}</span>
+                  <span className={`ml-2 rounded-full px-2 py-0.5 text-[11px] font-semibold align-middle ${METHOD_CLS[r.method ?? 'paypalme']}`}>{PAY_METHOD_LABEL[r.method ?? 'paypalme']}</span>
+                </span>
                 <span className="text-neutral-300">{r.tier_name} · {r.months} {r.months === 1 ? 'mes' : 'meses'} · esperado <b className="text-neutral-50">${Number(r.expected_usd).toFixed(2)} USD</b>{r.is_renewal ? ' · renovación' : ' · nueva'}</span>
               </div>
-              <p className="text-neutral-400 text-[12px]">ID de transacción: <span className="font-mono text-neutral-200 select-all">{r.reference}</span> · {fmt(r.created_at)}</p>
+              <p className="text-neutral-400 text-[12px]">
+                {r.method === 'kofi' ? 'Código en el mensaje de la propina de Ko-fi' : 'ID de transacción'}: <span className="font-mono text-neutral-200 select-all">{r.reference}</span> · {fmt(r.created_at)}
+              </p>
               {r.note && <p className="text-[12px] text-neutral-400">Nota: {r.note}</p>}
               {r.status === 'pending' ? (
                 <div className="flex flex-wrap items-center gap-2">

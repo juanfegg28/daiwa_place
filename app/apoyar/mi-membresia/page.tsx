@@ -6,7 +6,7 @@ import AppShell from '../../components/AppShell'
 import MoonArt from '../../components/supporters/MoonArt'
 import { MoonCoinIcon } from '../../components/icons'
 import {
-  TIERS, cancelSubscription, claimPerk, fetchSupporterMe, setHideBadge, tierName, type SupporterMe,
+  PAY_METHOD_LABEL, TIERS, cancelSubscription, claimPerk, fetchSupporterMe, setHideBadge, tierName, type SupporterMe,
 } from '../../lib/supporters'
 
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -18,7 +18,10 @@ const STATUS_LABEL: Record<string, { text: string; cls: string }> = {
   expired: { text: 'Vencida', cls: 'bg-neutral-500/15 text-neutral-300 border-neutral-500/30' },
   suspended: { text: 'Suspendida', cls: 'bg-garnet-600/15 text-garnet-300 border-garnet-600/30' },
 }
-const SOURCE_LABEL: Record<string, string> = { paypal: 'PayPal', manual: 'PayPal.Me (manual)', admin: 'Concedida por el equipo' }
+const SOURCE_LABEL: Record<string, string> = { paypal: 'PayPal', manual: 'Pago manual (PayPal.Me o Ko-fi)', admin: 'Concedida por el equipo' }
+/** Etiqueta de un pago: si se sabe el método (PayPal.Me / Ko-fi) se muestra ese; si no, el origen. */
+const payLabel = (source: string, method?: string | null) =>
+  method && method in PAY_METHOD_LABEL ? `${PAY_METHOD_LABEL[method as keyof typeof PAY_METHOD_LABEL]} (manual)` : SOURCE_LABEL[source] ?? source
 const PAY_STATUS: Record<string, string> = { completed: 'Completado', refunded: 'Reembolsado', reversed: 'Revertido', failed: 'Fallido' }
 const REQ_STATUS: Record<string, string> = { pending: 'En revisión', approved: 'Aprobada', rejected: 'Rechazada' }
 
@@ -117,7 +120,7 @@ function Content() {
                 </div>
                 <div className="rounded-xl bg-black/25 p-3">
                   <dt className="text-neutral-500 text-[12px]">Cómo pagas</dt>
-                  <dd className="text-neutral-100 font-medium">{SOURCE_LABEL[m.source]}</dd>
+                  <dd className="text-neutral-100 font-medium">{payLabel(m.source, me.payments.find((p) => p.source === 'manual' && p.method)?.method)}</dd>
                 </div>
                 <div className="rounded-xl bg-black/25 p-3">
                   <dt className="text-neutral-500 text-[12px]">Historias por día</dt>
@@ -214,7 +217,7 @@ function Content() {
             <ul className="divide-y divide-white/5 text-sm">
               {me.payments.map((p, i) => (
                 <li key={i} className="py-2 flex items-center justify-between gap-3">
-                  <span className="text-neutral-200">{tierName(p.tier)} · {fmtDate(p.paid_at)}<span className="block text-[11px] text-neutral-500">{SOURCE_LABEL[p.source] ?? p.source}</span></span>
+                  <span className="text-neutral-200">{tierName(p.tier)} · {fmtDate(p.paid_at)}<span className="block text-[11px] text-neutral-500">{payLabel(p.source, p.method)}</span></span>
                   <span className="text-right text-neutral-100">${Number(p.amount).toFixed(2)} {p.currency}<span className={`block text-[11px] ${p.status === 'completed' ? 'text-emerald-300' : 'text-amber-200'}`}>{PAY_STATUS[p.status] ?? p.status}</span></span>
                 </li>
               ))}
@@ -226,7 +229,7 @@ function Content() {
               <ul className="space-y-1.5 text-sm">
                 {me.requests.map((r) => (
                   <li key={r.id} className="flex items-center justify-between gap-3 text-neutral-300">
-                    <span>{tierName(r.tier)} · {fmtDate(r.created_at)}{r.review_note && <span className="block text-[11px] text-neutral-500">{r.review_note}</span>}</span>
+                    <span>{tierName(r.tier)}{r.method && r.method in PAY_METHOD_LABEL ? ` · ${PAY_METHOD_LABEL[r.method]}` : ''} · {fmtDate(r.created_at)}{r.review_note && <span className="block text-[11px] text-neutral-500">{r.review_note}</span>}</span>
                     <span className={`text-[12px] ${r.status === 'approved' ? 'text-emerald-300' : r.status === 'rejected' ? 'text-garnet-400' : 'text-amber-200'}`}>{REQ_STATUS[r.status]}</span>
                   </li>
                 ))}

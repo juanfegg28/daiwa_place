@@ -14,11 +14,12 @@ import { TIERS, TIER_KEYS, fetchPaypalConfig, type PaypalConfig, type TierKey } 
 
 const FAQ: { q: string; a: string }[] = [
   { q: '¿Qué es el Círculo Lunar?', a: 'Es la forma de apoyar a DaiwaPlace con una mensualidad pequeña. Ese dinero ayuda a mantener el proyecto (servidores, almacenamiento y mejoras) y a cambio recibes ventajas y detalles exclusivos.' },
-  { q: '¿Cómo se paga?', a: 'Con PayPal.Me, en dos pasos: pagas el monto del nivel (por uno o varios meses) y pegas aquí el ID de transacción que te da PayPal. Una persona del equipo comprueba el pago en PayPal y activa tu membresía; por eso puede tardar un poco. Nada se activa sin comprobar el pago.' },
+  { q: '¿Cómo se paga?', a: 'Puedes elegir entre PayPal.Me y Ko-fi. Con PayPal.Me pagas el monto del nivel (por uno o varios meses) y pegas aquí el ID de transacción que te da PayPal. Con Ko-fi das una propina por ese mismo monto y pegas en su mensaje un código que te damos aquí. En los dos casos, una persona del equipo comprueba el pago y activa tu membresía; por eso puede tardar un poco. Nada se activa sin comprobar el pago.' },
+  { q: '¿Qué es Ko-fi y por qué un código?', a: 'Ko-fi es una plataforma para dar propinas a creadores. Como no te entrega un ID de transacción, te damos un código único (por ejemplo DW-3FA9-K7M2Q): lo escribes en el mensaje de tu propina y así encontramos tu pago. El código solo sirve para tu cuenta.' },
   { q: '¿Se renueva sola?', a: 'No. Cada mes pagado son 30 días. Antes de que termine, en «Mi membresía» te avisamos y puedes pagar de nuevo (o varios meses juntos). Los meses se suman a lo que te quede.' },
   { q: '¿Puedo dejar de pagar cuando quiera?', a: 'Sí. Como no hay cobro automático, basta con no renovar. Conservas tus ventajas hasta que termine el período que ya pagaste.' },
   { q: '¿Qué pasa cuando termina mi período?', a: 'Dejas de recibir el bono semanal, los descuentos y el límite ampliado de historias. Los cosméticos exclusivos que ya hayas reclamado se quedan contigo.' },
-  { q: '¿Soy de Colombia, qué hago?', a: 'PayPal no permite pagos entre dos cuentas de residentes en Colombia, así que desde aquí no podrías pagar. Escríbele al creador por Discord (@juanfegg28) y buscamos otra vía.' },
+  { q: '¿Soy de Colombia, qué hago?', a: 'PayPal no permite pagos entre dos cuentas de residentes en Colombia, así que si estás en Colombia el apoyo se coordina directamente por Discord. Escríbele al creador (@juanfegg28) y buscamos otra vía.' },
   { q: '¿Apoyar me da poderes o acceso a información privada?', a: 'No. Ser Supporter nunca da permisos de administración o moderación ni acceso a datos privados. Tampoco permite saber quién escribió un Susurro anónimo: eso es imposible para cualquiera por pagar.' },
   { q: '¿Hay reembolsos?', a: 'Si hubo un error con tu pago (monto incorrecto, pago doble), escríbeme por Discord y lo revisamos. Si un pago se reembolsa o se revierte, la membresía de ese pago se quita.' },
 ]
@@ -148,7 +149,7 @@ function ApoyarContent({ userId }: { userId: string | null }) {
                 ) : !cfg ? (
                   <p className="mt-3 text-xs text-neutral-500">Cargando…</p>
                 ) : open === k ? (
-                  canAuto ? <PayPalSubscribe clientId={cfg.clientId} planId={planId!} userId={userId} onDone={onDone} /> : <ManualSteps tier={k} />
+                  canAuto ? <PayPalSubscribe clientId={cfg.clientId} planId={planId!} userId={userId} onDone={onDone} /> : <ManualSteps tier={k} userId={userId} />
                 ) : (
                   <button type="button" onClick={() => setOpen(k)} className="mt-3 w-full rounded-full py-2.5 text-sm font-semibold text-black transition hover:brightness-110" style={{ background: t.accent }}>
                     Apoyar con {t.short}
@@ -163,7 +164,7 @@ function ApoyarContent({ userId }: { userId: string | null }) {
       {colombian && (
         <p className="mt-3 text-center text-xs text-neutral-500">
           ¿No estás en Colombia?{' '}
-          <button type="button" className="underline underline-offset-2" onClick={() => setForceButtons((v) => !v)}>{forceButtons ? 'Ocultar botones de PayPal' : 'Mostrar los botones de PayPal'}</button>
+          <button type="button" className="underline underline-offset-2" onClick={() => setForceButtons((v) => !v)}>{forceButtons ? 'Ocultar los métodos de pago' : 'Mostrar los métodos de pago'}</button>
         </p>
       )}
 
@@ -174,16 +175,18 @@ function ApoyarContent({ userId }: { userId: string | null }) {
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-5 text-sm text-neutral-300">
             <p className="font-semibold text-neutral-50 mb-2">Cómo funciona</p>
             <ol className="list-decimal pl-5 space-y-1.5 leading-relaxed">
-              <li>Elige un nivel y cuántos meses quieres pagar.</li>
-              <li>Paga el monto exacto en PayPal.Me y copia el <b className="text-neutral-100">ID de transacción</b>.</li>
-              <li>Pégalo en la tarjeta del nivel y envía. Una persona del equipo comprueba el pago en PayPal.</li>
+              <li>Elige un nivel, el método (PayPal.Me o Ko-fi) y cuántos meses quieres pagar.</li>
+              <li>
+                Paga el monto exacto. Con <b className="text-neutral-100">PayPal.Me</b> copia el ID de transacción; con <b className="text-neutral-100">Ko-fi</b> pega tu código en el mensaje de la propina.
+              </li>
+              <li>Envía el aviso desde la tarjeta del nivel. Una persona del equipo comprueba el pago.</li>
               <li>Al aprobarlo, tu membresía se activa y recibes tu primer bono de Lunas. Verás todo en <Link href="/apoyar/mi-membresia" className="underline underline-offset-2">Mi membresía</Link>.</li>
               <li>Cada mes pagado son 30 días. Para seguir, vuelve a pagar antes de que termine: los meses se suman.</li>
             </ol>
           </div>
         )}
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-5 text-[13px] text-neutral-400 leading-relaxed">
-          El pago se hace en PayPal; DaiwaPlace nunca ve ni guarda los datos de tu tarjeta. La membresía se activa solo cuando una persona del equipo comprueba el pago.
+          El pago se hace en PayPal o en Ko-fi; DaiwaPlace nunca ve ni guarda los datos de tu tarjeta. La membresía se activa solo cuando una persona del equipo comprueba el pago.
           Cada mes pagado son 30 días. Ser Supporter no da permisos de moderación ni de administración, ni acceso a información privada.
         </div>
       </section>

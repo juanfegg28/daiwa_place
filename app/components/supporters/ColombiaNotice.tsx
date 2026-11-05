@@ -14,7 +14,7 @@ export function looksColombian(): boolean {
 
 /**
  * PayPal no permite pagos entre dos cuentas de residentes en Colombia. Por eso, si alguien es de Colombia,
- * debe hablar directamente con el creador por Discord para apoyar por otra vía.
+ * no usa PayPal.Me ni Ko-fi: habla directamente con el creador por Discord para apoyar por otra vía (v1.7.2: igual para Ko-fi).
  */
 export default function ColombiaNotice({ emphasized }: { emphasized: boolean }) {
   const [copied, setCopied] = useState(false)
@@ -31,7 +31,7 @@ export default function ColombiaNotice({ emphasized }: { emphasized: boolean }) 
     <div className={`rounded-2xl border p-4 sm:p-5 text-sm ${emphasized ? 'border-amber-400/50 bg-amber-400/10' : 'border-white/10 bg-white/5'}`}>
       <p className="font-semibold text-neutral-50">🇨🇴 ¿Eres de Colombia?</p>
       <p className="text-neutral-300 mt-1 leading-relaxed">
-        PayPal no permite pagos entre dos cuentas de personas residentes en Colombia, así que desde aquí no podrías suscribirte.
+        PayPal no permite pagos entre dos cuentas de personas residentes en Colombia, así que para ti ni PayPal.Me ni Ko-fi son la vía.
         No te preocupes: <b className="text-neutral-50">escríbeme por Discord</b> y lo resolvemos por otra vía.
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-2">

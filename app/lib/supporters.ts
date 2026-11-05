@@ -1,4 +1,5 @@
 // v1.7.0 · Círculo Lunar (membresías Supporter): configuración compartida y funciones del navegador.
+// v1.7.2 · Ko-fi (propinas) junto a PayPal.Me.
 // Los precios y ventajas REALES viven en la tabla supporter_tiers (Supabase); esto es solo lo que se muestra.
 import { useEffect, useReducer } from 'react'
 import { supabase } from './supabaseClient'
@@ -6,10 +7,14 @@ import { supabase } from './supabaseClient'
 export type TierKey = 'creciente' | 'llena' | 'eclipse'
 export const TIER_KEYS: TierKey[] = ['creciente', 'llena', 'eclipse']
 
-/** PayPal.Me: solo como alternativa MANUAL (revisión de un admin). Nunca activa nada solo. */
+/** PayPal.Me y Ko-fi: métodos MANUALES (los revisa una persona del equipo). Nunca activan nada solos. */
 export const PAYPAL_ME_BASE = 'https://paypal.me/juanfe280206'
+export const KOFI_URL = 'https://ko-fi.com/daiwaplace'
 export const DISCORD_CONTACT = '@juanfegg28'
 export const paypalMeUrl = (usd: number) => `${PAYPAL_ME_BASE}/${usd}USD`
+
+export type PayMethod = 'paypalme' | 'kofi'
+export const PAY_METHOD_LABEL: Record<PayMethod, string> = { paypalme: 'PayPal.Me', kofi: 'Ko-fi' }
 
 export type PerkLine = { label: string; text: string; soon?: boolean }
 export type TierInfo = {
@@ -92,15 +97,15 @@ export type SupporterMe = {
   week_start: string
   weekly_granted_now: boolean
   weekly_granted: boolean
-  payments: { tier: TierKey; amount: number; currency: string; source: string; status: string; paid_at: string }[]
-  requests: { id: string; tier: TierKey; status: 'pending' | 'approved' | 'rejected'; created_at: string; review_note: string | null }[]
+  payments: { tier: TierKey; amount: number; currency: string; source: string; method?: PayMethod | null; status: string; paid_at: string }[]
+  requests: { id: string; tier: TierKey; method?: PayMethod | null; status: 'pending' | 'approved' | 'rejected'; created_at: string; review_note: string | null }[]
   perks: { code: string; kind: string; name: string; min_tier: TierKey; available: boolean; claimed: boolean; unlocked: boolean }[]
 }
 
 function friendly(message: string | undefined | null): string {
   if (!message) return 'Algo salió mal. Inténtalo de nuevo.'
   if (/Failed to fetch|NetworkError|network/i.test(message)) return 'Parece que no hay internet. Inténtalo de nuevo.'
-  if (/Could not find the function|does not exist|schema cache/i.test(message)) return 'Falta correr el SQL de la v1.7.0 en Supabase.'
+  if (/Could not find the function|does not exist|schema cache/i.test(message)) return 'Falta correr el SQL más reciente (v1.7.2) en Supabase.'
   return message
 }
 
@@ -116,8 +121,9 @@ export async function setHideBadge(hide: boolean): Promise<string | null> {
   return error ? friendly(error.message) : null
 }
 
-export async function submitManualRequest(tier: TierKey, reference: string, note: string, months = 1): Promise<string | null> {
-  const { error } = await supabase.rpc('supporter_manual_submit', { p_tier: tier, p_reference: reference, p_note: note || null, p_months: months })
+/** PayPal.Me: `reference` es el ID de transacción. Ko-fi: `reference` es el código DW-… que la persona puso en el mensaje de su propina. */
+export async function submitManualRequest(tier: TierKey, reference: string, note: string, months = 1, method: PayMethod = 'paypalme'): Promise<string | null> {
+  const { error } = await supabase.rpc('supporter_manual_submit', { p_tier: tier, p_reference: reference, p_note: note || null, p_months: months, p_method: method })
   return error ? friendly(error.message) : null
 }
 
