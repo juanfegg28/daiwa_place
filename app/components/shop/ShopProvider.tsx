@@ -107,7 +107,8 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     return () => clearTimeout(t)
   }, [sales, features])
 
-  const catalog = useMemo(() => rawCatalog.map((i) => (i.id in wishOverride ? { ...i, wished: wishOverride[i.id] } : i)), [rawCatalog, wishOverride])
+  // Lo exclusivo nunca entra a la tienda: solo vive en Personalizar / Inventario de su dueño
+  const catalog = useMemo(() => rawCatalog.filter((i) => i.obtainable !== 'exclusivo').map((i) => (i.id in wishOverride ? { ...i, wished: wishOverride[i.id] } : i)), [rawCatalog, wishOverride])
   const shelf = useMemo(() => catalog.filter((i) => {
     if (i.type === 'badge') return false
     if (i.obtainable === 'gratis') return false

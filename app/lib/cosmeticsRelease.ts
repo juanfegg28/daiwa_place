@@ -7,6 +7,11 @@
 export const NEXT_KIT_COLLECTIONS: readonly string[] = []
 export const RELEASED_VERSION = '1.5.0'
 
+/** Colecciones EXCLUSIVAS de una sola cuenta («lestat», solo del usuario fundador @renshsh).
+ *  Se pueden DIBUJAR en el perfil de su dueño (cualquiera que lo visite las ve puestas), pero no entran en NINGUNA lista:
+ *  ni tienda, ni galerías, ni estudio del equipo. Solo aparecen en el inventario / «Personalizar» de su dueño (lo entrega la base de datos). */
+export const EXCLUSIVE_KIT_COLLECTIONS: readonly string[] = ['lestat']
+
 let allowNext = false
 /** Solo el estudio del equipo (cuenta con acceso total) enciende esto para PROBAR lo que viene. Nunca en perfiles. */
 export function setAllowNextKits(v: boolean) {

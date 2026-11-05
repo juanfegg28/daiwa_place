@@ -351,6 +351,149 @@ def({
   },
 })
 
+// ───────── «Lestat de Lioncourt» (exclusivos de @renshsh): 6 efectos de entrada MÍTICOS
+const LSE = P4([['lioncourt', 'Oro y carmesí', '#E0B14A', '#0B0508', '#FFEFB8', '#B3122E'], ['brocado', 'Brocado azul', '#5C86D6', '#060A18', '#EAF1FF', '#E0B14A'], ['sangre', 'Sangre y marfil', '#C0142E', '#0C0306', '#FFD0D6', '#EFE6D2'], ['marfil', 'Marfil y rosa', '#EFE6D2', '#0A0809', '#FFFFFF', '#B3122E']])
+const fleurC = (c, s) => { c.beginPath(); c.moveTo(0, -s); c.bezierCurveTo(s * 0.42, -s * 0.6, s * 0.38, -s * 0.1, 0, s * 0.38); c.bezierCurveTo(-s * 0.38, -s * 0.1, -s * 0.42, -s * 0.6, 0, -s); c.closePath(); for (const m of [1, -1]) { c.moveTo(m * s * 0.1, s * 0.26); c.bezierCurveTo(m * s * 0.5, -s * 0.1, m * s * 0.95, -s * 0.4, m * s * 0.86, -s * 0.02); c.bezierCurveTo(m * s * 0.8, s * 0.34, m * s * 0.4, s * 0.3, m * s * 0.12, s * 0.42); c.closePath() } c.rect(-s * 0.34, s * 0.36, s * 0.68, s * 0.13) }
+const batC = (c, s, w) => { c.save(); c.scale(s, s); for (const m of [1, -1]) { c.save(); c.scale(m, 1); c.beginPath(); c.moveTo(0, 0); c.quadraticCurveTo(8, -14 * w - 4, 24, -10 * w); c.quadraticCurveTo(20, -2, 18, 6); c.quadraticCurveTo(14, 1, 11, 8); c.quadraticCurveTo(7, 2, 0, 7); c.closePath(); c.fill(); c.stroke(); c.restore() } c.beginPath(); c.ellipse(0, 3, 3.6, 7, 0, 0, TAU); c.fill(); c.beginPath(); c.moveTo(-3, -3); c.lineTo(-3.4, -8); c.lineTo(0, -5); c.lineTo(3.4, -8); c.lineTo(3, -3); c.fill(); c.restore() }
+const roseC = (c, s, col, dkc) => { for (let ring = 0; ring < 3; ring++) { const rr = s * (1 - ring * 0.28); for (let i = 0; i < 5; i++) { c.save(); c.rotate((i * TAU) / 5 + ring * 0.6); c.translate(0, -rr * 0.45); c.beginPath(); c.ellipse(0, 0, rr * 0.5, rr * 0.62, 0, 0, TAU); c.fillStyle = ring % 2 ? col : dkc; c.fill(); c.strokeStyle = 'rgba(0,0,0,.4)'; c.lineWidth = 0.6; c.stroke(); c.restore() } } c.beginPath(); c.arc(0, 0, s * 0.14, 0, TAU); c.fillStyle = dkc; c.fill() }
+const sparkC = (c, x, y, r, col, a) => { c.save(); c.globalCompositeOperation = 'lighter'; glow(c, x, y, r * 3.2, col, a * 0.5); c.globalAlpha = a; c.fillStyle = '#fff'; c.translate(x, y); star(c, 4, r * 1.5, r * 0.3); c.fill(); c.restore() }
+
+def({
+  slug: 'eclipse-dorado', name: 'Eclipse dorado', rarity: 'mitico', price: 0, dur: 6, tint: 0.34, coll: 'lestat', palettes: LSE,
+  create: (env) => {
+    const R = env.R, cx = env.W / 2, cy = env.H * 0.4, Rm = Math.min(env.W, env.H) * 0.27
+    const cl = (v) => Math.max(0, Math.min(1, v)), ease = (v) => 1 - Math.pow(1 - v, 3)
+    const dust = system({ rate: 12, ambient: 3, max: 36, spawn: (R2) => ({ x: cx + A(-Rm * 1.5, Rm * 1.5, R2), y: cy + A(-Rm, Rm * 1.3, R2), r: A(0.8, 2.2, R2), life: 0, ttl: A(2, 4.4, R2), ph: A(0, 6, R2) }), step: (p, dt) => { p.life += dt; p.y -= 14 * dt; return p.life < p.ttl }, draw: (c, p, e) => { const k = Math.sin((p.life / p.ttl) * Math.PI); sparkC(c, p.x, p.y, p.r * 1.6, e.P.d3, k) } })(env)
+    const rays = Array.from({ length: 44 }, (_, i) => ({ a: (i / 44) * TAU + A(-0.03, 0.03, R), L: A(0.55, 1, R) * (i % 2 ? 0.58 : 1), w: A(0.018, 0.045, R) }))
+    return {
+      update(dt, t) { dust.update(dt, t) },
+      draw(c, t) {
+        const g = ease(cl((t - 0.1) / 1.0)), out = 1 - ease(cl((t - 4.0) / 1.6)), a = g * out
+        if (a <= 0.01) { dust.draw(c, t); return }
+        c.save(); c.globalAlpha = 0.5 * a; c.fillStyle = '#000'; c.fillRect(0, 0, env.W, env.H); c.restore()
+        // corona de rayos que gira despacio
+        const br = ease(cl((t - 0.9) / 0.9)) * out, rot = t * 0.05
+        c.save(); c.globalCompositeOperation = 'lighter'; glow(c, cx, cy, Rm * 3.4 * br, env.P.d1, 0.55 * br)
+        for (const r of rays) {
+          const a0 = r.a + rot, L = Rm * (1.1 + 1.5 * r.L) * br, gr = c.createRadialGradient(cx, cy, Rm, cx, cy, Rm + L)
+          gr.addColorStop(0, lt(env.P.d3, 0.3)); gr.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = gr
+          c.beginPath(); c.moveTo(cx + Math.cos(a0 - r.w) * Rm, cy + Math.sin(a0 - r.w) * Rm); c.lineTo(cx + Math.cos(a0) * (Rm + L), cy + Math.sin(a0) * (Rm + L)); c.lineTo(cx + Math.cos(a0 + r.w) * Rm, cy + Math.sin(a0 + r.w) * Rm); c.closePath(); c.fill()
+        }
+        c.restore()
+        // disco negro y aro de oro
+        c.save(); c.globalAlpha = a; c.fillStyle = '#020102'; c.beginPath(); c.arc(cx, cy, Rm * g, 0, TAU); c.fill()
+        const rg = c.createLinearGradient(cx - Rm, cy - Rm, cx + Rm, cy + Rm); rg.addColorStop(0, lt(env.P.d3, 0.5)); rg.addColorStop(0.5, env.P.d1); rg.addColorStop(1, lt(env.P.d3, 0.2))
+        c.strokeStyle = rg; c.lineWidth = 3; c.beginPath(); c.arc(cx, cy, Rm * g, 0, TAU); c.stroke(); c.restore()
+        // onda de choque cuando el eclipse se completa
+        if (t > 1.0 && t < 2.6) { const k = (t - 1.0) / 1.6; c.save(); c.globalAlpha = (1 - k) * 0.8; c.strokeStyle = env.P.d3; c.lineWidth = 2.4 * (1 - k) + 0.6; c.beginPath(); c.arc(cx, cy, Rm * (1 + k * 2.6), 0, TAU); c.stroke(); c.restore() }
+        // destello del anillo de diamante
+        if (br > 0) sparkC(c, cx + Math.cos(-0.8) * Rm, cy + Math.sin(-0.8) * Rm, Rm * 0.2 * (0.8 + 0.2 * Math.sin(t * 5)), env.P.d3, br * out)
+        dust.draw(c, t)
+      },
+    }
+  },
+})
+def({
+  slug: 'lluvia-de-rosas-y-oro', name: 'Lluvia de rosas y oro', rarity: 'mitico', price: 0, dur: 5.5, tint: 0.2, coll: 'lestat', palettes: LSE,
+  create: system({ rate: 0, ambient: 3.5, burst: 54, intro: 4.5, max: 80,
+    spawn: (R, e, t, i) => ({ x: A(-10, e.W + 10, R), y: A(-80, -8, R), s: A(6, 12, R), vy: A(34, 76, R) * 0.9, vx: A(-12, 16, R), ph: A(0, 6, R), r: A(0, 6, R), vr: A(-2.4, 2.4, R), k: R(), d: i >= 0 ? A(0, 2.2, R) : 0, gold: R() < 0.2, rose: R() < 0.16 }),
+    step: (p, dt, t, e) => { if (t < p.d) return true; p.y += p.vy * dt; p.x += (p.vx + Math.sin(t * 1.5 + p.ph) * 26) * dt; p.r += p.vr * dt; return p.y < e.H + 20 },
+    draw: (c, p, e, t) => { if (t < p.d) return; c.save(); c.translate(p.x, p.y); c.rotate(p.r)
+      if (p.rose) { roseC(c, p.s * 1.5, e.P.d4, dk(e.P.d4, 0.4)); c.restore(); return }
+      if (p.gold) { c.restore(); sparkC(c, p.x, p.y, p.s * 0.42, e.P.d3, 0.6 + 0.4 * Math.sin(t * 6 + p.ph)); return }
+      c.scale(0.5 + 0.5 * Math.abs(Math.cos(t * 1.9 + p.ph)), 1); c.fillStyle = p.k < 0.5 ? e.P.d4 : dk(e.P.d4, 0.25); petal(c, p.s); c.fill(); c.strokeStyle = 'rgba(0,0,0,.35)'; c.lineWidth = 0.6; c.stroke(); c.restore() } }),
+})
+def({
+  slug: 'bandada-de-lioncourt', name: 'Bandada de Lioncourt', rarity: 'mitico', price: 0, dur: 5.5, tint: 0.22, coll: 'lestat', palettes: LSE,
+  create: (env) => {
+    const R = env.R, N = 30, cx = env.W / 2, cy = env.H * 0.42
+    const B = Array.from({ length: N }, (_, i) => ({ a: A(0, TAU, R), r: 0, sp: A(80, 230, R), sw: A(-0.9, 0.9, R), s: A(0.5, 1.3, R), f: A(9, 14, R), ph: A(0, 6, R), d: i * 0.09 + A(0, 0.15, R) }))
+    const dust = system({ rate: 10, ambient: 3, max: 30, spawn: (R2, e) => ({ x: A(0, e.W, R2), y: A(0, e.H, R2), r: A(0.8, 2, R2), life: 0, ttl: A(2, 4, R2), ph: A(0, 6, R2) }), step: (p, dt) => { p.life += dt; p.y -= 5 * dt; return p.life < p.ttl }, draw: (c, p, e) => { const k = Math.sin((p.life / p.ttl) * Math.PI); sparkC(c, p.x, p.y, p.r * 1.4, e.P.d3, k * 0.8) } })(env)
+    return {
+      update(dt, t) { dust.update(dt, t); for (const b of B) { if (t < b.d) continue; b.r += b.sp * dt * (1 + b.r / 170); b.a += b.sw * dt * 0.5 } },
+      draw(c, t) {
+        dust.draw(c, t)
+        // la bandada nace del centro y se abre en abanico hacia la cámara
+        if (t < 1.4) { const k = Math.sin((t / 1.4) * Math.PI); c.save(); c.globalCompositeOperation = 'lighter'; glow(c, cx, cy, env.H * 0.5 * k, env.P.d4, 0.35 * k); c.restore() }
+        for (const b of B) {
+          if (t < b.d) continue
+          const x = cx + Math.cos(b.a) * b.r, y = cy + Math.sin(b.a) * b.r * 0.72
+          if (x < -70 || x > env.W + 70 || y < -70 || y > env.H + 70) continue
+          const s = b.s * (0.35 + b.r / 150), al = Math.min(1, b.r / 30)
+          c.save(); c.globalAlpha = al; c.translate(x, y); c.rotate(b.a + Math.PI / 2 + Math.sin(t * 3 + b.ph) * 0.12); c.fillStyle = '#07030a'; c.strokeStyle = env.P.d1; c.lineWidth = 0.8; batC(c, s, Math.sin(t * b.f + b.ph) * 0.5 + 0.5); c.restore()
+        }
+      },
+    }
+  },
+})
+def({
+  slug: 'velas-que-despiertan', name: 'Velas que despiertan', rarity: 'mitico', price: 0, dur: 0, tint: 0.16, coll: 'lestat', palettes: LSE,
+  create: (env) => {
+    const R = env.R, N = Math.max(5, Math.min(11, Math.round(env.W / 80)))
+    const C = Array.from({ length: N }, (_, i) => ({ x: ((i + 0.5) * env.W) / N + A(-12, 12, R), h: A(0.1, 0.26, R) * env.H, w: A(5, 8, R), ph: A(0, 6, R), on: 0.3 + i * 0.22 + A(0, 0.2, R), dr: A(0.2, 0.7, R) }))
+    const embers = system({ rate: 14, ambient: 5, max: 40, spawn: (R2, e) => { const c = C[Math.floor(R2() * C.length)]; return { x: c.x + A(-6, 6, R2), y: e.H - c.h - 10, vy: A(24, 70, R2), r: A(0.8, 2.2, R2), life: 0, ttl: A(2, 4.4, R2), ph: A(0, 6, R2) } }, step: (p, dt, t) => { p.life += dt; p.y -= p.vy * dt; p.x += Math.sin(t * 2 + p.ph) * 14 * dt; return p.life < p.ttl }, draw: (c, p, e) => { const k = 1 - p.life / p.ttl; c.globalCompositeOperation = 'lighter'; glow(c, p.x, p.y, p.r * 5, e.P.d1, 0.5 * k); c.globalAlpha = k; c.fillStyle = e.P.d3; c.beginPath(); c.arc(p.x, p.y, p.r, 0, TAU); c.fill(); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over' } })(env)
+    return {
+      update(dt, t) { embers.update(dt, t) },
+      draw(c, t) {
+        embers.draw(c, t)
+        for (const k of C) {
+          const top = env.H - k.h, a = Math.min(1, Math.max(0, (t - k.on) / 0.5)), fl = 0.8 + 0.2 * Math.sin(t * 9 + k.ph) + 0.08 * Math.sin(t * 23 + k.ph * 2)
+          // cera
+          const g = c.createLinearGradient(k.x - k.w / 2, 0, k.x + k.w / 2, 0); g.addColorStop(0, '#d8c8a8'); g.addColorStop(0.5, '#fff6e2'); g.addColorStop(1, '#b8996e')
+          c.fillStyle = g; c.fillRect(k.x - k.w / 2, top, k.w, k.h + 6)
+          c.fillStyle = '#fff8ec'; c.beginPath(); c.ellipse(k.x, top, k.w / 2 + 0.8, 2.2, 0, 0, TAU); c.fill()
+          const dl = k.h * (0.22 + 0.12 * k.dr) * Math.min(1, a + 0.2); c.beginPath(); c.moveTo(k.x - k.w * 0.3, top); c.lineTo(k.x - k.w * 0.3, top + dl); c.arc(k.x - k.w * 0.3 + 1.2, top + dl, 1.2, Math.PI, 0, true); c.lineTo(k.x - k.w * 0.3 + 2.4, top); c.fill()
+          c.strokeStyle = '#241410'; c.lineWidth = 1.2; c.beginPath(); c.moveTo(k.x, top); c.lineTo(k.x, top - 4); c.stroke()
+          if (a > 0) {
+            c.save(); c.strokeStyle = `rgba(255,255,255,${0.12 * a})`; c.lineWidth = 1.3; c.beginPath(); for (let j = 0; j < 16; j++) { const yy = top - 24 - j * 7, xx = k.x + Math.sin(t * 1.4 + j * 0.5 + k.ph) * (2 + j * 0.7); c[j ? 'lineTo' : 'moveTo'](xx, yy) } c.stroke(); c.restore()
+            c.save(); c.globalCompositeOperation = 'lighter'; glow(c, k.x, top - 10, 46 * a * fl, env.P.d1, 0.5 * a); c.restore()
+            c.save(); c.translate(k.x, top - 4); c.scale(a * (0.92 + 0.1 * fl), a * fl); c.fillStyle = '#FF9A2A'; c.beginPath(); c.moveTo(0, -17); c.bezierCurveTo(5, -10, 5.4, -3, 0, 1); c.bezierCurveTo(-5.4, -3, -5, -10, 0, -17); c.fill(); c.fillStyle = '#FFE9A8'; c.beginPath(); c.moveTo(0, -11); c.bezierCurveTo(2.6, -7, 2.6, -3, 0, -1); c.bezierCurveTo(-2.6, -3, -2.6, -7, 0, -11); c.fill(); c.restore()
+          }
+        }
+      },
+    }
+  },
+})
+def({
+  slug: 'telon-de-terciopelo', name: 'Telón de terciopelo', rarity: 'mitico', price: 0, dur: 6, tint: 0.14, coll: 'lestat', palettes: LSE,
+  create: (env) => {
+    const R = env.R
+    const dust = system({ rate: 12, ambient: 4, max: 40, spawn: (R2, e) => ({ x: A(0, e.W, R2), y: A(0, e.H, R2), r: A(0.8, 2.2, R2), life: 0, ttl: A(2.5, 5, R2), ph: A(0, 6, R2) }), step: (p, dt, t) => { p.life += dt; p.y -= 6 * dt; p.x += Math.sin(t + p.ph) * 6 * dt; return p.life < p.ttl }, draw: (c, p, e, t) => { if (t < 2) return; const k = Math.sin((p.life / p.ttl) * Math.PI); sparkC(c, p.x, p.y, p.r, e.P.d3, k * 0.9) } })(env)
+    const panel = (c, x0, x1, side) => {
+      const W = x1 - x0; if (W < 2) return
+      const n = Math.max(3, Math.round(W / 26)), pw = W / n
+      c.fillStyle = dk(env.P.d4, 0.5); c.fillRect(x0, 0, W, env.H)
+      for (let i = 0; i < n; i++) { const x = x0 + i * pw, g = c.createLinearGradient(x, 0, x + pw, 0); g.addColorStop(0, dk(env.P.d4, 0.7)); g.addColorStop(0.45, lt(env.P.d4, 0.2)); g.addColorStop(1, dk(env.P.d4, 0.72)); c.fillStyle = g; c.fillRect(x, 0, pw + 0.6, env.H) }
+      const sh = c.createLinearGradient(0, 0, 0, env.H); sh.addColorStop(0, 'rgba(0,0,0,.35)'); sh.addColorStop(0.5, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(0,0,0,.45)'); c.fillStyle = sh; c.fillRect(x0, 0, W, env.H)
+      const ex = side === 1 ? x1 : x0; c.fillStyle = env.P.d1; c.fillRect(ex - 1.6, 0, 3.2, env.H)
+      c.fillStyle = env.P.d1; for (let y = 6; y < env.H; y += 12) { c.beginPath(); c.arc(ex + side * 3.4, y, 1.6, 0, TAU); c.fill() }
+    }
+    return {
+      update(dt, t) { dust.update(dt, t) },
+      draw(c, t) {
+        const open = Math.min(1, Math.max(0, (t - 0.5) / 2.2)), e = 1 - Math.pow(1 - open, 3), edge = Math.max(14, env.W * 0.06), half = env.W / 2
+        const gap = e * (half - edge) // cuánto se abre cada lado
+        if (t > 1.2) { const k = Math.min(1, (t - 1.2) / 1.6); c.save(); c.globalCompositeOperation = 'lighter'; const g = c.createRadialGradient(env.W / 2, -10, 0, env.W / 2, env.H * 0.6, env.H * 1.1); g.addColorStop(0, env.P.d3); g.addColorStop(1, 'rgba(0,0,0,0)'); c.globalAlpha = 0.16 * k; c.fillStyle = g; c.fillRect(0, 0, env.W, env.H); c.restore() }
+        dust.draw(c, t)
+        panel(c, 0, half - gap, -1 + 2); panel(c, half + gap, env.W, -1)
+        // cenefa superior
+        const ph = Math.max(12, env.H * 0.07); c.fillStyle = dk(env.P.d4, 0.35); c.fillRect(0, 0, env.W, ph); c.fillStyle = env.P.d1; c.fillRect(0, 0, env.W, 3); c.fillStyle = env.P.d4
+        for (let x = 0; x < env.W; x += 40) { c.beginPath(); c.moveTo(x, ph - 4); c.quadraticCurveTo(x + 20, ph + 14, x + 40, ph - 4); c.closePath(); c.fill(); c.strokeStyle = env.P.d1; c.lineWidth = 1.4; c.stroke() }
+      },
+    }
+  },
+})
+def({
+  slug: 'flores-de-lis-doradas', name: 'Flores de lis doradas', rarity: 'mitico', price: 0, dur: 5, tint: 0.16, coll: 'lestat', palettes: LSE,
+  create: system({ rate: 0, ambient: 3, burst: 44, intro: 4, max: 64,
+    spawn: (R, e, t, i) => { const a = A(0, TAU, R), v = i >= 0 ? A(60, 260, R) : 0; return { x: i >= 0 ? e.W / 2 : A(0, e.W, R), y: i >= 0 ? e.H * 0.42 : A(-30, -6, R), vx: Math.cos(a) * v, vy: i >= 0 ? Math.sin(a) * v - 90 : A(26, 56, R), s: A(14, 27, R), r: A(-0.6, 0.6, R), vr: A(-1.6, 1.6, R), ph: A(0, 6, R), ttl: A(3.4, 5.4, R), life: 0, burst: i >= 0 } },
+    step: (p, dt, t, e) => { p.life += dt; if (p.burst) { p.vx *= 1 - 1.2 * dt; p.vy += 170 * dt; p.vy = Math.min(p.vy, 80) } p.x += (p.vx + Math.sin(t * 1.6 + p.ph) * 14) * dt; p.y += p.vy * dt; p.r += p.vr * dt * 0.4; return p.life < p.ttl && p.y < e.H + 20 },
+    draw: (c, p, e, t) => { const k = Math.min(1, p.life / 0.4) * Math.min(1, (p.ttl - p.life) / 1.2), sh = 0.7 + 0.3 * Math.sin(t * 5 + p.ph)
+      c.save(); c.translate(p.x, p.y); c.rotate(p.r); c.globalAlpha = k
+      const g = c.createLinearGradient(0, -p.s, 0, p.s); g.addColorStop(0, lt(e.P.d1, 0.55)); g.addColorStop(0.5, e.P.d1); g.addColorStop(1, dk(e.P.d1, 0.45)); c.fillStyle = g; fleurC(c, p.s); c.fill(); c.strokeStyle = 'rgba(40,20,4,.6)'; c.lineWidth = 0.7; c.stroke(); c.restore()
+      if (sh > 0.92) sparkC(c, p.x + p.s * 0.4, p.y - p.s * 0.5, p.s * 0.28, e.P.d3, k) } }),
+})
+
 // ───────── API pública
 export function startEntry(effect, canvas, { paletteId, hue = 0, loop = true, seed = 7, reduced = false, onFrame } = {}) {
   const def_ = effect.palettes.find((p) => p.id === paletteId) || effect.palettes[0]

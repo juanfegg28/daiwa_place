@@ -87,6 +87,15 @@ const OVER: Record<string, number> = {
   'corona-de-eclipse': 0.15,
   'alas-de-fenix': 0.08,
   'marco-fundador': 0.15,
+  'eclipse-del-principe': 0.15,
+  'alas-de-onix-y-oro': 0.15,
+  'corona-de-lioncourt': 0.15,
+  'gola-de-encaje-real': 0.15,
+  'espejo-rococo': 0.15,
+  'brocado-bordado': 0.15,
+  'rosas-negras-y-espinas': 0.15,
+  'luna-de-sangre-y-murcielagos': 0.15,
+  'caliz-y-rio-de-sangre': 0.15,
 }
 
 export function decoOverhang(id: string | null | undefined): number {

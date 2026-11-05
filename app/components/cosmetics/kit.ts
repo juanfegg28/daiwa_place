@@ -11,20 +11,25 @@ import { skinParts, BASE_SKIN_CSS } from './_kit/cards/kit.js'
 import { ENTRY_EFFECTS, startEntry } from './_kit/entry/engine.js'
 import { NAME_EFFECTS, nameEffectHTML } from './_kit/names/index.js'
 import { BACKGROUNDS, backgroundHTML } from './_kit/backgrounds/index.js'
-import { TITLES, COMPLETION_TITLES, titleHTML, badgeSVG, BADGE_IDS, PACK_EFFECT, PACK_CARD } from './_kit/titles/index.js'
+import { TITLES, COMPLETION_TITLES, titleHTML, badgeSVG, BADGE_IDS as ALL_BADGE_IDS, PACK_EFFECT, PACK_CARD } from './_kit/titles/index.js'
 import { FONTS } from './_kit/fonts/index.js'
 import { BASE_CSS } from './_kit/core/kit.js'
-import { NEXT_KIT_COLLECTIONS, isReleasedColl } from '../../lib/cosmeticsRelease'
+import { NEXT_KIT_COLLECTIONS, EXCLUSIVE_KIT_COLLECTIONS, isReleasedColl } from '../../lib/cosmeticsRelease'
 import { rng } from './_kit/core/util.js'
 import { makePalette } from './_kit/core/color.js'
 
 /** Arranca un efecto de entrada en un canvas. Devuelve {stop, seek} */
 export const startEntryFx = (effect: unknown, canvas: HTMLCanvasElement, opts: { paletteId?: string; hue?: number; loop?: boolean; seed?: number; reduced?: boolean }): { stop: () => void; seek: (s: number) => void } => startEntry(effect, canvas, opts)
-export { startEntry, DECO_COLLECTIONS, COMPLETION_TITLES, BADGE_IDS, PACK_EFFECT, PACK_CARD }
+// «lestat» (exclusiva de @renshsh) no aparece en las listas de colecciones de ningún lado
+const DECO_COLLECTIONS_PUBLIC = DECO_COLLECTIONS.filter((c) => !EXCLUSIVE_KIT_COLLECTIONS.includes(c.id))
+const BADGE_IDS = ALL_BADGE_IDS.filter((b) => !EXCLUSIVE_KIT_COLLECTIONS.includes(b))
+export { startEntry, DECO_COLLECTIONS_PUBLIC as DECO_COLLECTIONS, COMPLETION_TITLES, BADGE_IDS, PACK_EFFECT, PACK_CARD }
 
 // ───────── Registros: lo de la 1.5.0 NO existe para la app hasta que se lance ─────────
 const live = (list) => list.filter((x) => isReleasedColl(x.coll))
-const released = (list) => list.filter((x) => !NEXT_KIT_COLLECTIONS.includes(x.coll))
+// Las listas públicas (tienda, galerías, estudio) NO incluyen lo exclusivo; el dibujo por slug (decoBySlug, cardBySlug…) sí lo resuelve.
+const released = (list) => list.filter((x) => !NEXT_KIT_COLLECTIONS.includes(x.coll) && !EXCLUSIVE_KIT_COLLECTIONS.includes(x.coll))
+const onlyExclusive = (list) => list.filter((x) => EXCLUSIVE_KIT_COLLECTIONS.includes(x.coll))
 const slugify = (n) => n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
 /** Listas SOLO de lo lanzado (1.4.0). Estas son las que usan tienda, inventario, galería de pruebas… */
@@ -80,7 +85,7 @@ export const EXCLUSIVE_TITLE_LIST = (includeNext = false) => (includeNext ? EXCL
 const cssOf = (lists) => lists.flat().map((d) => d.css || '').join('\n')
 const REDUCED = '@media (prefers-reduced-motion:reduce){.dpw *,.pcw *,.bgl *{animation:none!important}}\n.dpw[data-static="1"] *,.dpw[data-static="1"].pcw *{animation:none!important}'
 /** CSS de lo lanzado: se monta UNA vez en el layout raíz */
-export const RELEASED_CSS = BASE_CSS + '\n' + BASE_SKIN_CSS + '\n' + cssOf([RELEASED.decos, RELEASED.cards, RELEASED.backgrounds]) + '\n' + REDUCED
+export const RELEASED_CSS = BASE_CSS + '\n' + BASE_SKIN_CSS + '\n' + cssOf([RELEASED.decos, RELEASED.cards, RELEASED.backgrounds, onlyExclusive(AVATAR_DECOS), onlyExclusive(CARDS), onlyExclusive(BACKGROUNDS)]) + '\n' + REDUCED
 /** CSS de lo que viene: solo se inyecta en el estudio del equipo */
 export const UPCOMING_CSS = cssOf([UPCOMING.decos, UPCOMING.cards, UPCOMING.backgrounds])
 
@@ -160,7 +165,7 @@ export function backgroundOut(slug: string, { palette, hue = 0 }: { palette?: st
 }
 
 export function badgeOut(coll: string, size = 24): string {
-  return BADGE_IDS.includes(coll) && isReleasedColl(coll) ? badgeSVG(coll, { size }) : ''
+  return ALL_BADGE_IDS.includes(coll) && isReleasedColl(coll) ? badgeSVG(coll, { size }) : ''
 }
 
 // ───────── Tarjetas de perfil v2: SUPERFICIE FLUIDA que envuelve los bloques reales del perfil ─────────

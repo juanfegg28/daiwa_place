@@ -109,6 +109,23 @@ def({ slug: 'tinta-rota', name: 'Tinta rota', rarity: 'epico', price: 2000, coll
   css: (c, P) => `.${c}{color:${P.d1};-webkit-text-stroke:.5px ${P.d3};text-shadow:2px 2px 0 ${P.d2},-1px -1px 0 ${P.d3}88;animation:${c}-a 4s steps(1) infinite}.${c}::after{content:'';display:block;height:2px;margin-top:-.12em;background:repeating-linear-gradient(90deg,${P.d3} 0 5px,transparent 5px 9px);opacity:.9}@keyframes ${c}-a{0%,90%,100%{transform:none}92%{transform:translate(1px,-1px) skewX(-3deg)}94%{transform:translate(-1px,1px)}96%{transform:none}}`,
   lite: (c, P) => `.${c}{color:${P.d1};text-shadow:2px 2px 0 ${P.d3}}.${c}::after{display:none}` })
 
+
+// ───────── «Lestat de Lioncourt» (exclusivos de @renshsh)
+const LSN = P4([['lioncourt', 'Oro y carmesí', '#E0B14A', '#0B0508', '#FFEFB8', '#B3122E'], ['brocado', 'Brocado azul', '#5C86D6', '#060A18', '#EAF1FF', '#E0B14A'], ['sangre', 'Sangre y marfil', '#C0142E', '#0C0306', '#FFD0D6', '#EFE6D2'], ['marfil', 'Marfil y rosa', '#EFE6D2', '#0A0809', '#FFFFFF', '#B3122E']])
+def({ slug: 'oro-de-lioncourt', name: 'Oro de Lioncourt', rarity: 'mitico', price: 0, coll: 'lestat', custom: true, palettes: LSN,
+  css: (c, P) => `.${c}{background-image:linear-gradient(105deg,transparent 0 42%,rgba(255,255,255,.95) 50%,transparent 58% 100%),linear-gradient(180deg,${P.lt(P.d1, 0.55)} 0%,${P.d1} 42%,${P.dk(P.d1, 0.42)} 70%,${P.d3} 100%);background-size:280% 100%,100% 100%;background-position:160% 0,0 0;${GR(P)};filter:drop-shadow(0 1px 0 ${P.dk(P.d1, 0.65)}) drop-shadow(0 0 7px ${rgba(P.d1, 0.45)});animation:${c}-a 4.2s ease-in-out infinite}@keyframes ${c}-a{0%{background-position:160% 0,0 0}60%,100%{background-position:-60% 0,0 0}}`,
+  lite: (c, P) => `.${c}{background-image:linear-gradient(180deg,${P.lt(P.d1, 0.55)},${P.d1} 50%,${P.dk(P.d1, 0.42)});${GR(P)};filter:drop-shadow(0 0 5px ${rgba(P.d1, 0.4)})}` })
+def({ slug: 'sangre-y-terciopelo', name: 'Sangre y terciopelo', rarity: 'mitico', price: 0, coll: 'lestat', custom: true, palettes: LSN,
+  css: (c, P) => `.${c}{color:${P.d4};background-image:linear-gradient(180deg,${P.lt(P.d4, 0.35)} 0%,${P.d4} 45%,${P.dk(P.d4, 0.5)} 100%);${GR(P)};-webkit-text-stroke:.5px ${rgba(P.d1, 0.55)};filter:drop-shadow(0 0 1px ${P.d1}) drop-shadow(0 0 9px ${rgba(P.d4, 0.7)});animation:${c}-a 3.8s ease-in-out infinite alternate}@keyframes ${c}-a{from{filter:drop-shadow(0 0 1px ${P.d1}) drop-shadow(0 0 5px ${rgba(P.d4, 0.45)})}to{filter:drop-shadow(0 0 1px ${P.d1}) drop-shadow(0 0 14px ${rgba(P.d4, 0.95)})}}`,
+  lite: (c, P) => `.${c}{color:${P.d4};text-shadow:0 0 8px ${rgba(P.d4, 0.6)},0 0 1px ${P.d1}}` })
+
+def({ slug: 'eclipse-de-oro', name: 'Eclipse de oro', rarity: 'mitico', price: 0, coll: 'lestat', custom: true, palettes: LSN,
+  css: (c, P) => `.${c}{color:${P.d2};-webkit-text-stroke:.8px ${P.d1};text-shadow:0 0 2px ${P.d1},0 0 9px ${rgba(P.d1, 0.9)},0 0 20px ${rgba(P.d1, 0.55)},0 0 38px ${rgba(P.d3, 0.3)};animation:${c}-a 4.4s ease-in-out infinite alternate}@keyframes ${c}-a{from{text-shadow:0 0 2px ${P.d1},0 0 6px ${rgba(P.d1, 0.7)},0 0 14px ${rgba(P.d1, 0.35)},0 0 24px ${rgba(P.d3, 0.15)}}to{text-shadow:0 0 2px ${P.d1},0 0 12px ${rgba(P.d1, 1)},0 0 26px ${rgba(P.d1, 0.7)},0 0 48px ${rgba(P.d3, 0.45)}}}`,
+  lite: (c, P) => `.${c}{color:${P.d2};-webkit-text-stroke:.7px ${P.d1};text-shadow:0 0 8px ${rgba(P.d1, 0.85)},0 0 18px ${rgba(P.d1, 0.45)}}` })
+def({ slug: 'marfil-y-encaje', name: 'Marfil y encaje', rarity: 'mitico', price: 0, coll: 'lestat', custom: true, palettes: LSN,
+  css: (c, P) => `.${c}{background-image:linear-gradient(100deg,transparent 0 40%,rgba(255,255,255,.9) 50%,transparent 60% 100%),linear-gradient(180deg,#fff 0%,${P.d3} 38%,${P.lt(P.d1, 0.25)} 72%,${P.d1} 100%);background-size:260% 100%,100% 100%;background-position:150% 0,0 0;${GR(P)};filter:drop-shadow(0 1px 0 ${P.dk(P.d1, 0.55)}) drop-shadow(0 0 1px ${P.dk(P.d1, 0.7)}) drop-shadow(0 0 9px ${rgba(P.d3, 0.5)});animation:${c}-a 5s ease-in-out infinite}@keyframes ${c}-a{0%{background-position:150% 0,0 0}55%,100%{background-position:-50% 0,0 0}}`,
+  lite: (c, P) => `.${c}{background-image:linear-gradient(180deg,#fff,${P.d3} 45%,${P.lt(P.d1, 0.2)});${GR(P)};filter:drop-shadow(0 1px 0 ${P.dk(P.d1, 0.55)}) drop-shadow(0 0 6px ${rgba(P.d3, 0.45)})}` })
+
 // ───────── Render: mode = 'full' | 'lite' | 'plain'
 let N = 0
 export function nameEffectHTML(effect, text, { paletteId, hue = 0, mode = 'full', uid } = {}) {
