@@ -16,7 +16,7 @@ export const RELEASE_STAGE: 'beta' | 'stable' = 'stable'
 export const CHANGELOG: Release[] = [
   {
     version: '1.7.2',
-    date: '2026-11-04',
+    date: '2026-11-05',
     title: 'Ahora también puedes apoyar con Ko-fi',
     sections: [
       {
