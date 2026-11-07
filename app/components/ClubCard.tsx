@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import ResilientImage from './ResilientImage'
 import { ClubsIcon, FireIcon } from './icons'
-import { CLUB_KIND_LABEL, hexToRgba, type ClubKind } from '../lib/clubs'
+import { CLUB_KIND_LABEL, hexToRgba, levelName, type ClubKind } from '../lib/clubs'
 
 type ClubLite = {
   slug: string
@@ -12,6 +12,11 @@ type ClubLite = {
   color: string
   avatar_url: string | null
   banner_url: string | null
+  // v1.8.0 (opcionales)
+  level?: number
+  members_count?: number
+  recruiting?: boolean
+  category?: string | null
 }
 
 /** Foto de perfil del club (cuadrada con esquinas suaves, distinta al círculo de las personas) */
@@ -74,7 +79,22 @@ export default function ClubCard({ club, variant = 'row' }: { club: ClubLite; va
       <div className="px-3 pb-3 -mt-5 relative">
         <ClubAvatar club={club} size="w-10 h-10" textClass="text-base" />
         <p className="mt-1.5 text-sm font-semibold text-neutral-50 truncate group-hover:text-garnet-300 transition">{club.name}</p>
-        <KindLabel kind={club.kind} className="mt-1" />
+        <div className="mt-1 flex flex-wrap items-center gap-1">
+          <KindLabel kind={club.kind} />
+          {club.level && club.level >= 2 && (
+            <span className="inline-flex items-center rounded-md border border-violet-400/40 bg-violet-500/15 text-violet-200 px-1.5 py-[1px] text-[10.5px] font-semibold" title={`Nivel ${club.level}`}>
+              ✦ {levelName(club.level)}
+            </span>
+          )}
+          {club.recruiting && <span className="inline-flex items-center rounded-md border border-emerald-400/40 bg-emerald-500/15 text-emerald-300 px-1.5 py-[1px] text-[10.5px] font-semibold">Reclutando</span>}
+        </div>
+        {(club.members_count !== undefined || club.category) && (
+          <p className="mt-1 text-[11px] text-neutral-500 truncate">
+            {club.members_count !== undefined ? `${club.members_count} ${club.members_count === 1 ? 'miembro' : 'miembros'}` : ''}
+            {club.members_count !== undefined && club.category ? ' · ' : ''}
+            {club.category ?? ''}
+          </p>
+        )}
       </div>
     </Link>
   )

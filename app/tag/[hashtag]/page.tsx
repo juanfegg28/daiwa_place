@@ -31,6 +31,8 @@ function TagContent() {
       .from('posts')
       .select('id')
       .ilike('content', `%#${tag}%`)
+      .is('club_id', null) // v1.8.0 · las publicaciones solo del club no salen en etiquetas
+      .limit(60)
       .order('created_at', { ascending: false })
     const { posts: found, error } = await fetchPostsByIds(((idRows as { id: string }[] | null) ?? []).map((r) => r.id))
     if (error) console.error('Error cargando la tendencia:', error)

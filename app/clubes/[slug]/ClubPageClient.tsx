@@ -15,8 +15,11 @@ import { ClubTag } from '../../components/ClubTag'
 import { ArrowLeftIcon, BoardPinIcon, EditIcon, UsersIcon } from '../../components/icons'
 import {
   CLUB_ANNOUNCEMENT_MAX,
+  CLUB_FULL_SELECT,
   CLUB_JOIN_WARNING,
   CLUB_SUMMARY_SELECT,
+  canPostInClub,
+  levelName,
   friendlyClubError,
   hexToRgba,
   type ClubMemberRow,
@@ -46,7 +49,7 @@ function ClubContent() {
   const [requests, setRequests] = useState<JoinRequestRow[]>([])
   const [myPending, setMyPending] = useState(false)
   const [state, setState] = useState<'loading' | 'ready' | 'missing'>('loading')
-  const [tab, setTab] = useState<'posts' | 'members' | 'manage'>('posts')
+  const [tab, setTab] = useState<'posts' | 'members' | 'about' | 'manage'>('posts')
 
   const [confirmJoin, setConfirmJoin] = useState(false)
   const [confirmLeave, setConfirmLeave] = useState(false)
@@ -62,8 +65,15 @@ function ClubContent() {
   const isMember = !!userId && members.some((m) => m.user_id === userId)
 
   const load = useCallback(async () => {
-    const { data: clubRow } = await supabase.from('clubs').select(CLUB_SUMMARY_SELECT).eq('slug', slug).maybeSingle()
-    const c = clubRow as ClubSummary | null
+    // v1.8.0 · con los ajustes nuevos; si todavía no se corrió el SQL de la 1.8.0, se usa la consulta de siempre
+    let clubRes: { data: unknown; error: unknown } = await supabase.from('clubs').select(CLUB_FULL_SELECT).eq('slug', slug).maybeSingle()
+    if (clubRes.error) clubRes = await supabase.from('clubs').select(CLUB_SUMMARY_SELECT).eq('slug', slug).maybeSingle()
+    const c = clubRes.data as ClubSummary | null
+    if (c) {
+      const { data: ov } = await supabase.rpc('club_overview')
+      const mine = ((ov as { club_id: string; level: number; members_count: number }[] | null) ?? []).find((o) => o.club_id === c.id)
+      if (mine) c.level = mine.level
+    }
     if (!c) {
       setState('missing')
       return
@@ -226,6 +236,8 @@ function ClubContent() {
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl font-display font-semibold text-neutral-50">{club.name}</h1>
               <KindLabel kind={club.kind} />
+              {club.level && club.level >= 2 && <span className="inline-flex items-center rounded-md border border-violet-400/40 bg-violet-500/15 text-violet-200 px-1.5 py-[1px] text-[10.5px] font-semibold">✦ {levelName(club.level)}</span>}
+              {club.recruiting && <span className="inline-flex items-center rounded-md border border-emerald-400/40 bg-emerald-500/15 text-emerald-300 px-1.5 py-[1px] text-[10.5px] font-semibold">Reclutando</span>}
             </div>
             <p className="text-xs text-neutral-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
               <UsersIcon className="w-3.5 h-3.5" />
@@ -317,8 +329,9 @@ function ClubContent() {
           [
             { id: 'posts', label: 'Publicaciones' },
             { id: 'members', label: `Miembros (${members.length})` },
+            { id: 'about', label: 'Info y reglas' },
             ...(isLeader ? [{ id: 'manage', label: requests.length > 0 ? `Administrar (${requests.length})` : 'Administrar' }] : []),
-          ] as { id: 'posts' | 'members' | 'manage'; label: string }[]
+          ] as { id: 'posts' | 'members' | 'about' | 'manage'; label: string }[]
         ).map((t) => (
           <button
             key={t.id}
@@ -332,7 +345,46 @@ function ClubContent() {
       </div>
 
       {tab === 'posts' && (
-        <ClubFeed clubId={club.id} emptyText="Todavía no hay publicaciones de los miembros de este grupo." />
+        <>
+          {isMember && (
+            <div className="surface-card rounded-2xl p-3.5 mb-4 flex items-center gap-3">
+              <p className="flex-1 text-[13px] text-neutral-300 leading-snug">
+                {canPostInClub(club as unknown as { leader_id: string; post_policy: 'members' | 'leaders' }, userId)
+                  ? 'Lo que publiques aquí solo se ve en la página de este club.'
+                  : 'En este club solo publican los líderes.'}
+              </p>
+              {canPostInClub(club as unknown as { leader_id: string; post_policy: 'members' | 'leaders' }, userId) && (
+                <Link href={`/?club=${club.slug}`} className="shrink-0 bg-garnet-600 hover:bg-garnet-500 text-white text-sm font-medium rounded-full px-4 py-2 transition">
+                  ✍️ Publicar en el club
+                </Link>
+              )}
+            </div>
+          )}
+          <ClubFeed clubId={club.id} emptyText="Todavía no hay publicaciones en este club. Los miembros pueden elegir «Publicar solo en el club» desde el Inicio." />
+        </>
+      )}
+
+      {tab === 'about' && (
+        <section className="surface-card rounded-2xl p-4 space-y-3">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-neutral-500 mb-1">Nivel</p>
+            <p className="text-sm text-neutral-100">✦ {levelName(club.level)} · nivel {club.level ?? 1} de 5</p>
+          </div>
+          {club.category && (
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-neutral-500 mb-1">Categoría</p>
+              <p className="text-sm text-neutral-100">{club.category}</p>
+            </div>
+          )}
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-neutral-500 mb-1">Quién publica</p>
+            <p className="text-sm text-neutral-100">{club.post_policy === 'leaders' ? 'Solo los líderes' : 'Todos los miembros'}</p>
+          </div>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wide text-neutral-500 mb-1">Reglas</p>
+            {club.rules ? <p className="text-sm text-neutral-200 leading-relaxed whitespace-pre-wrap break-words">{club.rules}</p> : <p className="text-sm text-neutral-500">Este club todavía no escribió sus reglas.</p>}
+          </div>
+        </section>
       )}
 
       {tab === 'members' && (

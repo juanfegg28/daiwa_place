@@ -386,7 +386,7 @@ export default function ChatPane({ convId, me, friendIds }: Props) {
     const path = `${convId}/${me}/${crypto.randomUUID()}.jpg`
     const { error: upError } = await supabase.storage
       .from(DM_IMAGE_BUCKET)
-      .upload(path, photo.blob, { contentType: 'image/jpeg', cacheControl: '3600' })
+      .upload(path, photo.blob, { contentType: 'image/jpeg', cacheControl: '31536000' })
     if (upError) {
       setMessages((prev) => prev.map((m) => (m.id === tempId ? { ...m, pending: 'failed' } : m)))
       setNotice(

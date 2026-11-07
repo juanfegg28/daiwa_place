@@ -145,7 +145,7 @@ function ProfileContent() {
     // Si falta el SQL de la v1.1.10, se usa la lista de siempre (sin compartidos).
     const [feed, { count }, { data: pinnedData }] = await Promise.all([
       fetchFeedItems('profile', postsLimit.current, profileId, (l) => loadLegacyProfilePosts(profileId, l)),
-      supabase.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', profileId),
+      supabase.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', profileId).is('club_id', null),
       pinned
         ? supabase.from('posts').select(PROFILE_POST_SELECT).eq('id', pinned).eq('user_id', profileId).maybeSingle()
         : Promise.resolve({ data: null }),
@@ -178,7 +178,17 @@ function ProfileContent() {
     setLoadingMorePosts(false)
   }
 
+  // v1.8.0 · Siempre se usa el id de sesión MÁS RECIENTE (antes, si la sesión terminaba de cargar mientras se pedía el perfil,
+  // el botón se quedaba en «Seguir» aunque ya siguieras a la persona: el chat y «Seguidos» sí lo mostraban bien).
+  const userIdRef = useRef<string | null>(userId)
+  useEffect(() => {
+    userIdRef.current = userId
+  }, [userId])
+  const followKey = useRef('')
+
   const loadFollowState = async (profileId: string) => {
+    const userId = userIdRef.current
+    followKey.current = `${userId ?? ''}:${profileId}`
     const [{ count: followers }, { count: following }] = await Promise.all([
       supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', profileId),
       supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', profileId),
@@ -270,14 +280,14 @@ function ProfileContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usernameParam])
 
-  // Vuelve a calcular follow/bloqueo cuando la sesión termina de cargar (userId cambia de null a un id)
+  // Vuelve a calcular follow/bloqueo cuando la sesión termina de cargar o cuando termina de cargar el perfil
+  // (solo si todavía no se calculó para esta pareja persona/perfil)
   useEffect(() => {
-    function run() {
-      if (profile) loadFollowState(profile.id)
-    }
-    run()
+    if (!profile?.id || loading) return
+    if (followKey.current === `${userId ?? ''}:${profile.id}`) return
+    void loadFollowState(profile.id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId])
+  }, [userId, profile?.id, loading])
 
   const handleLike = async (post: Post) => {
     if (!userId) {

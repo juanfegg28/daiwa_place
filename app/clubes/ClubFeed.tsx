@@ -12,14 +12,17 @@ import type { Post } from '../lib/types'
 const FEED_PAGE = 15
 
 /**
- * Feed de clubes: SOLO publicaciones de personas que pertenecen a algún club o pandilla.
- * Con clubId, solo las de los miembros de ese club (se usa en la página de cada club).
+ * v1.8.0 · Feed de clubes renovado:
+ *  · Con clubId: las publicaciones «solo del club» de ESE club (las que sus miembros eligen publicar solo para el club).
+ *  · Sin clubId (página general de Clubes): únicamente anuncios y publicaciones de los LÍDERES de los clubes.
  */
 export default function ClubFeed({ clubId = null, emptyText }: { clubId?: string | null; emptyText?: string }) {
   const { userId } = useAppSession()
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [announce, setAnnounce] = useState<Set<string>>(new Set())
+  const [clubOf, setClubOf] = useState<Map<string, { name: string; slug: string; color: string }>>(new Map())
   const [hasMore, setHasMore] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const limit = useRef(FEED_PAGE)
@@ -44,7 +47,18 @@ export default function ClubFeed({ clubId = null, emptyText }: { clubId?: string
     const { posts: found, error: postsError } = await fetchPostsByIds(pageIds)
     if (postsError) setError(friendlyClubError(postsError))
     else setError('')
-    setPosts([...found].sort((a, b) => b.created_at.localeCompare(a.created_at)))
+    // etiquetas pequeñas: ¿es anuncio?, ¿de qué club? (una sola consulta liviana)
+    const { data: metaRows } = await supabase.from('posts').select('id, is_announcement, clubs!posts_club_id_fkey(name, slug, color)').in('id', pageIds)
+    const ann = new Set<string>()
+    const cm = new Map<string, { name: string; slug: string; color: string }>()
+    for (const r of (metaRows as unknown as { id: string; is_announcement: boolean; clubs: { name: string; slug: string; color: string } | null }[] | null) ?? []) {
+      if (r.is_announcement) ann.add(r.id)
+      if (r.clubs) cm.set(r.id, r.clubs)
+    }
+    setAnnounce(ann)
+    setClubOf(cm)
+    // anuncios recientes arriba, el resto por fecha
+    setPosts([...found].sort((a, b) => Number(ann.has(b.id)) - Number(ann.has(a.id)) || b.created_at.localeCompare(a.created_at)))
     setLoading(false)
   }
 
@@ -70,25 +84,40 @@ export default function ClubFeed({ clubId = null, emptyText }: { clubId?: string
   if (posts.length === 0) {
     return (
       <p className="text-neutral-500 text-sm text-center py-10">
-        {emptyText ?? 'Todavía no hay publicaciones de miembros de clubes o pandillas.'}
+        {emptyText ?? 'Todavía no hay anuncios ni publicaciones de líderes. Cuando un líder publique «solo para su club» o marque un anuncio, aparecerá aquí.'}
       </p>
     )
   }
 
   return (
     <div className="space-y-4">
-      {posts.map((post, i) => (
-        <PostCard
-          key={post.id}
-          post={post}
-          priorityImages={i === 0}
-          currentUserId={userId}
-          onToggleLike={toggleLike}
-          onToggleCommentLike={toggleCommentLike}
-          onAddComment={addComment}
-          onRefresh={loadPosts}
-        />
-      ))}
+      {posts.map((post, i) => {
+        const c = clubOf.get(post.id)
+        const isAnn = announce.has(post.id)
+        return (
+          <div key={post.id}>
+            {(isAnn || (!clubId && c)) && (
+              <div className="flex items-center gap-2 mb-1.5 px-1 text-[11.5px]">
+                {isAnn && <span className="rounded-full bg-amber-400/15 border border-amber-400/40 text-amber-300 font-bold uppercase tracking-wide px-2 py-0.5 text-[10px]">📢 Anuncio</span>}
+                {!clubId && c && (
+                  <a href={`/clubes/${c.slug}`} className="font-semibold hover:underline truncate" style={{ color: c.color }}>
+                    {c.name}
+                  </a>
+                )}
+              </div>
+            )}
+            <PostCard
+              post={post}
+              priorityImages={i === 0}
+              currentUserId={userId}
+              onToggleLike={toggleLike}
+              onToggleCommentLike={toggleCommentLike}
+              onAddComment={addComment}
+              onRefresh={loadPosts}
+            />
+          </div>
+        )
+      })}
       {hasMore && (
         <div className="flex justify-center pt-2">
           <button

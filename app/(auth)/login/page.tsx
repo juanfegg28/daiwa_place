@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '../../lib/supabaseClient'
@@ -18,6 +18,12 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const brake = useLoginBrake()
+  // v1.8.0 · /login?add=1 = entrar en OTRA cuenta sin perder la actual (cambio rápido de cuentas)
+  const [adding, setAdding] = useState(false)
+  useEffect(() => {
+    const t = window.setTimeout(() => setAdding(new URLSearchParams(window.location.search).get('add') === '1'), 0)
+    return () => window.clearTimeout(t)
+  }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -50,6 +56,11 @@ export default function LoginPage() {
 
   return (
     <form onSubmit={handleLogin} className="space-y-4" noValidate>
+      {adding && (
+        <SoftNotice tone="info">
+          Vas a añadir otra cuenta. La que tenías abierta queda guardada en este dispositivo y podrás volver a ella sin contraseña desde «Cambiar de cuenta».
+        </SoftNotice>
+      )}
       <AuthField
         id="username"
         label="Tu usuario"

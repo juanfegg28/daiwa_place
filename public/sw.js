@@ -5,7 +5,7 @@
  * NO guarda páginas, publicaciones, mensajes ni nada que venga de Supabase: lo tuyo siempre se pide al servidor, así que
  * nunca verás datos viejos ni de otra persona.
  *   3) (v1.6.1) Muestra las NOTIFICACIONES push (mensajes y avisos) aunque la app esté cerrada, y las abre al tocarlas. */
-const VERSION = 'v1.7.2'
+const VERSION = 'v1.8.0'
 const CACHE = `daiwa-static-${VERSION}`
 const PRECACHE = ['/offline.html', '/icons/icon-192.png', '/brand-moon.png']
 

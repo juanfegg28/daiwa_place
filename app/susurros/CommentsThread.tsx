@@ -12,7 +12,10 @@ import { anonCommentName, friendlyWhisperError, isMineComment, type WhisperComme
 import AnonAvatar from './AnonAvatar'
 import CommentComposer from './CommentComposer'
 
-const MAX_VISUAL_DEPTH = 4
+// v1.8.0 · Antes cada respuesta se metía un nivel más a la derecha (avatar + línea + margen) y en el celular, a partir del 4.º nivel,
+// el texto se quedaba con 1 letra de ancho («O Y E Q U E…»). Ahora solo se anidan 2 niveles; las respuestas más profundas se muestran
+// en una sola columna debajo («en respuesta a …»), así el texto SIEMPRE tiene espacio.
+const MAX_VISUAL_DEPTH = 2
 
 type Props = {
   whisperId: string
@@ -23,6 +26,26 @@ type Props = {
   onChanged: () => void
   onReport: (commentId: string) => void
   onNotice: (text: string) => void
+}
+
+/** Todas las respuestas (hijos, nietos…) de un comentario, de la más vieja a la más nueva */
+function collectDescendants(id: string, childrenMap: Map<string, WhisperComment[]>): WhisperComment[] {
+  const out: WhisperComment[] = []
+  const walk = (cid: string) => {
+    for (const c of childrenMap.get(cid) ?? []) {
+      out.push(c)
+      walk(c.id)
+    }
+  }
+  walk(id)
+  return out.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+}
+
+function shortName(c: WhisperComment | undefined): string {
+  if (!c) return ''
+  if (c.is_anonymous) return anonCommentName(c)
+  if (!c.author_id) return 'Cuenta eliminada'
+  return c.profiles?.id_student || c.profiles?.username || 'usuario'
 }
 
 export default function CommentsThread({ comments, ...rest }: Props) {
@@ -43,6 +66,7 @@ export default function CommentsThread({ comments, ...rest }: Props) {
     }
     return { roots: rootList, children: byParent }
   }, [comments])
+  const byId = useMemo(() => new Map(comments.map((c) => [c.id, c])), [comments])
 
   if (roots.length === 0) {
     return <p className="text-sm text-neutral-500 text-center py-8">Todavía no hay comentarios. Sé el primero en susurrar algo.</p>
@@ -51,7 +75,7 @@ export default function CommentsThread({ comments, ...rest }: Props) {
   return (
     <div className="space-y-4">
       {roots.map((c) => (
-        <CommentNode key={c.id} comment={c} depth={0} childrenMap={children} {...rest} />
+        <CommentNode key={c.id} comment={c} depth={0} childrenMap={children} byId={byId} {...rest} />
       ))}
     </div>
   )
@@ -61,6 +85,8 @@ function CommentNode({
   comment,
   depth,
   childrenMap,
+  byId,
+  flat = false,
   whisperId,
   isWhisperMine,
   reportedComments,
@@ -72,12 +98,19 @@ function CommentNode({
   comment: WhisperComment
   depth: number
   childrenMap: Map<string, WhisperComment[]>
+  byId: Map<string, WhisperComment>
+  /** true = es una respuesta «aplanada»: sus propias respuestas las dibuja el comentario de arriba */
+  flat?: boolean
 } & Omit<Props, 'comments'>) {
   const [replying, setReplying] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
-  const replies = childrenMap.get(comment.id) ?? []
+  const nested = depth < MAX_VISUAL_DEPTH
+  // más profundo del límite: todas las respuestas van juntas, en una sola columna
+  const replies = flat ? [] : nested ? childrenMap.get(comment.id) ?? [] : collectDescendants(comment.id, childrenMap)
+  const replyTo = flat && comment.parent_comment_id ? shortName(byId.get(comment.parent_comment_id)) : ''
+  const small = depth > 0
   const mine = isMineComment(comment)
   const deleted = !!comment.deleted_at
   const removedByMod = comment.status === 'removed'
@@ -100,20 +133,21 @@ function CommentNode({
   const author = comment.profiles
 
   return (
-    <div id={`comment-${comment.id}`}>
-      <div className="flex items-start gap-2.5">
+    <div id={`comment-${comment.id}`} className="min-w-0">
+      <div className={`flex items-start ${small ? 'gap-2' : 'gap-2.5'}`}>
         {comment.is_anonymous || accountGone ? (
-          <AnonAvatar size="w-8 h-8" />
+          <AnonAvatar size={small ? 'w-6 h-6' : 'w-8 h-8'} />
         ) : (
-          <UserAvatar username={author?.username ?? 'usuario'} avatarUrl={author?.avatar_url ?? null} size="w-8 h-8" textSize="text-xs" />
+          <UserAvatar username={author?.username ?? 'usuario'} avatarUrl={author?.avatar_url ?? null} size={small ? 'w-6 h-6' : 'w-8 h-8'} textSize="text-xs" />
         )}
 
         <div className="min-w-0 flex-1">
           <div
-            className={`rounded-2xl rounded-tl-sm px-3.5 py-2.5 transition ${
+            className={`rounded-2xl rounded-tl-sm ${small ? 'px-3 py-2' : 'px-3.5 py-2.5'} transition ${
               highlightId === comment.id ? 'bg-garnet-600/15 ring-2 ring-garnet-500/70' : 'bg-ink-800'
             }`}
           >
+            {replyTo && <p className="text-[11px] text-neutral-500 mb-0.5 truncate">↪ en respuesta a {replyTo}</p>}
             <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
               {comment.is_anonymous ? (
                 <span className="text-[13px] font-semibold text-neutral-200">{anonCommentName(comment)}</span>
@@ -190,13 +224,15 @@ function CommentNode({
           )}
 
           {replies.length > 0 && (
-            <div className={`mt-3 space-y-3 ${depth < MAX_VISUAL_DEPTH ? 'pl-3 border-l border-ink-700' : ''}`}>
+            <div className={`mt-3 space-y-3 ${nested ? 'pl-2.5 sm:pl-3 border-l border-ink-700' : 'pl-2.5 border-l border-ink-700/60'}`}>
               {replies.map((r) => (
                 <CommentNode
                   key={r.id}
                   comment={r}
-                  depth={depth + 1}
+                  depth={nested ? depth + 1 : depth}
+                  flat={!nested}
                   childrenMap={childrenMap}
+                  byId={byId}
                   whisperId={whisperId}
                   isWhisperMine={isWhisperMine}
                   reportedComments={reportedComments}

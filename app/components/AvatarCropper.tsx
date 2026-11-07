@@ -19,7 +19,7 @@ export type CropperOptions = {
   onReject?: (msg: string) => void
 }
 
-/** Banner del perfil: recorte 3:1, pero un GIF animado (hasta 25 MB) se sube sin recortar para que se siga moviendo */
+/** Banner del perfil: recorte 3:1, pero un GIF animado (hasta 6 MB; 12 MB con el Círculo Lunar) se sube sin recortar para que se siga moviendo */
 export const BANNER_CROP_GIF: CropperOptions = { ...{ aspect: 3, shape: 'rect', outputWidth: 1500, title: 'Acomoda tu banner', fileName: 'banner.jpg' }, allowGif: true, maxGifBytes: 25 * 1024 * 1024 }
 
 /** Recorte 3:1 para el banner del perfil */

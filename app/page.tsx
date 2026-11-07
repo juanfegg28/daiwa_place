@@ -30,6 +30,8 @@ import MusicPicker from './components/MusicPicker'
 import { MusicIcon } from './components/icons'
 import { normalizeTrack, toStoredTrack } from './lib/music'
 import type { Post, PostImage, FeedItem } from './lib/types'
+import { canPostInClub, fetchMyClubs, type MyClub } from './lib/clubs'
+import StreakChip from './components/economy/StreakChip'
 
 const FEED_PAGE = 12 // v1.6.3 · 12 (antes 15): cada publicación trae sus comentarios y likes, así que cada una pesa
 
@@ -62,6 +64,11 @@ function Feed() {
   const [loading, setLoading] = useState(false)
   const [loadingPosts, setLoadingPosts] = useState(true)
   const [postError, setPostError] = useState('')
+  // v1.8.0 · ¿dónde publico? null = todo Daiwa (Inicio y perfil) · un id = SOLO esa página de club
+  const [myClubs, setMyClubs] = useState<MyClub[]>([])
+  const [audience, setAudience] = useState<string | null>(null)
+  const [asAnnouncement, setAsAnnouncement] = useState(false)
+  const [postNote, setPostNote] = useState('')
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const mentionRef = useRef<MentionFieldHandle | null>(null)
 
@@ -204,6 +211,22 @@ function Feed() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  useEffect(() => {
+    if (!userId) return
+    let alive = true
+    void fetchMyClubs(userId).then((list) => {
+      if (!alive) return
+      setMyClubs(list)
+      // /?club=mi-club (desde la página del club) deja elegido ese club
+      const wanted = new URLSearchParams(window.location.search).get('club')
+      const c = wanted ? list.find((x) => x.slug === wanted) : null
+      if (c && canPostInClub(c, userId)) setAudience(c.id)
+    })
+    return () => {
+      alive = false
+    }
+  }, [userId])
+
   // Aviso de "hay publicaciones nuevas".
   // v1.6.3 · Primero una mirada BARATA a la fecha de la última publicación/compartido; solo si hay algo más nuevo que lo que ya cargaste
   // se llama a la función pesada feed_items (que respeta ocultos y tu preferencia). Se revisa cada 3 min y solo con la pestaña a la vista.
@@ -212,7 +235,7 @@ function Feed() {
     async function check() {
       if (!newestSeen.current) return
       const [p, r] = await Promise.all([
-        supabase.from('posts').select('created_at').order('created_at', { ascending: false }).limit(1),
+        supabase.from('posts').select('created_at').is('club_id', null).order('created_at', { ascending: false }).limit(1),
         supabase.from('reposts').select('created_at').order('created_at', { ascending: false }).limit(1),
       ])
       if (p.error) return
@@ -286,9 +309,11 @@ function Feed() {
     setLoading(true)
     setPostError('')
 
+    // v1.8.0 · getSession lee la sesión guardada (sin pedirle nada a Supabase); antes getUser hacía una consulta de más por cada publicación
     const {
-      data: { user },
-    } = await supabase.auth.getUser()
+      data: { session: authSession },
+    } = await supabase.auth.getSession()
+    const user = authSession?.user ?? null
     if (!user) {
       setLoading(false)
       router.push('/login')
@@ -329,11 +354,13 @@ function Feed() {
     }
 
     // 2) Crear la publicación
+    const targetClub = audience ? myClubs.find((c) => c.id === audience) ?? null : null
     const { error: insertError } = await supabase.from('posts').insert({
       user_id: user.id,
       content: content.trim(),
       images: uploaded,
       music: postMusic && normalizeTrack(postMusic) ? postMusic : null,
+      ...(targetClub ? { club_id: targetClub.id, is_announcement: targetClub.leader_id === user.id && asAnnouncement } : {}),
     })
 
     if (insertError) {
@@ -350,6 +377,13 @@ function Feed() {
     setContent('')
     setPostMusic(null)
     setLoading(false)
+    if (targetClub) {
+      // una publicación «solo del club» no sale en el Inicio ni en tu perfil: solo en la página del club
+      setPostNote(`Publicado en ${targetClub.name} ✓ Solo se ve en la página del club.`)
+      setAsAnnouncement(false)
+      return
+    }
+    setPostNote('')
     loadPosts(true)
   }
 
@@ -452,6 +486,7 @@ function Feed() {
       <StoriesTray />
 
       {/* Misiones: en pantallas chicas, tarjeta plegable; en PC grande van en la columna de la derecha */}
+      {username && <StreakChip state={missions} />}
       {username && <MissionsInline state={missions} />}
 
       {username && (
@@ -494,6 +529,44 @@ function Feed() {
           )}
 
           {postError && <p className="text-xs text-garnet-400 mt-3">{postError}</p>}
+          {postNote && !postError && <p className="text-xs text-emerald-400 mt-3">{postNote}</p>}
+
+          {/* v1.8.0 · Si estás en algún club, eliges si la publicación es para todo Daiwa o SOLO para tu club */}
+          {myClubs.length > 0 && (
+            <div className="mt-3 flex flex-wrap items-center gap-1.5" role="group" aria-label="Dónde publicar">
+              <span className="text-[11px] text-neutral-500 mr-0.5">Publicar en:</span>
+              <button
+                type="button"
+                onClick={() => setAudience(null)}
+                className={`text-xs rounded-full px-3 py-1 border transition ${audience === null ? 'bg-garnet-600/20 border-garnet-500 text-garnet-200' : 'border-ink-600 text-neutral-400 hover:bg-ink-800'}`}
+              >
+                🌐 Todo Daiwa
+              </button>
+              {myClubs.map((c) => {
+                const allowed = canPostInClub(c, userId)
+                const on = audience === c.id
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    disabled={!allowed}
+                    onClick={() => setAudience(on ? null : c.id)}
+                    title={allowed ? `Solo se verá en la página de ${c.name}` : 'En este club solo publican los líderes'}
+                    className={`text-xs rounded-full px-3 py-1 border transition max-w-[11rem] truncate disabled:opacity-40 ${on ? 'text-white' : 'border-ink-600 text-neutral-300 hover:bg-ink-800'}`}
+                    style={on ? { backgroundColor: `${c.color}33`, borderColor: c.color } : undefined}
+                  >
+                    🏷️ Solo {c.name}
+                  </button>
+                )
+              })}
+              {audience && myClubs.find((c) => c.id === audience)?.leader_id === userId && (
+                <label className="flex items-center gap-1.5 text-xs text-neutral-300 ml-1 cursor-pointer">
+                  <input type="checkbox" checked={asAnnouncement} onChange={(e) => setAsAnnouncement(e.target.checked)} className="accent-garnet-500" />
+                  📢 Marcar como anuncio
+                </label>
+              )}
+            </div>
+          )}
 
           <div className="flex flex-wrap items-center justify-between gap-y-2 mt-2 pt-2 border-t border-ink-700">
             <div className="flex flex-wrap items-center gap-1">
@@ -559,7 +632,7 @@ function Feed() {
               disabled={!canPublish}
               className="bg-garnet-600 hover:bg-garnet-500 disabled:opacity-50 text-white text-sm font-medium rounded-full px-5 py-2 transition"
             >
-              {loading ? (drafts.length > 0 ? 'Subiendo...' : 'Publicando...') : 'Publicar'}
+              {loading ? (drafts.length > 0 ? 'Subiendo...' : 'Publicando...') : audience ? 'Publicar en el club' : 'Publicar'}
             </button>
           </div>
           <MusicPicker

@@ -15,6 +15,62 @@ export const RELEASE_STAGE: 'beta' | 'stable' = 'stable'
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.8.0',
+    date: '2026-11-06',
+    title: 'Clubes renovados, racha con escudo, más beneficios y cambio rápido de cuentas',
+    sections: [
+      {
+        heading: 'Clubes renovados',
+        items: [
+          'Si estás en un club, al escribir una publicación en el Inicio puedes elegir «Publicar en: Todo Daiwa» o «Solo [tu club]». Las publicaciones solo del club NO salen en el Inicio ni en tu perfil: se ven únicamente en la página del club.',
+          'La página general de Clubes ahora muestra solo los anuncios y las publicaciones de los líderes. Antes salía todo lo que publicaban los miembros de cualquier club.',
+          'Los líderes pueden marcar una publicación como 📢 anuncio (queda arriba unos días) y elegir si en su club publican todos los miembros o solo los líderes.',
+          'Niveles de club (Semilla, Brote, Constelación, Aurora y Eclipse) según miembros y actividad. Cada nivel da más roles propios y, desde el nivel 2, Lunas cada lunes para el líder (y para quienes publican en el club desde el nivel 4).',
+          'Nuevo en cada club: etiqueta «Reclutando», categoría, reglas, pestaña «Info y reglas» y la sección «Mis clubes» en Clubes.',
+          'Nuevas misiones de club: «Publica algo solo para tu club» (diaria) y «Publica 2 veces en tu club» (semanal). Solo les salen a quienes están en un club.',
+        ],
+      },
+      {
+        heading: 'Racha y más Lunas para todos',
+        items: [
+          'Tu racha ahora se ve en el Inicio: cuántos días llevas y en cuánto tiempo se apaga. En el panel de Misiones tienes el detalle y los premios.',
+          'Bono de entrada diario: de 12 a 40 ☾ (crece con tu racha) cada día que lo reclames.',
+          'Tres premios de racha nuevos: a los 5, 10 y 21 días (se suman a los de 3, 7, 14 y 30).',
+          '🛡️ Escudo de racha: si tienes una racha de 3 días o más y se te pasa UN día, el escudo la salva. Se recarga cada 30 días.',
+        ],
+      },
+      {
+        heading: 'Círculo Lunar: más ventajas',
+        items: [
+          'Bono de entrada ×1,25 / ×1,5 / ×2 según tu nivel, premios de racha con +10 % / +20 % / +30 % y escudo que se recarga cada 14 / 10 / 7 días.',
+          '+15 % / +25 % / +40 % de Lunas extra en cada misión completada y en el cofre semanal, según tu nivel.',
+          'Banners GIF de hasta 12 MB (6 MB sin apoyar).',
+          'Debajo de las Misiones hay un anuncio para apoyar a DaiwaPlace que lleva al Círculo Lunar (se puede ocultar 7 días).',
+        ],
+      },
+      {
+        heading: 'Cambio rápido de cuentas',
+        items: [
+          'Guarda tus personajes y cambia entre ellos con un toque desde «Cambiar de cuenta» (menú) o en Configuración → Mis cuentas, sin escribir la contraseña de nuevo. Puedes guardar hasta 2 cuentas por dispositivo (las del rol) y solo funciona con cuentas en las que ya entraste en ese dispositivo.',
+        ],
+      },
+      {
+        heading: 'Arreglos',
+        items: [
+          'Susurros: los comentarios con muchas respuestas ya no se aprietan en una columna de letras en el celular.',
+          'Estado: la hoja para poner tu estado ya no queda tapada por las historias ni por las fotos del Inicio.',
+          'Perfil: el botón ahora muestra «Siguiendo» / «Amigos» correctamente (antes decía «Seguir» aunque ya seguías a la persona).',
+        ],
+      },
+      {
+        heading: 'Más liviana',
+        items: [
+          'Menos consultas a Supabase al cambiar de página, al abrir Configuración y al publicar; los GIF de banner pesan menos y las fotos se guardan más tiempo en el dispositivo.',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.7.2',
     date: '2026-11-04',
     title: 'Ahora también puedes apoyar con Ko-fi',
@@ -1047,4 +1103,4 @@ export const CHANGELOG: Release[] = [
 
 export const LATEST_RELEASE = CHANGELOG[0]
 // Versión que se muestra en la app. Si un parche pequeño (1.0.x) no lleva notas en el changelog, igual se sube este número a mano.
-export const APP_VERSION = '1.7.2'
+export const APP_VERSION = '1.8.0'

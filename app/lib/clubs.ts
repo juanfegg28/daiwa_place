@@ -1,4 +1,6 @@
 // Clubes y Pandillas (v1.1.0): tipos, textos y utilidades compartidas.
+// v1.8.0 · Clubes renovados: publicaciones «solo del club», anuncios de líderes, niveles, «reclutando», categorías y reglas.
+import { supabase } from './supabaseClient'
 
 export type ClubKind = 'club' | 'pandilla'
 
@@ -53,10 +55,61 @@ export type ClubSummary = {
   announcement: string | null
   announcement_updated_at: string | null
   created_at: string
+  // v1.8.0 (opcionales: llegan con club_overview(); si falta el SQL nuevo simplemente no vienen)
+  members_count?: number
+  level?: number
+  recruiting?: boolean
+  category?: string | null
+  rules?: string | null
+  post_policy?: 'members' | 'leaders'
 }
 
 export const CLUB_SUMMARY_SELECT =
   'id, slug, name, kind, description, avatar_url, banner_url, color, leader_id, announcement, announcement_updated_at, created_at'
+
+/** v1.8.0 · Lo que se pide en la página de UN club (incluye los ajustes nuevos). Si falta el SQL, se usa CLUB_SUMMARY_SELECT. */
+export const CLUB_FULL_SELECT = `${CLUB_SUMMARY_SELECT}, recruiting, category, rules, post_policy`
+
+export const CLUB_CATEGORIES = ['Música', 'Arte', 'Deportes', 'Estudio', 'Videojuegos', 'Lectura y escritura', 'Cocina', 'Tecnología', 'Solidaridad', 'Otro'] as const
+export const CLUB_RULES_MAX = 600
+
+/** Niveles del club: se calculan en la base de datos con miembros + publicaciones del último mes */
+export const CLUB_LEVELS: { level: number; name: string; points: number; perk: string }[] = [
+  { level: 1, name: 'Semilla', points: 0, perk: 'Página del club, tablón de anuncios y roles.' },
+  { level: 2, name: 'Brote', points: 30, perk: 'Insignia de nivel y el líder recibe 60 Lunas cada semana.' },
+  { level: 3, name: 'Constelación', points: 80, perk: 'Aparece en «Clubes destacados» y el líder recibe 120 Lunas semanales.' },
+  { level: 4, name: 'Aurora', points: 160, perk: 'Lunas semanales para el líder (200) y premio de actividad para quienes publican en el club (+15).' },
+  { level: 5, name: 'Eclipse', points: 300, perk: 'Máximo nivel: 320 Lunas semanales para el líder y +25 de actividad para los miembros que publican.' },
+]
+export const levelName = (n: number | undefined) => CLUB_LEVELS.find((l) => l.level === (n ?? 1))?.name ?? 'Semilla'
+
+/** Un club donde tengo membresía (para elegir dónde publicar) */
+export type MyClub = { id: string; slug: string; name: string; color: string; leader_id: string; post_policy: 'members' | 'leaders' }
+
+/** ¿Puedo publicar «solo del club» en este club? (los miembros sí, salvo que el líder lo haya dejado solo para líderes) */
+export function canPostInClub(c: Pick<MyClub, 'leader_id' | 'post_policy'>, userId: string | null | undefined): boolean {
+  if (!userId) return false
+  return c.leader_id === userId || c.post_policy !== 'leaders'
+}
+
+let myClubsCache: { uid: string; at: number; list: MyClub[] } | null = null
+export function clearMyClubsCache() {
+  myClubsCache = null
+}
+
+/** Mis clubes (se recuerdan 5 min para no repetir la consulta en cada página) */
+export async function fetchMyClubs(userId: string): Promise<MyClub[]> {
+  if (myClubsCache && myClubsCache.uid === userId && Date.now() - myClubsCache.at < 5 * 60_000) return myClubsCache.list
+  type Row = { clubs: { id: string; slug: string; name: string; color: string; leader_id: string; post_policy?: string | null } | null }
+  let res: { data: unknown; error: unknown } = await supabase.from('club_members').select('clubs!club_members_club_id_fkey(id, slug, name, color, leader_id, post_policy)').eq('user_id', userId)
+  if (res.error) res = await supabase.from('club_members').select('clubs!club_members_club_id_fkey(id, slug, name, color, leader_id)').eq('user_id', userId)
+  const list = ((res.data as Row[] | null) ?? [])
+    .map((r) => r.clubs)
+    .filter((c): c is NonNullable<Row['clubs']> => !!c)
+    .map((c) => ({ id: c.id, slug: c.slug, name: c.name, color: c.color, leader_id: c.leader_id, post_policy: (c.post_policy === 'leaders' ? 'leaders' : 'members') as 'members' | 'leaders' }))
+  myClubsCache = { uid: userId, at: Date.now(), list }
+  return list
+}
 
 export type ClubRole = { id: string; club_id: string; name: string; color: string; is_leader: boolean }
 

@@ -5,6 +5,8 @@ import MissionNotifier from './economy/MissionNotifier'
 import { ClaimDot, useClaimable, useWalletRefreshOnNavigate } from './economy/ClaimDot'
 import NewTag from './NewTag'
 import { syncPush, unlinkPushDevice } from '../lib/push'
+import { forgetAccount, rememberSession } from '../lib/accounts'
+import AccountSwitcherSheet from './AccountSwitcherSheet'
 import { ECO, onWake, startPoll } from '../lib/eco'
 import { markWhispersSeen, useShopNoveltyFlag, useWhisperNovelty } from '../lib/novelty'
 import Avatar from './cosmetics/Avatar'
@@ -164,6 +166,27 @@ function CountBubble({ count, className = '', small = false }: { count: number; 
   )
 }
 
+// v1.8.0 · Cada página monta su propio AppShell, así que antes CADA cambio de página repetía 3-4 consultas (perfil, roles, modo
+// mantenimiento) aunque nada hubiera cambiado: eran decenas de miles de peticiones al mes (egress y logs de Supabase). Ahora el
+// resultado se recuerda 5 min entre páginas; `refresh()` (por ejemplo al guardar tu perfil) lo fuerza.
+type ShellCache = {
+  uid: string
+  at: number
+  username: string | null
+  avatarUrl: string | null
+  idStudent: string | null
+  permissions: Permissions
+  hasAnyRole: boolean
+  showOnline: boolean
+  showReadReceipts: boolean
+  theme: ThemeMode
+  accent: string | null
+}
+const SHELL_TTL_MS = 5 * 60_000
+let shellCache: ShellCache | null = null
+let maintAtGlobal = 0
+let maintValueGlobal = false
+
 export default function AppShell({
   children,
   hideMobileChrome = false,
@@ -234,24 +257,26 @@ export default function AppShell({
   }, [pathname])
   const router = useRouter()
 
+  const [switcherOpen, setSwitcherOpen] = useState(false)
   const loadedRef = useRef<{ id: string | null; at: number }>({ id: null, at: 0 })
-  const maintRef = useRef(0)
-  const load = async () => {
-    // v1.6.3 · el modo mantenimiento se mira como mucho una vez cada 2 min (antes, en cada carga)
-    if (Date.now() - maintRef.current > 120_000) {
-      maintRef.current = Date.now()
+  const load = async (force = false) => {
+    // v1.6.3 · el modo mantenimiento se mira como mucho una vez cada 2 min (antes, en cada carga); v1.8.0: y se comparte entre páginas
+    if (Date.now() - maintAtGlobal > 120_000) {
+      maintAtGlobal = Date.now()
       const { data: settingsRow } = await supabase
         .from('app_settings')
         .select('value')
         .eq('key', 'maintenance_mode')
         .maybeSingle()
-      setMaintenanceOn(settingsRow?.value === true)
+      maintValueGlobal = settingsRow?.value === true
     }
+    setMaintenanceOn(maintValueGlobal)
 
     // v1.6.3 · sesión local (sin ir al servidor de Auth en cada carga): la seguridad real la sigue poniendo RLS
     const { data: authData } = await supabase.auth.getSession()
     const user = authData.session?.user ?? null
     if (!user) {
+      shellCache = null
       setUserId(null)
       setUsername(null)
       setAvatarUrl(null)
@@ -263,6 +288,21 @@ export default function AppShell({
     }
     setUserId(user.id)
     loadedRef.current = { id: user.id, at: Date.now() }
+    // v1.8.0 · misma persona y datos recientes: se reutilizan (cambiar de página ya no repite 3-4 consultas)
+    const hit = shellCache
+    if (!force && hit && hit.uid === user.id && Date.now() - hit.at < SHELL_TTL_MS) {
+      setUsername(hit.username)
+      setAvatarUrl(hit.avatarUrl)
+      setIdStudent(hit.idStudent)
+      setPermissions(hit.permissions)
+      setHasAnyRole(hit.hasAnyRole)
+      setShowOnline(hit.showOnline)
+      setShowReadReceipts(hit.showReadReceipts)
+      applyTheme(hit.theme, hit.accent)
+      rememberSession(authData.session, { username: hit.username, name: hit.idStudent, avatar: hit.avatarUrl })
+      setLoading(false)
+      return
+    }
     // v1.6.3 · UNA sola consulta de perfil (antes eran 3). Si falta alguna columna de SQL viejos, se usa el camino de siempre.
     let profile: { username?: string | null; avatar_url?: string | null; id_student?: string | null; theme?: string | null; accent_color?: string | null; show_online_status?: boolean | null; show_read_receipts?: boolean | null } | null = null
     const full = await supabase
@@ -299,6 +339,22 @@ export default function AppShell({
     setPermissions(merged)
     setHasAnyRole((roleRows ?? []).length > 0)
 
+    shellCache = {
+      uid: user.id,
+      at: Date.now(),
+      username: profile?.username ?? null,
+      avatarUrl: profile?.avatar_url ?? null,
+      idStudent: profile?.id_student ?? null,
+      permissions: merged,
+      hasAnyRole: (roleRows ?? []).length > 0,
+      showOnline: profile?.show_online_status !== false,
+      showReadReceipts: profile?.show_read_receipts !== false,
+      theme: (profile?.theme as ThemeMode) ?? 'dark',
+      accent: profile?.accent_color ?? null,
+    }
+    // v1.8.0 · esta cuenta queda guardada en este dispositivo para el cambio rápido de cuentas
+    rememberSession(authData.session, { username: profile?.username ?? null, name: profile?.id_student ?? null, avatar: profile?.avatar_url ?? null })
+
     setLoading(false)
   }
 
@@ -309,7 +365,11 @@ export default function AppShell({
     run()
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       // v1.6.3 · renovar el token (cada hora) o volver a la pestaña NO vuelve a cargar todo el perfil
-      if (event === 'TOKEN_REFRESHED') return
+      if (event === 'TOKEN_REFRESHED') {
+        rememberSession(session) // v1.8.0 · el cambio rápido de cuentas necesita siempre el token más nuevo
+        return
+      }
+      if (event === 'SIGNED_OUT') shellCache = null
       if (event === 'SIGNED_IN' && session?.user?.id && session.user.id === loadedRef.current.id && Date.now() - loadedRef.current.at < 10 * 60_000) return
       load()
     })
@@ -484,6 +544,8 @@ export default function AppShell({
     } catch {
       /* sin almacenamiento */
     }
+    if (userId) forgetAccount(userId) // v1.8.0 · cerrar sesión la quita de la lista del cambio rápido
+    shellCache = null
     await supabase.auth.signOut()
     applyTheme('dark', null)
     router.push('/login')
@@ -515,7 +577,7 @@ export default function AppShell({
     refreshNotifRef.current = refreshNotifications
     refreshDmRef.current = refreshDm
   })
-  const stableRefresh = useCallback(() => loadRef.current(), [])
+  const stableRefresh = useCallback(() => loadRef.current(true), [])
   const stableRefreshNotifications = useCallback(() => refreshNotifRef.current(), [])
   const stableRefreshDm = useCallback(() => refreshDmRef.current(), [])
   const sessionValue = useMemo<SessionState>(
@@ -793,6 +855,9 @@ export default function AppShell({
                     <Link href={`/perfil/${username}`} aria-label="Mi perfil" title={displayLabel ?? 'Mi perfil'}>
                       <Avatar username={username ?? '?'} avatarUrl={avatarUrl} size="w-9 h-9" textSize="text-sm" sizes="48px" />
                     </Link>
+                    <button onClick={() => setSwitcherOpen(true)} aria-label="Cambiar de cuenta" title="Cambiar de cuenta" className="w-9 h-9 rounded-xl flex items-center justify-center text-neutral-500 hover:text-garnet-400 hover:bg-ink-800 transition text-base">
+                      ⇄
+                    </button>
                     <button onClick={handleLogout} aria-label="Cerrar sesión" title="Cerrar sesión" className="w-9 h-9 rounded-xl flex items-center justify-center text-neutral-500 hover:text-garnet-400 hover:bg-ink-800 transition">
                       <LogoutIcon className="w-4 h-4" />
                     </button>
@@ -870,6 +935,19 @@ export default function AppShell({
                   Configuración
                 </Link>
               )}
+              {username && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDrawerOpen(false)
+                    setSwitcherOpen(true)
+                  }}
+                  className="mt-1 w-full flex items-center gap-3 px-3 py-3 rounded-xl text-[15px] text-neutral-300 hover:bg-ink-800 transition text-left"
+                >
+                  <span className="w-5 text-center text-lg leading-none" aria-hidden="true">⇄</span>
+                  Cambiar de cuenta
+                </button>
+              )}
 
               <Link
                 href="/novedades"
@@ -900,6 +978,13 @@ export default function AppShell({
                         <p className="text-xs text-neutral-600 truncate">@{username}</p>
                       </div>
                     </Link>
+                    <button
+                      onClick={() => setSwitcherOpen(true)}
+                      className="w-full flex items-center gap-1.5 px-2 text-xs text-neutral-500 hover:text-garnet-400 transition"
+                    >
+                      <span className="w-3.5 text-center" aria-hidden="true">⇄</span>
+                      Cambiar de cuenta
+                    </button>
                     <button
                       onClick={handleLogout}
                       className="w-full flex items-center gap-1.5 px-2 text-xs text-neutral-500 hover:text-garnet-400 transition"
@@ -1082,6 +1167,7 @@ export default function AppShell({
           </aside>
         </div>
       </div>
+      <AccountSwitcherSheet open={switcherOpen} onClose={() => setSwitcherOpen(false)} />
     </AppSessionContext.Provider>
   )
 }

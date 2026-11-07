@@ -12,6 +12,15 @@ function supabaseHost(): string | null {
 const host = supabaseHost();
 
 const nextConfig: NextConfig = {
+  // v1.8.0 · menos peso para Vercel: sin cabecera «X-Powered-By» y con caché largo en los archivos que no cambian
+  poweredByHeader: false,
+  async headers() {
+    const longCache = [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }];
+    return [
+      { source: "/icons/:path*", headers: longCache },
+      { source: "/:file(.*\\.(?:png|jpg|jpeg|webp|svg|ico|woff2))", headers: longCache },
+    ];
+  },
   images: {
     // Si el plan gratis de Vercel agota las optimizaciones del mes, basta con crear en Vercel la variable
     // NEXT_PUBLIC_UNOPTIMIZED_IMAGES=1 y volver a desplegar: las fotos siguen cargando perezosas y con su

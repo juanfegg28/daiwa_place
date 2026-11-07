@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { MOOD_PRESETS, STATUS_MAX, clearMyStatus, emitStatusChanged, setMyStatus, type StatusRow } from '../lib/status'
 
 /**
@@ -43,6 +44,15 @@ export default function StatusSheet({
     return () => document.removeEventListener('keydown', onKey)
   }, [open, busy, onClose])
 
+  useEffect(() => {
+    if (!open) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [open])
+
   if (!open) return null
 
   const save = async () => {
@@ -75,8 +85,11 @@ export default function StatusSheet({
     onClose()
   }
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/70 flex items-end md:items-center justify-center md:px-4 sheet-backdrop" onClick={() => !busy && onClose()}>
+  // v1.8.0 · La hoja se dibuja directamente en <body> (portal). Antes vivía DENTRO de la tarjeta del perfil / del feed y, como esas
+  // tarjetas tienen efectos (transform, filtros, decoraciones), el «fixed» se quedaba atrapado dentro y las historias y fotos del
+  // Inicio se le montaban encima. Fuera de ahí no hay nada que la tape (z-index por encima de historias y visores).
+  const sheet = (
+    <div className="fixed inset-0 z-[130] bg-black/70 flex items-end md:items-center justify-center md:px-4 sheet-backdrop" onClick={() => !busy && onClose()}>
       <div
         className="surface-raised border border-ink-600 sheet-panel rounded-t-2xl md:rounded-2xl border-b-0 md:border-b p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] md:pb-5 w-full md:max-w-md overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
@@ -150,4 +163,5 @@ export default function StatusSheet({
       </div>
     </div>
   )
+  return typeof document === 'undefined' ? null : createPortal(sheet, document.body)
 }

@@ -8,7 +8,7 @@ import ClubCard from '../components/ClubCard'
 import ClubFeed from './ClubFeed'
 import ClubRequestModal from './ClubRequestModal'
 import { ClubsIcon, PlusIcon, SearchIcon, CloseIcon } from '../components/icons'
-import { CLUB_SUMMARY_SELECT, friendlyClubError, shuffled, type ClubRequestRow, type ClubSummary } from '../lib/clubs'
+import { CLUB_SUMMARY_SELECT, CLUB_LEVELS, fetchMyClubs, friendlyClubError, shuffled, type MyClub, type ClubRequestRow, type ClubSummary } from '../lib/clubs'
 
 export default function ClubesPage() {
   return (
@@ -30,17 +30,34 @@ function ClubesContent() {
   const [myRequest, setMyRequest] = useState<ClubRequestRow | null>(null)
   const [notice, setNotice] = useState('')
   const searchSeq = useRef(0)
+  const [myClubs, setMyClubs] = useState<MyClub[]>([])
 
   // Descubrimiento: todos los clubes, mezclados DISTINTO en cada recarga para que todos tengan visibilidad
   useEffect(() => {
     async function run() {
-      const { data, error } = await supabase.from('clubs').select(CLUB_SUMMARY_SELECT).limit(120)
+      const [{ data, error }, ov] = await Promise.all([supabase.from('clubs').select(CLUB_SUMMARY_SELECT).limit(120), supabase.rpc('club_overview')])
       if (error) setClubsError(friendlyClubError(error.message))
-      setClubs(shuffled((data as ClubSummary[] | null) ?? []))
+      // v1.8.0 · cada club trae su nivel, miembros, categoría y si está reclutando; los de más nivel salen primero («destacados»)
+      const stats = new Map(((ov.data as { club_id: string; level: number; members_count: number; recruiting: boolean; category: string | null }[] | null) ?? []).map((o) => [o.club_id, o]))
+      const withStats = ((data as ClubSummary[] | null) ?? []).map((c) => {
+        const o = stats.get(c.id)
+        return o ? { ...c, level: o.level, members_count: o.members_count, recruiting: o.recruiting, category: o.category } : c
+      })
+      const mixed = shuffled(withStats)
+      setClubs(mixed.sort((a, b) => (b.level ?? 1) - (a.level ?? 1)))
       setClubsLoading(false)
     }
     run()
   }, [])
+
+  useEffect(() => {
+    if (!userId) return
+    let alive = true
+    void fetchMyClubs(userId).then((l) => alive && setMyClubs(l))
+    return () => {
+      alive = false
+    }
+  }, [userId])
 
   const loadMyRequest = async () => {
     if (!userId) return
@@ -104,7 +121,7 @@ function ClubesContent() {
             </span>
             <div>
               <h1 className="text-xl font-display font-semibold text-neutral-50 leading-tight">Clubes y Pandillas</h1>
-              <p className="text-xs text-neutral-500">Lo que publican los miembros de los grupos del rol.</p>
+              <p className="text-xs text-neutral-500">Anuncios y publicaciones de los líderes de los grupos del rol.</p>
             </div>
           </div>
 
@@ -123,6 +140,21 @@ function ClubesContent() {
               </button>
             )}
           </div>
+
+          {/* v1.8.0 · tus clubes, a un toque */}
+          {myClubs.length > 0 && results === null && (
+            <section className="mb-4">
+              <h2 className="text-sm font-semibold text-neutral-200 mb-2">Mis clubes</h2>
+              <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
+                {myClubs.map((c) => (
+                  <Link key={c.id} href={`/clubes/${c.slug}`} className="shrink-0 rounded-full border px-3.5 py-1.5 text-sm text-neutral-100 hover:bg-ink-700 transition" style={{ borderColor: c.color, backgroundColor: `${c.color}22` }}>
+                    {c.name}
+                  </Link>
+                ))}
+              </div>
+              <p className="mt-1.5 text-[11.5px] text-neutral-500">Desde el Inicio puedes elegir «Publicar solo en el club» al escribir una publicación.</p>
+            </section>
+          )}
 
           {results !== null ? (
             <section className="mb-6">
@@ -201,6 +233,19 @@ function ClubesContent() {
                   </div>
                 )}
               </section>
+
+              <details className="mb-5 surface-card rounded-2xl p-3.5 group">
+                <summary className="cursor-pointer text-sm font-semibold text-neutral-100 list-none flex items-center justify-between">
+                  ✦ ¿Para qué sirve tener un club?
+                  <span className="text-neutral-500 text-xs group-open:hidden">Ver</span>
+                </summary>
+                <ul className="mt-2.5 space-y-1.5">
+                  {CLUB_LEVELS.map((l) => (
+                    <li key={l.level} className="text-[12px] leading-snug text-neutral-300"><b className="text-violet-200">{l.name}</b> · {l.perk}</li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-[11.5px] text-neutral-500 leading-snug">Además: publicaciones «solo del club», anuncios, ajustes de reclutamiento, reglas, más roles por nivel y misiones de club con Lunas.</p>
+              </details>
 
               <ClubFeed />
             </>

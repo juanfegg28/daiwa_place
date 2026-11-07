@@ -9,8 +9,12 @@ import { ClubAvatar } from '../../components/ClubCard'
 import { ClubTag } from '../../components/ClubTag'
 import { CameraIcon, CheckIcon, CloseIcon, EditIcon, PlusIcon, TrashIcon } from '../../components/icons'
 import {
+  CLUB_CATEGORIES,
   CLUB_DESC_MAX,
+  CLUB_LEVELS,
   CLUB_MAX_ROLES,
+  CLUB_RULES_MAX,
+  levelName,
   CLUB_PALETTE,
   CLUB_ROLE_NAME_MAX,
   friendlyClubError,
@@ -54,6 +58,26 @@ export default function ClubManage({
   const [roleError, setRoleError] = useState('')
   const [editingRole, setEditingRole] = useState<{ id: string; name: string; color: string } | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
+
+  // v1.8.0 · ajustes del club: quién publica, reclutando, categoría y reglas
+  const [policy, setPolicy] = useState<'members' | 'leaders'>(club.post_policy ?? 'members')
+  const [recruiting, setRecruiting] = useState(!!club.recruiting)
+  const [category, setCategory] = useState(club.category ?? '')
+  const [rules, setRules] = useState(club.rules ?? '')
+  const [savingSettings, setSavingSettings] = useState(false)
+  const [settingsMsg, setSettingsMsg] = useState('')
+  const level = club.level ?? 1
+  const maxRoles = CLUB_MAX_ROLES + 3 * (level - 1)
+  const nextLevel = CLUB_LEVELS.find((l) => l.level === level + 1) ?? null
+
+  const saveSettings = async () => {
+    setSavingSettings(true)
+    setSettingsMsg('')
+    const { error } = await supabase.rpc('club_update_settings', { p_club: club.id, p_post_policy: policy, p_recruiting: recruiting, p_category: category || null, p_rules: rules || null })
+    setSavingSettings(false)
+    setSettingsMsg(error ? friendlyClubError(error.message) : 'Ajustes guardados ✓')
+    if (!error) await onChanged()
+  }
 
   // El mismo editor de recorte y zoom del registro
   const { openCropper, cropperElement } = useAvatarCropper(
@@ -172,6 +196,63 @@ export default function ClubManage({
 
   return (
     <div className="space-y-4">
+      {/* v1.8.0 · Nivel del club */}
+      <section className="surface-card rounded-2xl p-4">
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <h3 className="text-sm font-semibold text-neutral-50">Nivel del club</h3>
+          <span className="rounded-md border border-violet-400/40 bg-violet-500/15 text-violet-200 px-2 py-0.5 text-xs font-semibold">✦ {levelName(level)} · nivel {level}</span>
+        </div>
+        <p className="text-xs text-neutral-400 leading-relaxed">
+          Tu club sube de nivel con sus <b className="text-neutral-200">miembros</b> y con los <b className="text-neutral-200">días en que se publica «solo para el club»</b>. {nextLevel ? `Siguiente: ${nextLevel.name} — ${nextLevel.perk}` : 'Ya estás en el nivel máximo. ¡Felicidades!'}
+        </p>
+        <ul className="mt-2 space-y-1">
+          {CLUB_LEVELS.map((l) => (
+            <li key={l.level} className={`text-[11.5px] leading-snug ${l.level <= level ? 'text-neutral-200' : 'text-neutral-600'}`}>
+              {l.level <= level ? '✓' : '·'} <b>{l.name}</b> — {l.perk}
+            </li>
+          ))}
+        </ul>
+        <p className="mt-2 text-[11px] text-neutral-500">Los premios en Lunas se entregan cada lunes. Desde cualquier nivel, tu club tiene +3 roles propios por nivel.</p>
+      </section>
+
+      {/* v1.8.0 · Ajustes: quién publica, reclutando, categoría, reglas */}
+      <section className="surface-card rounded-2xl p-4">
+        <h3 className="text-sm font-semibold text-neutral-50 mb-1">Ajustes de publicación</h3>
+        <p className="text-xs text-neutral-500 mb-3">Quienes estén en tu club pueden elegir «Publicar solo en el club» al escribir una publicación.</p>
+
+        <p className="text-xs font-medium text-neutral-300 mb-1.5">¿Quién puede publicar en el club?</p>
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          {([['members', 'Todos los miembros'], ['leaders', 'Solo líderes']] as const).map(([v, label]) => (
+            <button key={v} type="button" onClick={() => setPolicy(v)} className={`rounded-xl border px-3 py-2 text-sm transition ${policy === v ? 'border-garnet-500 bg-garnet-600/15 text-garnet-100' : 'border-ink-600 text-neutral-300 hover:bg-ink-700'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <label className="flex items-center gap-2.5 text-sm text-neutral-200 mb-3 cursor-pointer">
+          <input type="checkbox" checked={recruiting} onChange={(e) => setRecruiting(e.target.checked)} className="accent-garnet-500 w-4 h-4" />
+          <span>Estamos <b>reclutando</b> <span className="text-xs text-neutral-500">(sale una etiqueta verde en el club)</span></span>
+        </label>
+
+        <label className="block text-xs font-medium text-neutral-300 mb-1" htmlFor="club-category">Categoría</label>
+        <select id="club-category" value={category} onChange={(e) => setCategory(e.target.value)} className="w-full mb-3 bg-ink-900 border border-ink-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-garnet-600">
+          <option value="">Sin categoría</option>
+          {CLUB_CATEGORIES.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+
+        <label className="block text-xs font-medium text-neutral-300 mb-1" htmlFor="club-rules">Reglas del club (opcional)</label>
+        <textarea id="club-rules" value={rules} onChange={(e) => setRules(e.target.value.slice(0, CLUB_RULES_MAX))} rows={4} placeholder={'1. Respeto ante todo.\n2. Avisa si no puedes venir a una reunión.'} className="w-full bg-ink-900 border border-ink-700 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:border-garnet-600" />
+        <div className="flex items-center justify-between mt-1.5">
+          <span className="text-[11px] text-neutral-600">{rules.length}/{CLUB_RULES_MAX}</span>
+          <button type="button" onClick={saveSettings} disabled={savingSettings} className="text-sm bg-garnet-600 hover:bg-garnet-500 text-white rounded-full px-5 py-1.5 transition disabled:opacity-60">
+            {savingSettings ? 'Guardando...' : 'Guardar ajustes'}
+          </button>
+        </div>
+        {settingsMsg && <p className="text-xs text-neutral-300 mt-2">{settingsMsg}</p>}
+      </section>
+
       {/* Solicitudes para unirse */}
       <section className="surface-card rounded-2xl p-4">
         <h3 className="text-sm font-semibold text-neutral-50 mb-1">Solicitudes para unirse {requests.length > 0 && <span className="text-garnet-400">({requests.length})</span>}</h3>
@@ -204,7 +285,7 @@ export default function ClubManage({
         <h3 className="text-sm font-semibold text-neutral-50 mb-1">Roles de tu {club.kind === 'pandilla' ? 'pandilla' : 'club'}</h3>
         <p className="text-xs text-neutral-500 mb-3">
           Son <b className="text-neutral-300">solo de adorno</b>: se ven como etiqueta junto al nombre de cada miembro, pero no dan ningún permiso en DaiwaPlace.
-          Se asignan desde la pestaña «Miembros». Máximo {CLUB_MAX_ROLES}.
+          Se asignan desde la pestaña «Miembros». Máximo {maxRoles} en el nivel {level}.
         </p>
 
         {leaderRole && (
@@ -250,7 +331,7 @@ export default function ClubManage({
           ))}
         </ul>
 
-        {customRoles.length < CLUB_MAX_ROLES && (
+        {customRoles.length < maxRoles && (
           <div className="rounded-xl border border-dashed border-ink-600 p-3">
             <p className="text-xs text-neutral-400 mb-2">Crear un rol nuevo (ej. «Tesorero», «Comandante»)</p>
             <div className="flex gap-2 mb-2">

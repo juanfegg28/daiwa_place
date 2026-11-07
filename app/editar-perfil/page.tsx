@@ -8,6 +8,7 @@ import AppShell, { useAppSession } from '../components/AppShell'
 import ProfilePreviewCard from '../components/ProfilePreviewCard'
 import { useAvatarCropper, BANNER_CROP_GIF } from '../components/AvatarCropper'
 import { uploadBanner } from '../lib/banner'
+import { fetchMyPerks } from '../lib/perks'
 import { CameraIcon } from '../components/icons'
 import IdentityFields from '../components/IdentityFields'
 import { IDENTITY_VISIBILITY_OPTIONS, type IdentityVisibility } from '../lib/identities'
@@ -148,7 +149,7 @@ function EditProfileForm() {
     }
 
     if (bannerFile) {
-      const up = await uploadBanner(supabase, userId, bannerFile)
+      const up = await uploadBanner(supabase, userId, bannerFile, (await fetchMyPerks()).gif_mb)
       if ('error' in up) uploadWarnings.push('Banner: ' + up.error)
       else bannerUrl = up.url
     }

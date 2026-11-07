@@ -8,7 +8,8 @@ import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { supabase } from '../../lib/supabaseClient'
 import { ECO, startPoll } from '../../lib/eco'
-import { countdown, effectiveReward, refreshWallet, subscribeWallet, type DayMissions, type Mission, type WeekMissions } from '../../lib/economy'
+import { countdown, effectiveReward, refreshWallet, subscribeWallet, type DayMissions, type Mission, type StreakOverview, type WeekMissions } from '../../lib/economy'
+import SupportBanner from './SupportBanner'
 import { MISSIONS_CHANGED, MISSION_CLAIMED } from './MissionNotifier'
 import { CheckIcon, GiftIcon, MoonCoinIcon, TargetIcon } from '../icons'
 import { ClaimDot } from './ClaimDot'
@@ -28,6 +29,10 @@ export type MissionsPanelState = {
   failed: boolean
   day: DayMissions | null
   week: WeekMissions | null
+  /** v1.8.0 · racha, escudo y bono diario (null si falta el SQL de la 1.8.0) */
+  streak: StreakOverview | null
+  claimStreak: (day: number) => void
+  claimDaily: () => void
   busy: boolean
   loadedAt: number
   collapsed: Collapsed
@@ -42,6 +47,7 @@ export type MissionsPanelState = {
 export function useMissionsPanel(userId: string | null | undefined): { state: MissionsPanelState; overlay: ReactNode } {
   const [day, setDay] = useState<DayMissions | null>(null)
   const [week, setWeek] = useState<WeekMissions | null>(null)
+  const [streak, setStreak] = useState<StreakOverview | null>(null)
   const [failed, setFailed] = useState(false)
   const [busy, setBusy] = useState(false)
   const [loadedAt, setLoadedAt] = useState(0)
@@ -86,7 +92,8 @@ export function useMissionsPanel(userId: string | null | undefined): { state: Mi
     }
     inflight.current = true
     try {
-      const [d, w] = await Promise.all([supabase.rpc('missions_today'), supabase.rpc('missions_week')])
+      const [d, w, st] = await Promise.all([supabase.rpc('missions_today'), supabase.rpc('missions_week'), supabase.rpc('streak_overview')])
+      if (!st.error && st.data) setStreak(st.data as StreakOverview) // si falta el SQL de la 1.8.0 simplemente no se muestra
       if (d.error || w.error) {
         setFailed(true)
         return
@@ -214,6 +221,45 @@ export function useMissionsPanel(userId: string | null | undefined): { state: Mi
     void load()
   }, [load])
 
+  const claimStreak = useCallback(
+    async (dayN: number) => {
+      if (claimLock.current) return
+      claimLock.current = true
+      setBusy(true)
+      const { data, error } = await supabase.rpc('streak_claim', { p_day: dayN })
+      claimLock.current = false
+      setBusy(false)
+      if (error) {
+        say(error.message, 'error')
+        void load()
+        return
+      }
+      setRain(true)
+      say(`¡Premio de racha de ${dayN} días! +${(data as { reward: number }).reward} ☾`)
+      void refreshWallet(true)
+      void load()
+    },
+    [load]
+  )
+
+  const claimDaily = useCallback(async () => {
+    if (claimLock.current) return
+    claimLock.current = true
+    setBusy(true)
+    const { data, error } = await supabase.rpc('daily_login_claim')
+    claimLock.current = false
+    setBusy(false)
+    if (error) {
+      say(error.message, 'error')
+      void load()
+      return
+    }
+    setRain(true)
+    say(`¡Bono de entrada! +${(data as { reward: number }).reward} ☾`)
+    void refreshWallet(true)
+    void load()
+  }, [load])
+
   const dayClaimable = day?.missions.filter((m) => m.claimable).length ?? 0
   const weekClaimable = (week?.missions.filter((m) => m.claimable).length ?? 0) + (week?.chest_ready && !week.chest_paid ? 1 : 0)
 
@@ -223,6 +269,9 @@ export function useMissionsPanel(userId: string | null | undefined): { state: Mi
       failed,
       day,
       week,
+      streak,
+      claimStreak: (n) => void claimStreak(n),
+      claimDaily: () => void claimDaily(),
       busy,
       loadedAt,
       collapsed,
@@ -231,7 +280,7 @@ export function useMissionsPanel(userId: string | null | undefined): { state: Mi
       openChest: () => void openChest(),
       dayClaimable,
       weekClaimable,
-      anyClaimable: dayClaimable + weekClaimable > 0,
+      anyClaimable: dayClaimable + weekClaimable + (streak && (!streak.daily.claimed || streak.milestones.some((m) => m.reached && !m.claimed)) ? 1 : 0) > 0,
     },
     overlay: (
       <>
@@ -293,6 +342,90 @@ function Block({ title, sub, open, onToggle, dot, children }: { title: string; s
   )
 }
 
+/** «Se apaga en 5 h 12 min» (o «¡Entra hoy!») */
+function streakLeft(st: StreakOverview, loadedAt: number): string {
+  if (!st.ends_at) return ''
+  return countdown(st.ends_at, st.server_now, loadedAt)
+}
+
+/** v1.8.0 · Racha: días, cuándo se apaga, escudo, bono de entrada y premios por hito */
+function StreakBlock({ s }: { s: MissionsPanelState }) {
+  const st = s.streak
+  if (!st) return null
+  const next = st.milestones.find((m) => !m.reached) ?? null
+  const claimable = st.milestones.filter((m) => m.reached && !m.claimed)
+  const alive = st.current > 0
+  const prev = [...st.milestones].reverse().find((m) => m.reached)?.day ?? 0
+  const pct = next ? Math.min(100, Math.round(((st.cycle_day - prev) / (next.day - prev)) * 100)) : 100
+  return (
+    <section className={`rounded-2xl border px-3.5 py-3 ${alive ? 'border-orange-400/40 bg-gradient-to-br from-orange-500/12 via-ink-900/60 to-transparent' : 'border-ink-700 bg-ink-900/60'}`} aria-label="Racha">
+      <div className="flex items-center gap-2">
+        <span className={`text-xl leading-none ${alive ? '' : 'grayscale opacity-60'}`} aria-hidden="true">🔥</span>
+        <div className="min-w-0 flex-1 leading-tight">
+          <p className="font-display text-[15px] font-semibold text-neutral-50">
+            {alive ? `${st.current} ${st.current === 1 ? 'día' : 'días'} de racha` : 'Sin racha todavía'}
+          </p>
+          <p className="text-[11.5px] text-neutral-400">
+            {alive
+              ? st.today_done
+                ? `Hoy ya cuenta ✓ · se apaga en ${streakLeft(st, s.loadedAt)} si no entras`
+                : `¡Entra hoy para mantenerla! Se apaga en ${streakLeft(st, s.loadedAt)}`
+              : 'Entra cada día y empieza una. Se apaga si faltas un día.'}
+          </p>
+        </div>
+        <span className="text-[10.5px] text-neutral-500 text-right leading-tight">Mejor<br /><b className="text-neutral-300 tabular-nums">{st.best}</b></span>
+      </div>
+
+      {st.saved_by_shield && <p className="mt-2 text-[11.5px] text-sky-300">🛡️ Tu escudo salvó tu racha: entra hoy y se mantiene.</p>}
+
+      {next && (
+        <div className="mt-2.5">
+          <div className="flex items-center justify-between text-[11px] text-neutral-400 mb-1">
+            <span>Próximo premio: día {next.day}</span>
+            <span className="text-amber-300 font-semibold tabular-nums">+{next.amount} ☾{st.boost_pct > 0 ? <span className="opacity-70"> (+{st.boost_pct} %)</span> : null}</span>
+          </div>
+          <div className="h-1.5 rounded-full bg-ink-800 overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Avance al próximo premio de racha">
+            <div className="h-full rounded-full bg-orange-400 transition-all" style={{ width: `${pct}%` }} />
+          </div>
+        </div>
+      )}
+
+      <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2">
+        <span className="text-lg" aria-hidden="true">🎁</span>
+        <div className="min-w-0 flex-1 leading-tight">
+          <p className="text-[12.5px] font-semibold text-neutral-50">Bono de entrada</p>
+          <p className="text-[11px] text-neutral-400">+{st.daily.amount} ☾{st.daily.mult > 1 ? ` · ×${st.daily.mult} por apoyar` : ' · crece con tu racha'}</p>
+        </div>
+        {st.daily.claimed ? (
+          <span className="text-[12px] text-emerald-400 font-medium">Cobrado ✓</span>
+        ) : (
+          <button type="button" onClick={s.claimDaily} disabled={s.busy} className="press rounded-full bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-ink-950 text-[12px] font-bold px-3.5 py-1.5 transition touch-manipulation">
+            Reclamar
+          </button>
+        )}
+      </div>
+
+      {claimable.length > 0 && (
+        <ul className="mt-2 space-y-1.5">
+          {claimable.map((m) => (
+            <li key={m.day} className="flex items-center gap-2 rounded-xl border border-orange-400/40 bg-orange-500/8 px-3 py-2">
+              <span className="text-[12.5px] text-neutral-100 flex-1">Racha de {m.day} días</span>
+              <span className="text-[11.5px] text-amber-300 font-semibold tabular-nums">+{m.amount} ☾</span>
+              <button type="button" onClick={() => s.claimStreak(m.day)} disabled={s.busy} className="press rounded-full bg-orange-400 hover:bg-orange-300 disabled:opacity-50 text-ink-950 text-[12px] font-bold px-3 py-1 transition touch-manipulation">
+                Reclamar
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <p className="mt-2 text-[10.5px] text-neutral-500 leading-snug">
+        🛡️ Escudo de racha: {st.shield_ready ? 'listo (salva 1 día perdido si tu racha es de 3 o más)' : `recargándose (se renueva cada ${st.shield_days} días)`}.
+      </p>
+    </section>
+  )
+}
+
 function Blocks({ s }: { s: MissionsPanelState }) {
   const { day, week } = s
   if (!day || !week) return null
@@ -300,6 +433,7 @@ function Blocks({ s }: { s: MissionsPanelState }) {
   const weekDone = week.missions.filter((m) => m.claimed).length
   return (
     <div className="space-y-2.5">
+      <StreakBlock s={s} />
       <Block title="Diarias" sub={`${done}/${day.missions.length} · ${countdown(day.ends_at, day.server_now, s.loadedAt)}`} open={!s.collapsed.day} onToggle={() => s.toggle('day')} dot={s.dayClaimable > 0}>
         <ul className="space-y-2">
           {day.missions.map((m) => <Row key={m.id} m={m} mult={day.multiplier} busy={s.busy} onClaim={s.claim} />)}
@@ -329,6 +463,7 @@ function Blocks({ s }: { s: MissionsPanelState }) {
         </div>
       </Block>
       <Link href="/misiones" className="block text-center text-[12.5px] text-amber-300 hover:text-amber-200 py-1">Ver todas las misiones, logros y racha →</Link>
+      <SupportBanner />
     </div>
   )
 }

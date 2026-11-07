@@ -58,6 +58,17 @@ export type StreakState = {
   milestones: { day: number; amount: number; reached: boolean; claimed: boolean }[]
 }
 
+/** v1.8.0 · Todo lo de la racha en una llamada (streak_overview) */
+export type StreakOverview = StreakState & {
+  ends_at: string | null
+  server_now: string
+  shield_ready: boolean
+  saved_by_shield: boolean
+  boost_pct: number
+  shield_days: number
+  daily: { amount: number; claimed: boolean; mult: number }
+}
+
 export type LedgerRow = {
   id: number
   delta: number
@@ -90,6 +101,10 @@ export const REASON_LABELS: Record<string, string> = {
   mission_reroll: 'Cambio de misión',
   shop_buy: 'Compra en la tienda',
   event: 'Evento',
+  login_bonus: 'Bono diario de entrada',
+  supporter_bonus: 'Círculo Lunar · Lunas extra',
+  club_weekly: 'Premio semanal del club',
+  supporter_weekly: 'Círculo Lunar · bono semanal',
 }
 
 export const CATEGORY_LABELS: Record<Mission['category'], string> = {

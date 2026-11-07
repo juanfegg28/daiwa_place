@@ -49,3 +49,8 @@ Historias en celular (responder/enviar, editor con íconos visibles, ir al perfi
 - Lado del panel de misiones: constante `MISSIONS_SIDE` en `app/page.tsx` ('right' / 'left').
 - Nunca se probó en un teléfono real; revisar en celular: responder historia, enviar mensaje, editor de historias, «Explorar» en la tienda, salir de una historia y poder bajar.
 - Verificado: `tsc` y `eslint` sin errores nuevos; `next dev` sirve todas las rutas principales (200). El único error de tsc (`LayoutProps` en layout.tsx) es de tipos generados de Next y ya existía.
+
+
+---
+## v1.8.0 (2026-11-06) — resumen para quien continúe
+Ver `INSTRUCCIONES_V1.8.0.md`. Cambios clave: `posts.club_id/is_announcement` (publicaciones solo de club, fuera de feed_items), niveles de club (`club_overview`), `club_update_settings`, `club_weekly_rewards` (cron lunes), racha ampliada (hitos 3/5/7/10/14/21/30, escudo, `streak_overview`, `daily_login_claim`), `my_perks()` (ventajas del Círculo Lunar), cambio rápido de cuentas en el navegador (`app/lib/accounts.ts`, tokens en localStorage, nunca por IP), caché de sesión del AppShell entre páginas (menos consultas), GIF de banner 6/12 MB.
