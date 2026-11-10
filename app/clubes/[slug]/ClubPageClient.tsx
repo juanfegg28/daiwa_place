@@ -9,6 +9,7 @@ import AppShell, { useAppSession } from '../../components/AppShell'
 import ResilientImage from '../../components/ResilientImage'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import ClubFeed from '../ClubFeed'
+import ClubEvents from './ClubEvents'
 import ClubManage, { type JoinRequestRow } from './ClubManage'
 import { ClubAvatar, KindLabel } from '../../components/ClubCard'
 import { ClubTag } from '../../components/ClubTag'
@@ -49,7 +50,7 @@ function ClubContent() {
   const [requests, setRequests] = useState<JoinRequestRow[]>([])
   const [myPending, setMyPending] = useState(false)
   const [state, setState] = useState<'loading' | 'ready' | 'missing'>('loading')
-  const [tab, setTab] = useState<'posts' | 'members' | 'about' | 'manage'>('posts')
+  const [tab, setTab] = useState<'posts' | 'events' | 'members' | 'about' | 'manage'>('posts')
 
   const [confirmJoin, setConfirmJoin] = useState(false)
   const [confirmLeave, setConfirmLeave] = useState(false)
@@ -328,10 +329,11 @@ function ClubContent() {
         {(
           [
             { id: 'posts', label: 'Publicaciones' },
+            { id: 'events', label: 'Eventos' },
             { id: 'members', label: `Miembros (${members.length})` },
             { id: 'about', label: 'Info y reglas' },
             ...(isLeader ? [{ id: 'manage', label: requests.length > 0 ? `Administrar (${requests.length})` : 'Administrar' }] : []),
-          ] as { id: 'posts' | 'members' | 'about' | 'manage'; label: string }[]
+          ] as { id: 'posts' | 'events' | 'members' | 'about' | 'manage'; label: string }[]
         ).map((t) => (
           <button
             key={t.id}
@@ -363,6 +365,8 @@ function ClubContent() {
           <ClubFeed clubId={club.id} emptyText="Todavía no hay publicaciones en este club. Los miembros pueden elegir «Publicar solo en el club» desde el Inicio." />
         </>
       )}
+
+      {tab === 'events' && club && <ClubEvents clubId={club.id} clubName={club.name} isLeader={isLeader} signedIn={!!userId} />}
 
       {tab === 'about' && (
         <section className="surface-card rounded-2xl p-4 space-y-3">

@@ -139,7 +139,7 @@ function EditProfileForm() {
       const path = `${userId}/avatar.jpg`
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(path, avatarFile, { upsert: true })
+        .upload(path, avatarFile, { upsert: true, cacheControl: '31536000' })
       if (uploadError) {
         uploadWarnings.push('Foto de perfil: ' + uploadError.message)
       } else {

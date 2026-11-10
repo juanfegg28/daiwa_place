@@ -14,6 +14,7 @@ const OPTIONS: { key: Exclude<keyof ConfigProfile['notif_prefs'], 'dm' | 'push' 
   { key: 'follows', label: 'Nuevos seguidores', description: 'Cuando alguien empieza a seguirte.' },
   { key: 'note_likes', label: 'Likes en tus notas', description: 'Cuando un amigo le da like a tu nota de los mensajes directos.' },
   { key: 'story_likes', label: 'Likes en tus historias', description: 'Cuando alguien le da like a tu historia.' },
+  { key: 'events', label: 'Eventos', description: 'Cuando se anuncia un evento nuevo (oficial o de uno de tus clubes) y un recordatorio poco antes de los que confirmaste.' },
   { key: 'whispers', label: 'Muro de los Susurros', description: 'Cuando alguien comenta tu confesión o responde un comentario tuyo en el Muro (incluso si lo hizo de forma anónima).' },
 ]
 

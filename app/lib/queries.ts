@@ -14,13 +14,21 @@ const COMMENTS_SELECT =
 const CLUB_TAGS_SELECT =
   'club_members!user_id(joined_at, clubs!club_members_club_id_fkey(slug, name, kind, color), club_roles!club_members_role_id_fkey(name, color, is_leader))'
 
-const POST_BASE = `id, user_id, content, created_at, edited_at, images, music, profiles!posts_user_id_fkey(username, avatar_url, id_student, name_color, is_frozen, badge_color, posts_visibility, user_roles!user_id(roles(name, badge_color)), ${CLUB_TAGS_SELECT}), likes(user_id), ${COMMENTS_SELECT}`
+const POST_BASE_CORE = `id, user_id, content, created_at, edited_at, images, music, profiles!posts_user_id_fkey(username, avatar_url, id_student, name_color, is_frozen, badge_color, posts_visibility, user_roles!user_id(roles(name, badge_color)), ${CLUB_TAGS_SELECT}), likes(user_id), ${COMMENTS_SELECT}`
+
+// v1.9.0 · Encuesta de la publicación (con sus opciones y TU voto: RLS solo deja ver el tuyo) y si la tienes guardada (RLS: solo tus filas).
+// Va dentro de la misma consulta: no cuesta ninguna petición extra. Si todavía no se corrió el SQL de la 1.9.0, se usa la versión «core».
+const PLUS_EXTRAS = ', poll:polls(id, question, ends_at, total_votes, poll_options(id, pos, label, votes), poll_votes(option_id)), saved_posts(user_id)'
+const POST_BASE = `${POST_BASE_CORE}${PLUS_EXTRAS}`
 
 // reposts(user_id) trae quiénes compartieron la publicación (v1.1.10)
+export const POST_SELECT_CORE = `${POST_BASE_CORE}, reposts(user_id)`
 export const POST_SELECT = `${POST_BASE}, reposts(user_id)`
 
 // Perfil: ya sabemos quién es el autor, no hace falta traerlo
-export const PROFILE_POST_SELECT = `id, user_id, content, created_at, edited_at, images, music, likes(user_id), reposts(user_id), ${COMMENTS_SELECT}`
+const PROFILE_POST_CORE = `id, user_id, content, created_at, edited_at, images, music, likes(user_id), reposts(user_id), ${COMMENTS_SELECT}`
+export const PROFILE_POST_SELECT_CORE = PROFILE_POST_CORE
+export const PROFILE_POST_SELECT = `${PROFILE_POST_CORE}${PLUS_EXTRAS}`
 const PROFILE_POST_BASE = `id, user_id, content, created_at, edited_at, images, music, likes(user_id), ${COMMENTS_SELECT}`
 
 export const POST_IMAGES_BUCKET = 'post-images'
@@ -35,7 +43,7 @@ export const NOTIFICATION_SELECT_BASE =
 
 // Con las historias de la v1.2.0 (si todavía no corriste ese SQL, la página usa la versión de arriba)
 export const NOTIFICATION_SELECT =
-  'id, type, read, story_id, created_at, post_id, comment_id, club_id, club_request_id, whisper_id, whisper_comment_id, anonymous, actor:profiles!notifications_actor_id_fkey(username, id_student, avatar_url), post:posts!notifications_post_id_fkey(content, images), comment:comments!notifications_comment_id_fkey(content), club:clubs!notifications_club_id_fkey(name, slug, kind, avatar_url), club_request:club_requests!notifications_club_request_id_fkey(club_name, kind, decline_reason), note:notes!notifications_note_id_fkey(content), wcomment:whisper_comments!notifications_whisper_comment_id_fkey(content), whisper:whispers!notifications_whisper_id_fkey(content), story:stories!notifications_story_id_fkey(id, kind, media_path, bg, expires_at, deleted_at)'
+  'id, type, read, story_id, created_at, post_id, comment_id, club_id, club_request_id, whisper_id, whisper_comment_id, anonymous, actor:profiles!notifications_actor_id_fkey(username, id_student, avatar_url), post:posts!notifications_post_id_fkey(content, images), comment:comments!notifications_comment_id_fkey(content), club:clubs!notifications_club_id_fkey(name, slug, kind, avatar_url), club_request:club_requests!notifications_club_request_id_fkey(club_name, kind, decline_reason), note:notes!notifications_note_id_fkey(content), wcomment:whisper_comments!notifications_whisper_comment_id_fkey(content), whisper:whispers!notifications_whisper_id_fkey(content), story:stories!notifications_story_id_fkey(id, kind, media_path, bg, expires_at, deleted_at), event_id, event:events!notifications_event_id_fkey(title, starts_at, cancelled_at)'
 
 // ───────── Feed con compartidos (v1.1.10) ─────────
 
@@ -71,8 +79,12 @@ export async function fetchPostsByIds(ids: string[], profileView = false): Promi
   if (ids.length === 0) return { posts: [], error: '' }
   const run = (sel: string) => supabase.from('posts').select(sel).in('id', ids)
   let res = await run(profileView ? PROFILE_POST_SELECT : POST_SELECT)
+  // sin el SQL de la 1.9.0 (encuestas/guardadas): la consulta de la 1.8.0
+  if (res.error && /polls|poll_|saved_posts|relationship|schema cache|permission denied/i.test(res.error.message)) {
+    res = await run(profileView ? PROFILE_POST_SELECT_CORE : POST_SELECT_CORE)
+  }
   if (res.error && /reposts|posts_visibility|relationship|schema cache|permission denied/i.test(res.error.message)) {
-    res = await run(profileView ? PROFILE_POST_BASE : POST_BASE.replace('posts_visibility, ', ''))
+    res = await run(profileView ? PROFILE_POST_BASE : POST_BASE_CORE.replace('posts_visibility, ', ''))
   }
   const posts = (res.data as unknown as Post[]) ?? []
   await attachCosmetics(posts)

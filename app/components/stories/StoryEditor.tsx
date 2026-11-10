@@ -667,7 +667,7 @@ export default function StoryEditor() {
         const baked = await bakeStoryPhoto(src, doc.fit)
         setPublishing('Subiendo la foto…')
         const path = `${uid}/${newId()}.jpg`
-        const up = await supabase.storage.from(STORY_BUCKET).upload(path, baked.blob, { contentType: 'image/jpeg', upsert: false })
+        const up = await supabase.storage.from(STORY_BUCKET).upload(path, baked.blob, { contentType: 'image/jpeg', upsert: false, cacheControl: '31536000' })
         if (up.error) throw new Error(friendlyStoryError(up.error.message))
         uploaded = path
         media = { path, w: baked.w, h: baked.h }

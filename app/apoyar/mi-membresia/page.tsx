@@ -1,12 +1,14 @@
 'use client'
 
 import Link from 'next/link'
+import SupporterTabs from '../../components/supporters/SupporterTabs'
 import { useCallback, useEffect, useState } from 'react'
 import AppShell from '../../components/AppShell'
 import MoonArt from '../../components/supporters/MoonArt'
+import DecoStrip from '../../components/supporters/DecoStrip'
 import { MoonCoinIcon } from '../../components/icons'
 import {
-  PAY_METHOD_LABEL, TIERS, cancelSubscription, claimPerk, fetchSupporterMe, setHideBadge, tierName, type SupporterMe,
+  PAY_METHOD_LABEL, TIERS, cancelSubscription, claimAllPerks, claimPerk, fetchSupporterMe, setHideBadge, tierName, type SupporterMe,
 } from '../../lib/supporters'
 
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -95,12 +97,21 @@ function Content() {
     void load()
   }
 
+  const claimAll = async () => {
+    setBusy(true)
+    const r = await claimAllPerks()
+    setBusy(false)
+    setNote(r.error ?? (r.claimed > 0 ? `¡Listo! Reclamaste ${r.claimed} ${r.claimed === 1 ? 'beneficio' : 'beneficios'}. Los encontrarás en Personalizar.` : 'Ya tienes todo lo de tu nivel.'))
+    void load()
+  }
+
   return (
     <div className="lunar-bg min-h-dvh">
       <div className="max-w-3xl mx-auto px-4 py-8 space-y-5">
+        <SupporterTabs active="membresia" signedIn />
         <div>
           <h1 className="font-display text-3xl font-semibold text-neutral-50">Mi membresía</h1>
-          <p className="text-sm text-neutral-400 mt-1">Círculo Lunar · <Link href="/apoyar" className="underline underline-offset-2">ver niveles</Link></p>
+          <p className="text-sm text-neutral-400 mt-1">Círculo Lunar · <Link href="/apoyar" className="underline underline-offset-2">ver niveles</Link> · <Link href="/apoyar/estilos" className="underline underline-offset-2">ver todos los estilos</Link></p>
         </div>
 
         {note && <p className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-neutral-200">{note}</p>}
@@ -192,23 +203,63 @@ function Content() {
         )}
 
         {/* Beneficios cosméticos */}
-        <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
-          <h2 className="text-base font-semibold text-neutral-50">Beneficios exclusivos</h2>
-          <p className="text-[12px] text-neutral-500 mb-3">Los diseños llegarán en próximas actualizaciones. Lo que reclames se queda contigo aunque canceles.</p>
-          <ul className="space-y-2">
-            {me.perks.map((p) => (
-              <li key={p.code} className="flex items-center justify-between gap-3 text-sm rounded-xl bg-black/20 px-3 py-2.5">
-                <span className="min-w-0">
-                  <span className="text-neutral-100">{p.name}</span>
-                  <span className="block text-[11px] text-neutral-500">Desde {tierName(p.min_tier)}</span>
-                </span>
-                {p.claimed ? <span className="text-[12px] text-emerald-300">Reclamado ✓</span>
-                  : p.available && p.unlocked ? <button type="button" disabled={busy} onClick={() => claim(p.code)} className="rounded-full bg-white text-black px-3.5 py-1.5 text-[12.5px] font-semibold disabled:opacity-60">Reclamar</button>
-                  : <span className="text-[11px] uppercase tracking-wide text-neutral-500">{p.available ? 'Sube de nivel' : 'Pronto'}</span>}
-              </li>
-            ))}
-          </ul>
-        </section>
+        {(() => {
+          const decos = me.perks.filter((p) => p.kind === 'decoration' && p.slug)
+          const others = me.perks.filter((p) => !(p.kind === 'decoration' && p.slug))
+          const pending = me.perks.filter((p) => p.available && p.unlocked && !p.claimed).length
+          const total = decos.length
+          const have = decos.filter((p) => p.claimed).length
+          return (
+            <section className="rounded-2xl border border-white/10 bg-white/5 p-5">
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div className="min-w-0">
+                  <h2 className="text-base font-semibold text-neutral-50">Cosméticos míticos de miembros</h2>
+                  <p className="text-[12px] text-neutral-500">{me.perks.filter((p) => p.claimed).length} de {me.perks.filter((p) => p.available).length} entregados ({have}/{total} decoraciones) · cada uno con 10 paletas y color libre. Se entregan solos al tener tu nivel (no hace falta reclamar ni volver a pagar) y se quedan contigo aunque canceles. Ponlos en Personalizar.</p>
+                </div>
+                {pending > 0 && <button type="button" disabled={busy} onClick={claimAll} className="rounded-full bg-white text-black px-4 py-2 text-[13px] font-semibold disabled:opacity-60">Entregar los {pending} pendientes</button>}
+              </div>
+              {(['creciente', 'llena', 'eclipse'] as const).map((tk) => {
+                const group = decos.filter((p) => p.min_tier === tk)
+                if (group.length === 0) return null
+                const locked = group.every((p) => !p.unlocked)
+                return (
+                  <div key={tk} className="mt-5">
+                    <h3 className="text-[12px] font-semibold uppercase tracking-wide" style={{ color: TIERS[tk].accent }}>{TIERS[tk].name}{locked ? ' · sube de nivel para desbloquear' : ''}</h3>
+                    <div className={locked ? 'opacity-55' : ''}>
+                      <DecoStrip decos={group.map((p) => ({ slug: p.slug as string, name: p.name.replace(/^Decoración /, '') }))} offset={TIERS[tk].rank * 2} claimedSlugs={new Set(group.filter((p) => p.claimed).map((p) => p.slug as string))} />
+                    </div>
+                    <ul className="mt-2 grid gap-1.5 sm:grid-cols-2">
+                      {group.map((p) => (
+                        <li key={p.code} className="flex items-center justify-between gap-2 text-[13px] rounded-xl bg-black/20 px-3 py-2">
+                          <span className="min-w-0 truncate text-neutral-100">{p.name.replace(/^Decoración /, '')}</span>
+                          {p.claimed ? <span className="text-[12px] text-emerald-300 shrink-0">Tuya ✓</span>
+                            : p.available && p.unlocked ? <button type="button" disabled={busy} onClick={() => claim(p.code)} className="rounded-full bg-white text-black px-3 py-1 text-[12px] font-semibold disabled:opacity-60 shrink-0">Reclamar</button>
+                            : <span className="text-[11px] uppercase tracking-wide text-neutral-500 shrink-0">{p.available ? 'Sube de nivel' : 'Pronto'}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )
+              })}
+              {others.length > 0 && (
+                <div className="mt-6">
+                  <h3 className="text-[12px] font-semibold uppercase tracking-wide text-neutral-400">Tarjetas, efectos y títulos</h3>
+                  <ul className="mt-2 space-y-1.5">
+                    {others.map((p) => (
+                      <li key={p.code} className="flex items-center justify-between gap-3 text-[13px] rounded-xl bg-black/20 px-3 py-2">
+                        <span className="min-w-0 text-neutral-200">{p.name}<span className="block text-[11px] text-neutral-500">Desde {tierName(p.min_tier)} · 10 paletas y color libre</span></span>
+                        {p.claimed ? <span className="text-[12px] text-emerald-300">Tuyo ✓</span>
+                          : p.available && !p.unlocked ? <span className="text-[11px] uppercase tracking-wide text-neutral-500">Sube de nivel</span>
+                          : p.available && p.unlocked ? <button type="button" disabled={busy} onClick={() => claim(p.code)} className="rounded-full bg-white text-black px-3 py-1 text-[12px] font-semibold disabled:opacity-60">Reclamar</button>
+                          : <span className="text-[11px] uppercase tracking-wide text-neutral-500">Pronto</span>}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </section>
+          )
+        })()}
 
         {/* Historial */}
         <section className="rounded-2xl border border-white/10 bg-white/5 p-5">

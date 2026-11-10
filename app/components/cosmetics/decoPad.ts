@@ -1,6 +1,20 @@
 // GENERADO por tools/gen_deco_pad.ts · slug → cuánto sobresale el marco por debajo de la foto (fracción del tamaño del avatar).
 // v1.5.10 · sirve para reservar espacio bajo el avatar y que ningún marco tape el nombre. Ligero a propósito: no carga el kit pesado.
 const OVER: Record<string, number> = {
+  'halo-naciente': 0.15,
+  'lazo-de-seda-y-perlas': 0.15,
+  'jardin-de-luna': 0.15,
+  'orbita-de-plata': 0.15,
+  'astrolabio-de-selene': 0.15,
+  'polilla-lunar': 0.15,
+  'diadema-de-selene': 0.15,
+  'medusas-de-medianoche': 0.15,
+  'corona-de-la-totalidad': 0.15,
+  'caliz-de-rosas': 0.15,
+  'serafin-lunar': 0.15,
+  'reloj-de-selene': 0.15,
+  'cristales-de-eclipse': 0.15,
+  'gatita-celestial': 0.15,
   'halo-roto': 0.14,
   'cadenas-flotantes': 0.15,
   'ojos-en-la-sombra': 0.12,

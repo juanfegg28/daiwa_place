@@ -30,3 +30,7 @@ const watchedFetch: typeof fetch = async (input, init) => {
 
 // v1.6.3 · eventsPerSecond limita los mensajes que ESTE navegador manda por Realtime (presencia, «visto»…)
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, { global: { fetch: watchedFetch }, realtime: { params: { eventsPerSecond: 5 } } })
+
+// v1.9.0 · el hub de canales Realtime (lib/liveHub.ts) cierra canales con el mismo cliente
+import { setHubRemover } from './liveHub'
+setHubRemover((ch) => supabase.removeChannel(ch))

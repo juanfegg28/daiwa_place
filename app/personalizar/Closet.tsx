@@ -23,6 +23,7 @@ import MoonRain from '../components/economy/MoonRain'
 import { CARD_MODES, PROFILE_PALETTE, profileThemeVars, type CardMode } from '../lib/color'
 import { HeartIcon } from '../components/icons'
 import { formatNumber } from '../lib/economy'
+import LooksPanel from './LooksPanel'
 import { RARITY_LABEL, RARITY_STYLE, useCosmeticFont, type CatalogItem, type CosmeticType, type Equip } from '../lib/cosmetics'
 
 const NameFx = dynamic(() => import('../components/cosmetics/cosmetics').then((m) => m.NameFx), { ssr: false })
@@ -30,14 +31,14 @@ const TitlePill = dynamic(() => import('../components/cosmetics/cosmetics').then
 const EntryEffect = dynamic(() => import('../components/cosmetics/cosmetics').then((m) => m.EntryEffect), { ssr: false })
 
 // ───────── Tipos compartidos con la página ─────────
-export type Tab = 'color' | 'nombre' | 'avatar' | 'tarjeta' | 'entrada' | 'fondo' | 'titulo'
+export type Tab = 'color' | 'nombre' | 'avatar' | 'tarjeta' | 'entrada' | 'fondo' | 'titulo' | 'looks'
 export type Draft = { profile_color: string | null; name_color: string | null; card_color: string | null; card_mode: CardMode }
 export type Look = { avatar_deco: Equip | null; font: string | null; effect: Equip | null; title: Equip | null; card: Equip | null; entry: Equip | null; bg: Equip | null }
 export const EMPTY_LOOK: Look = { avatar_deco: null, font: null, effect: null, title: null, card: null, entry: null, bg: null }
 export type ClosetInfo = { id_student: string | null; avatar_url: string | null; bio: string | null; grado: string | null; banner_url: string | null; created_at: string }
 
 /** pestaña → tipo de cosmético y pieza del look */
-export const SLOT: Record<Exclude<Tab, 'color'>, { type: CosmeticType; key: keyof Look }> = {
+export const SLOT: Record<Exclude<Tab, 'color' | 'looks'>, { type: CosmeticType; key: keyof Look }> = {
   nombre: { type: 'name_effect', key: 'effect' },
   avatar: { type: 'avatar_decoration', key: 'avatar_deco' },
   tarjeta: { type: 'profile_card', key: 'card' },
@@ -54,6 +55,7 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'entrada', label: 'Entrada', icon: '✨' },
   { id: 'fondo', label: 'Fondo', icon: '🌌' },
   { id: 'titulo', label: 'Título', icon: '🏷️' },
+  { id: 'looks', label: 'Looks', icon: '💾' },
 ]
 
 const COLL_NAME = new Map<string, string>((DECO_COLLECTIONS as { id: string; name: string }[]).map((c) => [c.id, c.name]))
@@ -84,6 +86,8 @@ export type ClosetViewProps = {
   dirty: boolean
   onSave: () => void
   onBuy: (item: CatalogItem) => void
+  /** v1.9.0 · aplica un tema o un look guardado al borrador (solo la vista previa; se ve en el perfil al guardar) */
+  onApplyLook?: (patch: Partial<Look>) => void
   onDiscard: () => void
   onClearTrial: () => void
   rain: boolean
@@ -259,7 +263,7 @@ function Segmented<T extends string>({ value, onChange, options }: { value: T; o
 
 // ───────── El cajón abierto: lo que llevas, paleta y prendas ─────────
 function ClosetBody({ tab, items, look, savedLook, me, balance, lockedIds, onPick, onClear }: {
-  tab: Exclude<Tab, 'color'>
+  tab: Exclude<Tab, 'color' | 'looks'>
   items: CatalogItem[]
   look: Look
   savedLook: Look
@@ -390,11 +394,12 @@ function ClosetBody({ tab, items, look, savedLook, me, balance, lockedIds, onPic
 function Drawers({ tab, onTab, look, draft, trying }: { tab: Tab; onTab: (t: Tab) => void; look: Look; draft: Draft; trying: CatalogItem[] }) {
   const worn = (t: Tab): boolean => {
     if (t === 'color') return !!(draft.profile_color || draft.name_color || draft.card_color)
+    if (t === 'looks') return false
     if (t === 'nombre') return !!(look.effect || look.font)
     return !!look[SLOT[t].key]
   }
   const probing = (t: Tab): boolean => {
-    if (t === 'color') return false
+    if (t === 'color' || t === 'looks') return false
     const types: CosmeticType[] = t === 'nombre' ? ['name_effect', 'font'] : [SLOT[t].type]
     return trying.some((i) => types.includes(i.type))
   }
@@ -404,7 +409,7 @@ function Drawers({ tab, onTab, look, draft, trying }: { tab: Tab; onTab: (t: Tab
     ref.current?.querySelector<HTMLElement>('[aria-selected="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'auto' })
   }, [tab])
   return (
-    <div ref={ref} role="tablist" aria-label="Cajones del clóset" className="flex lg:grid lg:grid-cols-7 gap-1.5 overflow-x-auto lg:overflow-visible pb-1 -mx-1 px-1 snap-x [scrollbar-width:none]">
+    <div ref={ref} role="tablist" aria-label="Cajones del clóset" className="flex lg:grid lg:grid-cols-8 gap-1.5 overflow-x-auto lg:overflow-visible pb-1 -mx-1 px-1 snap-x [scrollbar-width:none]">
       {TABS.map((t) => (
         <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => onTab(t.id)}
           className={`relative snap-center shrink-0 lg:shrink min-w-[60px] flex flex-col items-center gap-0.5 rounded-xl border px-2 py-1.5 transition ${tab === t.id ? 'bg-garnet-600 border-garnet-400 text-white' : 'bg-ink-800/70 border-ink-700 text-neutral-300 hover:bg-ink-700'}`}>
@@ -579,6 +584,8 @@ export default function ClosetView(p: ClosetViewProps) {
   }
   const body = p.tab === 'color'
     ? <ColorBody draft={p.draft} onDraft={p.onDraft} cardMode={cardMode} />
+    : p.tab === 'looks'
+    ? <LooksPanel look={p.look} items={p.items} onApply={(patch) => p.onApplyLook?.(patch)} />
     : <ClosetBody key={p.tab} tab={p.tab} items={p.items} look={p.look} savedLook={p.savedLook} me={p.me} balance={p.balance} lockedIds={p.lockedIds} onPick={p.onPick} onClear={p.onClear} />
 
   return (

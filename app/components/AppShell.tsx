@@ -14,6 +14,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabaseClient'
+import { hubChannel, hubClose, hubCloseAll, hubJoined, hubOpen } from '../lib/liveHub'
+import { loadBootstrap } from '../lib/shellBootstrap'
 import { applyTheme, type ThemeMode } from '../lib/theme'
 import Logo from './Logo'
 import { APP_VERSION } from '../lib/changelog'
@@ -37,6 +39,8 @@ import {
   StoreIcon,
   CrescentMoonIcon,
   CloseIcon,
+  CalendarIcon,
+  BookmarkIcon,
   type IconProps,
 } from './icons'
 
@@ -186,6 +190,10 @@ const SHELL_TTL_MS = 5 * 60_000
 let shellCache: ShellCache | null = null
 let maintAtGlobal = 0
 let maintValueGlobal = false
+// v1.9.0 · contadores recientes (avisos y chats sin leer): al cambiar de página se reutilizan 30 s en vez de pedirlos otra vez
+let notifCountCache: { uid: string; at: number; n: number } | null = null
+let dmCountCache: { uid: string; at: number; unread: number; req: number } | null = null
+const COUNT_TTL_MS = 30_000
 
 export default function AppShell({
   children,
@@ -259,23 +267,68 @@ export default function AppShell({
 
   const [switcherOpen, setSwitcherOpen] = useState(false)
   const loadedRef = useRef<{ id: string | null; at: number }>({ id: null, at: 0 })
-  const load = async (force = false) => {
-    // v1.6.3 · el modo mantenimiento se mira como mucho una vez cada 2 min (antes, en cada carga); v1.8.0: y se comparte entre páginas
-    if (Date.now() - maintAtGlobal > 120_000) {
-      maintAtGlobal = Date.now()
-      const { data: settingsRow } = await supabase
-        .from('app_settings')
-        .select('value')
-        .eq('key', 'maintenance_mode')
-        .maybeSingle()
-      maintValueGlobal = settingsRow?.value === true
-    }
-    setMaintenanceOn(maintValueGlobal)
+  const userIdRef = useRef<string | null>(null)
+  useEffect(() => {
+    userIdRef.current = userId
+  }, [userId])
+  const dmSig = useRef('')
+  const countDm = async (): Promise<boolean> => {
+    const { data } = await supabase.rpc('dm_unread_summary')
+    const row = (Array.isArray(data) ? data[0] : data) as
+      | { unread_conversations?: number; pending_requests?: number }
+      | null
+      | undefined
+    setUnreadMessages(row?.unread_conversations ?? 0)
+    setMessageRequests(row?.pending_requests ?? 0)
+    if (userIdRef.current) dmCountCache = { uid: userIdRef.current, at: Date.now(), unread: row?.unread_conversations ?? 0, req: row?.pending_requests ?? 0 }
+    const sig = `${row?.unread_conversations ?? 0}:${row?.pending_requests ?? 0}`
+    const changed = sig !== dmSig.current
+    dmSig.current = sig
+    return changed
+  }
 
+  const countUnread = async (id: string) => {
+    const { count } = await supabase
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('recipient_id', id)
+      .eq('read', false)
+    setUnreadCount(count ?? 0)
+    notifCountCache = { uid: id, at: Date.now(), n: count ?? 0 }
+  }
+
+  // v1.9.0 · contadores iniciales: si son recientes (<30 s) se reutilizan; si no, se piden (avisos y chats a la vez)
+  const seedCounts = (uid: string) => {
+    const n = notifCountCache
+    if (n && n.uid === uid && Date.now() - n.at < COUNT_TTL_MS) setUnreadCount(n.n)
+    else void countUnread(uid)
+    const d = dmCountCache
+    if (d && d.uid === uid && Date.now() - d.at < COUNT_TTL_MS) {
+      setUnreadMessages(d.unread)
+      setMessageRequests(d.req)
+    } else void countDm()
+  }
+
+  const load = async (force = false) => {
     // v1.6.3 · sesión local (sin ir al servidor de Auth en cada carga): la seguridad real la sigue poniendo RLS
     const { data: authData } = await supabase.auth.getSession()
     const user = authData.session?.user ?? null
+    // v1.6.3 · el modo mantenimiento se mira como mucho una vez cada 2 min (antes, en cada carga); v1.8.0: y se comparte entre páginas
+    // v1.9.0 · con sesión iniciada llega dentro del paquete de arranque (shell_bootstrap): no hace falta pedirlo aparte
+    const checkMaintenance = async () => {
+      if (Date.now() - maintAtGlobal > 120_000) {
+        maintAtGlobal = Date.now()
+        const { data: settingsRow } = await supabase
+          .from('app_settings')
+          .select('value')
+          .eq('key', 'maintenance_mode')
+          .maybeSingle()
+        maintValueGlobal = settingsRow?.value === true
+      }
+      setMaintenanceOn(maintValueGlobal)
+    }
     if (!user) {
+      await checkMaintenance()
       shellCache = null
       setUserId(null)
       setUsername(null)
@@ -301,8 +354,50 @@ export default function AppShell({
       applyTheme(hit.theme, hit.accent)
       rememberSession(authData.session, { username: hit.username, name: hit.idStudent, avatar: hit.avatarUrl })
       setLoading(false)
+      await checkMaintenance()
+      seedCounts(user.id)
       return
     }
+    // v1.9.0 · arranque en frío: UNA sola petición trae perfil, permisos, mantenimiento y contadores (antes eran 5)
+    const boot = await loadBootstrap()
+    if (boot && boot.profile) {
+      const pr = boot.profile
+      maintAtGlobal = Date.now()
+      maintValueGlobal = boot.maintenance
+      setMaintenanceOn(boot.maintenance)
+      setShowOnline(pr.show_online_status !== false)
+      setShowReadReceipts(pr.show_read_receipts !== false)
+      setUsername(pr.username ?? null)
+      setAvatarUrl(pr.avatar_url ?? null)
+      setIdStudent(pr.id_student ?? null)
+      applyTheme((pr.theme as ThemeMode) ?? 'dark', pr.accent_color ?? null)
+      const mergedBoot = mergePermissions((boot.roles as Permissions[]).filter((p) => p && typeof p === 'object').map((p) => ({ permissions: p })))
+      setPermissions(mergedBoot)
+      setHasAnyRole(boot.roles.length > 0)
+      notifCountCache = { uid: user.id, at: Date.now(), n: boot.unreadNotifications }
+      dmCountCache = { uid: user.id, at: Date.now(), unread: boot.dmUnread, req: boot.dmRequests }
+      setUnreadCount(boot.unreadNotifications)
+      setUnreadMessages(boot.dmUnread)
+      setMessageRequests(boot.dmRequests)
+      dmSig.current = `${boot.dmUnread}:${boot.dmRequests}`
+      shellCache = {
+        uid: user.id,
+        at: Date.now(),
+        username: pr.username ?? null,
+        avatarUrl: pr.avatar_url ?? null,
+        idStudent: pr.id_student ?? null,
+        permissions: mergedBoot,
+        hasAnyRole: boot.roles.length > 0,
+        showOnline: pr.show_online_status !== false,
+        showReadReceipts: pr.show_read_receipts !== false,
+        theme: (pr.theme as ThemeMode) ?? 'dark',
+        accent: pr.accent_color ?? null,
+      }
+      rememberSession(authData.session, { username: pr.username ?? null, name: pr.id_student ?? null, avatar: pr.avatar_url ?? null })
+      setLoading(false)
+      return
+    }
+    await checkMaintenance()
     // v1.6.3 · UNA sola consulta de perfil (antes eran 3). Si falta alguna columna de SQL viejos, se usa el camino de siempre.
     let profile: { username?: string | null; avatar_url?: string | null; id_student?: string | null; theme?: string | null; accent_color?: string | null; show_online_status?: boolean | null; show_read_receipts?: boolean | null } | null = null
     const full = await supabase
@@ -356,6 +451,7 @@ export default function AppShell({
     rememberSession(authData.session, { username: profile?.username ?? null, name: profile?.id_student ?? null, avatar: profile?.avatar_url ?? null })
 
     setLoading(false)
+    seedCounts(user.id)
   }
 
   useEffect(() => {
@@ -369,21 +465,18 @@ export default function AppShell({
         rememberSession(session) // v1.8.0 · el cambio rápido de cuentas necesita siempre el token más nuevo
         return
       }
-      if (event === 'SIGNED_OUT') shellCache = null
+      if (event === 'SIGNED_OUT') {
+        shellCache = null
+        notifCountCache = null
+        dmCountCache = null
+        hubCloseAll()
+      }
       if (event === 'SIGNED_IN' && session?.user?.id && session.user.id === loadedRef.current.id && Date.now() - loadedRef.current.at < 10 * 60_000) return
       load()
     })
     return () => sub.subscription.unsubscribe()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  const countUnread = async (id: string) => {
-    const { count } = await supabase
-      .from('notifications')
-      .select('id', { count: 'exact', head: true })
-      .eq('recipient_id', id)
-      .eq('read', false)
-    setUnreadCount(count ?? 0)
-  }
 
   const refreshNotifications = () => {
     if (userId) countUnread(userId)
@@ -408,40 +501,27 @@ export default function AppShell({
         setNotificationsVersion((v) => v + 1)
       }, 350)
     }
-    recount()
-    const channel = supabase
-      .channel(`notifications-${id}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'notifications', filter: `recipient_id=eq.${id}` },
-        bump
-      )
-      .subscribe()
+    // v1.9.0 · el conteo inicial lo hace load() (con caché de 30 s); aquí solo se escucha. El canal NO se cierra al cambiar de página.
+    const key = `notifications-${id}`
+    const off = hubOpen(
+      key,
+      (emit) =>
+        supabase
+          .channel(key)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `recipient_id=eq.${id}` }, () => emit())
+          .subscribe(),
+      bump
+    )
     // v1.6.3 · respaldo cada 5 min (solo si estás mirando la pestaña y activo) y al volver a ella
-    const stop = startPoll(recount, ECO.notifRecountMs, () => channel.state === 'joined')
+    const stop = startPoll(recount, ECO.notifRecountMs, () => hubJoined(key))
     const offWake = onWake(bump)
     return () => {
       window.clearTimeout(timer)
       stop()
       offWake()
-      supabase.removeChannel(channel)
+      off()
     }
   }, [userId])
-
-  const dmSig = useRef('')
-  const countDm = async (): Promise<boolean> => {
-    const { data } = await supabase.rpc('dm_unread_summary')
-    const row = (Array.isArray(data) ? data[0] : data) as
-      | { unread_conversations?: number; pending_requests?: number }
-      | null
-      | undefined
-    setUnreadMessages(row?.unread_conversations ?? 0)
-    setMessageRequests(row?.pending_requests ?? 0)
-    const sig = `${row?.unread_conversations ?? 0}:${row?.pending_requests ?? 0}`
-    const changed = sig !== dmSig.current
-    dmSig.current = sig
-    return changed
-  }
 
   const refreshDm = () => {
     countDm()
@@ -455,9 +535,6 @@ export default function AppShell({
   useEffect(() => {
     if (!userId) return
     const id = userId
-    function recount() {
-      void countDm()
-    }
     // varios eventos seguidos (mensaje, lectura…) se juntan en UNA sola recarga
     let timer: number | undefined
     function bump() {
@@ -471,17 +548,22 @@ export default function AppShell({
     async function soft() {
       if (await countDm()) setDmVersion((v) => v + 1)
     }
-    recount()
-    const channel = supabase
-      .channel(`dm-live-${id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations', filter: `user_a=eq.${id}` }, bump)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations', filter: `user_b=eq.${id}` }, bump)
-      .subscribe()
-    const stop = startPoll(soft, ECO.dmRecountMs, () => channel.state === 'joined')
+    const key = `dm-live-${id}`
+    const off = hubOpen(
+      key,
+      (emit) =>
+        supabase
+          .channel(key)
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations', filter: `user_a=eq.${id}` }, () => emit())
+          .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations', filter: `user_b=eq.${id}` }, () => emit())
+          .subscribe(),
+      bump
+    )
+    const stop = startPoll(soft, ECO.dmRecountMs, () => hubJoined(key))
     return () => {
       window.clearTimeout(timer)
       stop()
-      supabase.removeChannel(channel)
+      off()
     }
   }, [userId])
 
@@ -492,23 +574,36 @@ export default function AppShell({
         setOnlineIds(new Set())
       }
       clear()
+      if (userIdRef.current) hubClose(`presence-${userIdRef.current}`) // apagaste «conectado»: sales YA, sin esperar
       return
     }
+    // v1.9.0 · el canal de presencia dura mientras navegas (antes se cerraba y se abría en cada página, avisando a TODAS las personas
+    // conectadas cada vez). Quien llega a una página nueva recibe enseguida la última lista de conectados.
     const id = userId
-    const channel = supabase.channel('daiwa-presence', { config: { presence: { key: id } } })
-    presenceRef.current = channel
-    channel
-      .on('presence', { event: 'sync' }, () => {
-        setOnlineIds(new Set(Object.keys(channel.presenceState())))
-      })
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') await channel.track({ online_at: new Date().toISOString() })
-      })
+    const key = `presence-${id}`
+    const off = hubOpen(
+      key,
+      (emit) => {
+        const ch = supabase.channel('daiwa-presence', { config: { presence: { key: id } } })
+        ch.on('presence', { event: 'sync' }, () => emit(Object.keys(ch.presenceState()))).subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') await ch.track({ online_at: new Date().toISOString() })
+        })
+        return ch
+      },
+      (list) => setOnlineIds(new Set((list as string[] | undefined) ?? [])),
+      { replay: true }
+    )
+    presenceRef.current = hubChannel(key)
     const leave = () => {
-      channel.untrack()
+      hubChannel(key)?.untrack()
     }
+    let lastTrack = Date.now()
     const onVisible = () => {
-      if (document.visibilityState === 'visible') channel.track({ online_at: new Date().toISOString() })
+      // solo si pasó más de 1 minuto: cada «track» avisa a todos los conectados
+      if (document.visibilityState === 'visible' && Date.now() - lastTrack > 60_000) {
+        lastTrack = Date.now()
+        void hubChannel(key)?.track({ online_at: new Date().toISOString() })
+      }
     }
     window.addEventListener('pagehide', leave)
     document.addEventListener('visibilitychange', onVisible)
@@ -516,7 +611,7 @@ export default function AppShell({
       window.removeEventListener('pagehide', leave)
       document.removeEventListener('visibilitychange', onVisible)
       presenceRef.current = null
-      supabase.removeChannel(channel)
+      off()
     }
   }, [userId, showOnline])
 
@@ -688,6 +783,19 @@ export default function AppShell({
           match: (p: string) => p.startsWith('/mensajes'),
           badge: unreadMessages,
         },
+        // v1.9.0 · accesos rápidos (ya no van en la lista larga de abajo)
+        {
+          href: '/eventos',
+          label: 'Eventos',
+          icon: CalendarIcon,
+          match: (p: string) => p.startsWith('/eventos'),
+        },
+        {
+          href: '/guardados',
+          label: 'Guardados',
+          icon: BookmarkIcon,
+          match: (p: string) => p.startsWith('/guardados'),
+        },
       ]
     : []
 
@@ -725,6 +833,14 @@ export default function AppShell({
 
   const displayLabel = idStudent || username
 
+  // v1.9.0 · la lista del menú se ordena en secciones (Comunidad · Tu espacio · Equipo) para que no se vea apretada
+  const NAV_GROUP_LABEL = { main: 'Comunidad', you: 'Tu espacio', admin: 'Equipo' } as const
+  const navGroupOf = (href: string): keyof typeof NAV_GROUP_LABEL =>
+    href === '/' || href === '/explorar' || href.startsWith('/clubes') || href.startsWith('/susurros') ? 'main' : href === '/admin' ? 'admin' : 'you'
+  const groupedNav = (['main', 'you', 'admin'] as const)
+    .map((g) => ({ id: g, items: navItems.filter((it) => navGroupOf(it.href) === g) }))
+    .filter((g) => g.items.length > 0)
+
   const renderNavLink = (item: NavItem, variant: 'desktop' | 'drawer') => {
     const active = item.match(pathname)
     const Icon = item.icon
@@ -749,6 +865,14 @@ export default function AppShell({
       </Link>
     )
   }
+
+  const renderNavGroups = (variant: 'desktop' | 'drawer') =>
+    groupedNav.map((g, gi) => (
+      <div key={g.id} className={gi > 0 ? 'mt-3' : ''}>
+        {groupedNav.length > 1 && <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-600">{NAV_GROUP_LABEL[g.id]}</p>}
+        <div className="space-y-1">{g.items.map((item) => renderNavLink(item, variant))}</div>
+      </div>
+    ))
 
   return (
     <AppSessionContext.Provider value={sessionValue}>
@@ -805,7 +929,8 @@ export default function AppShell({
               )}
 
               <nav className="flex-1 mt-1 flex flex-col items-center gap-1">
-                {navItems.map((item) => {
+                {groupedNav.flatMap((g, gi) => (gi > 0 ? [{ divider: g.id } as const, ...g.items] : g.items)).map((item) => {
+                  if ('divider' in item) return <span key={`d-${item.divider}`} className="w-6 h-px bg-ink-700 my-1" aria-hidden />
                   const active = item.match(pathname)
                   const Icon = item.icon
                   return (
@@ -920,7 +1045,7 @@ export default function AppShell({
                 </div>
               )}
 
-              <nav className="flex-1 space-y-1">{navItems.map((item) => renderNavLink(item, 'desktop'))}</nav>
+              <nav className="flex-1">{renderNavGroups('desktop')}</nav>
 
               {username && (
                 <Link
@@ -1008,13 +1133,13 @@ export default function AppShell({
         </aside>
 
         {/* Barra superior móvil: las 3 rayitas (con la burbuja roja), el logo y listo. Ya no hay barra de abajo. */}
-        <header className={`${hideMobileChrome ? 'hidden' : 'md:hidden'} sticky top-0 z-30 flex items-center justify-between border-b border-ink-800 bg-ink-950/95 px-3 pb-2.5 pt-[calc(0.625rem+env(safe-area-inset-top,0px))]`}>
+        <header className={`${hideMobileChrome ? 'hidden' : 'md:hidden'} sticky top-0 z-30 grid grid-cols-[1fr_auto_1fr] items-center border-b border-ink-800 bg-ink-950/95 px-3 pb-2.5 pt-[calc(0.625rem+env(safe-area-inset-top,0px))]`}>
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
             aria-label={menuBadge > 0 ? `Abrir menú (${menuBadge} sin leer)` : 'Abrir menú'}
             aria-expanded={drawerOpen}
-            className="press relative w-10 h-10 rounded-full flex items-center justify-center text-neutral-200 hover:bg-ink-800 active:bg-ink-800 transition"
+            className="press relative justify-self-start w-10 h-10 rounded-full flex items-center justify-center text-neutral-200 hover:bg-ink-800 active:bg-ink-800 transition"
           >
             <MenuIcon className="w-6 h-6" />
             <CountBubble count={menuBadge} className="absolute top-0.5 right-0" />
@@ -1026,15 +1151,18 @@ export default function AppShell({
           </Link>
           {/* Espacio del mismo ancho que el botón de la izquierda para que el logo quede centrado */}
           {!loading && !userId ? (
-            <Link href="/login" className="text-xs font-medium text-garnet-400 px-2 w-10 text-right">
+            <Link href="/login" className="justify-self-end text-xs font-medium text-garnet-400 px-2 text-right">
               Entrar
             </Link>
           ) : userId ? (
-            <span className="min-w-10 flex justify-end">
+            <span className="justify-self-end flex items-center gap-1">
+              <Link href="/eventos" aria-label="Eventos" className="press w-9 h-9 rounded-full flex items-center justify-center text-neutral-300 hover:bg-ink-800 active:bg-ink-800 transition">
+                <CalendarIcon className="w-5 h-5" />
+              </Link>
               <WalletChip userId={userId} compact />
             </span>
           ) : (
-            <span className="w-10" aria-hidden="true" />
+            <span className="w-10 justify-self-end" aria-hidden="true" />
           )}
         </header>
 
@@ -1121,7 +1249,7 @@ export default function AppShell({
                 </div>
               )}
 
-              <nav className="space-y-1">{navItems.map((item) => renderNavLink(item, 'drawer'))}</nav>
+              <nav>{renderNavGroups('drawer')}</nav>
 
               {username && (
                 <Link

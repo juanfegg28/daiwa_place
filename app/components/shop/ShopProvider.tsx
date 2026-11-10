@@ -112,6 +112,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const shelf = useMemo(() => catalog.filter((i) => {
     if (i.type === 'badge') return false
     if (i.obtainable === 'gratis') return false
+    if (i.obtainable === 'supporter' || i.obtainable === 'exclusivo') return false // exclusivas de miembros: no van en la tienda
     if (i.type === 'title' && i.obtainable !== 'tienda') return false // los títulos exclusivos van en las colecciones
     if (i.obtainable === 'fundador' && i.type !== 'avatar_decoration') return false
     return true

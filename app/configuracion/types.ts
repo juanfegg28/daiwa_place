@@ -14,5 +14,5 @@ export type ConfigProfile = {
   /** v1.2.0: audiencia por defecto de tus historias y quién puede responderlas */
   story_default_audience: 'followers' | 'friends'
   story_replies: 'all' | 'friends' | 'off'
-  notif_prefs: { comments: boolean; mentions: boolean; likes: boolean; follows: boolean; note_likes: boolean; whispers: boolean; tags: boolean; reposts: boolean; story_likes: boolean; dm?: boolean; push?: boolean; push_preview?: boolean }
+  notif_prefs: { comments: boolean; mentions: boolean; likes: boolean; follows: boolean; note_likes: boolean; whispers: boolean; tags: boolean; reposts: boolean; story_likes: boolean; events?: boolean; dm?: boolean; push?: boolean; push_preview?: boolean }
 }

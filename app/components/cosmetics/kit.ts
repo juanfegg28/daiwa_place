@@ -5,6 +5,7 @@
 // Los diseños devuelven texto SVG/HTML generado por NUESTRO código; lo que escribe la gente se escapa dentro del kit.
 // (sin comprobación de tipos: el kit es JavaScript puro)
 import { AVATAR_DECOS, COLLECTIONS as DECO_COLLECTIONS } from './_kit/avatar/index.js'
+import './_kit/members/register.js' // v1.7.3: lo exclusivo de miembros se registra aquí
 import { renderLayers } from './_kit/avatar/render.js'
 import { CARDS } from './_kit/cards/index.js'
 import { skinParts, BASE_SKIN_CSS } from './_kit/cards/kit.js'
@@ -91,7 +92,7 @@ export const UPCOMING_CSS = cssOf([UPCOMING.decos, UPCOMING.cards, UPCOMING.back
 
 
 /** Instante (s) que mejor representa a cada efecto en una miniatura quieta (el motor, en «reducido», dibuja el final y muchos quedan vacíos). */
-const STILL_AT: Record<string, number> = { 'confeti': 1.7, 'relampago-suave': 0.54, 'glitch-y-escaneo': 1.2, 'eclipse-total': 4.6, 'murcielagos': 1.8, 'rafaga-de-estrellas': 1.1 }
+const STILL_AT: Record<string, number> = { 'confeti': 1.7, 'relampago-suave': 0.54, 'glitch-y-escaneo': 1.2, 'eclipse-total': 4.6, 'murcielagos': 1.8, 'rafaga-de-estrellas': 1.1, 'eclipse-total-lunar': 5, 'marea-de-petalos-lunares': 4, 'lluvia-de-estrellas-de-plata': 1.5  }
 /** Dibuja UN fotograma de un efecto de entrada (sin bucle de animación): para miniaturas en reposo. No toca el kit. */
 export function drawEntryStill(effect: any, canvas: HTMLCanvasElement, opts: { paletteId?: string; hue?: number; seed?: number } = {}): void {
   const def = effect.palettes.find((p: any) => p.id === opts.paletteId) || effect.palettes[0]

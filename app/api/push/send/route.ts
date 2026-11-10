@@ -44,7 +44,17 @@ export async function POST(request: Request) {
       const { data: c } = await admin.from('clubs').select('slug').eq('id', n.club_id).maybeSingle()
       clubSlug = c?.slug ?? null
     }
-    const t = notificationText(n, actorName, me?.username ?? null, clubSlug, actorUsername)
+    // v1.9.0 · los avisos de eventos traen el título del evento (se pide aparte: así esta ruta sigue funcionando aunque falte el SQL nuevo)
+    const enriched: typeof n & { event_id?: string | null; event_title?: string | null } = { ...n }
+    if (n.type === 'event_new' || n.type === 'event_reminder') {
+      const { data: link } = await admin.from('notifications').select('event_id').eq('id', n.id).maybeSingle()
+      enriched.event_id = (link as { event_id?: string | null } | null)?.event_id ?? null
+      if (enriched.event_id) {
+        const { data: ev } = await admin.from('events').select('title').eq('id', enriched.event_id).maybeSingle()
+        enriched.event_title = (ev as { title?: string } | null)?.title ?? null
+      }
+    }
+    const t = notificationText(enriched, actorName, me?.username ?? null, clubSlug, actorUsername)
     const r = await sendToUser(admin, n.recipient_id, { kind: 'notification', ...t })
     return NextResponse.json({ ok: true, ...r })
   }

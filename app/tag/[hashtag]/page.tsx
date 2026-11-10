@@ -49,18 +49,20 @@ function TagContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tag])
 
+  // v1.9.0 · me gusta al instante, sin volver a descargar las 60 publicaciones en cada toque
+  const patchPost = (id: string, fn: (p: Post) => Post) => setPosts((l) => l.map((p) => (p.id === id ? fn(p) : p)))
+
   const handleLike = async (post: Post) => {
     if (!userId) {
       router.push('/login')
       return
     }
     const alreadyLiked = post.likes.some((l) => l.user_id === userId)
-    if (alreadyLiked) {
-      await supabase.from('likes').delete().eq('post_id', post.id).eq('user_id', userId)
-    } else {
-      await supabase.from('likes').insert({ post_id: post.id, user_id: userId })
-    }
-    loadPosts()
+    patchPost(post.id, (p) => ({ ...p, likes: alreadyLiked ? p.likes.filter((l) => l.user_id !== userId) : [...p.likes, { user_id: userId }] }))
+    const { error } = alreadyLiked
+      ? await supabase.from('likes').delete().eq('post_id', post.id).eq('user_id', userId)
+      : await supabase.from('likes').insert({ post_id: post.id, user_id: userId })
+    if (error) patchPost(post.id, () => post)
   }
 
   const handleLikeComment = async (commentId: string, alreadyLiked: boolean) => {
@@ -68,12 +70,24 @@ function TagContent() {
       router.push('/login')
       return
     }
-    if (alreadyLiked) {
-      await supabase.from('comment_likes').delete().eq('comment_id', commentId).eq('user_id', userId)
-    } else {
-      await supabase.from('comment_likes').insert({ comment_id: commentId, user_id: userId })
+    const owner = posts.find((p) => p.comments.some((c) => c.id === commentId))
+    if (owner) {
+      patchPost(owner.id, (p) => ({
+        ...p,
+        comments: p.comments.map((c) =>
+          c.id !== commentId ? c : { ...c, comment_likes: alreadyLiked ? c.comment_likes.filter((l) => l.user_id !== userId) : [...c.comment_likes, { user_id: userId }] }
+        ),
+      }))
     }
-    loadPosts()
+    const { error } = alreadyLiked
+      ? await supabase.from('comment_likes').delete().eq('comment_id', commentId).eq('user_id', userId)
+      : await supabase.from('comment_likes').insert({ comment_id: commentId, user_id: userId })
+    if (error && owner) patchPost(owner.id, () => owner)
+  }
+
+  const reloadOne = async (postId: string) => {
+    const { posts: fresh } = await fetchPostsByIds([postId])
+    if (fresh[0]) patchPost(postId, () => fresh[0])
   }
 
   const handleAddComment = async (postId: string, text: string, parentCommentId?: string | null) => {
@@ -87,7 +101,7 @@ function TagContent() {
       content: text,
       parent_comment_id: parentCommentId ?? null,
     })
-    loadPosts()
+    await reloadOne(postId)
   }
 
   return (

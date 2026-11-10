@@ -54,3 +54,14 @@ Historias en celular (responder/enviar, editor con íconos visibles, ir al perfi
 ---
 ## v1.8.0 (2026-11-06) — resumen para quien continúe
 Ver `INSTRUCCIONES_V1.8.0.md`. Cambios clave: `posts.club_id/is_announcement` (publicaciones solo de club, fuera de feed_items), niveles de club (`club_overview`), `club_update_settings`, `club_weekly_rewards` (cron lunes), racha ampliada (hitos 3/5/7/10/14/21/30, escudo, `streak_overview`, `daily_login_claim`), `my_perks()` (ventajas del Círculo Lunar), cambio rápido de cuentas en el navegador (`app/lib/accounts.ts`, tokens en localStorage, nunca por IP), caché de sesión del AppShell entre páginas (menos consultas), GIF de banner 6/12 MB.
+
+## v1.9.0 «Constelaciones» (resumen técnico para otro chat)
+- SQL: `sql/v1.9.0_1_decoraciones_miembros.sql` (31 cosméticos `obtainable='supporter'`, collection `supporters`) + `sql/v1.9.0_2_constelaciones.sql` (todo lo demás, idempotente).
+- Círculo Lunar: `supporter_sync_perks()` + trigger en `supporters` (entrega automática); `user_looks` + `look_save/look_list/look_delete`; UI en `app/apoyar/estilos`, `components/supporters/*`, `personalizar/LooksPanel.tsx`, `lib/looks.ts`, `lib/memberCatalog.ts`.
+- Encuestas: `polls/poll_options/poll_votes` (RLS + `poll_create` + `poll_vote` SECURITY INVOKER); se leen DENTRO del select de posts (`poll:polls(...)`, `saved_posts(user_id)` en `lib/queries.ts`, con respaldo a la consulta anterior).
+- Guardadas: `saved_posts/saved_collections` (RLS directa); `app/guardados`, `components/SaveButton.tsx`, `lib/saved.ts`.
+- Eventos: `events/event_rsvps` + RPC `events_list/event_save/event_rsvp/event_cancel/event_delete`, `events_send_reminders()` (cron cada 30 min), permiso `manage_events`, notificaciones `event_new/event_reminder` (columna `notifications.event_id`); UI `app/eventos`, `components/events/*`, `admin/EventosTab.tsx`, `clubes/[slug]/ClubEvents.tsx`.
+- Vitrina: `profile_showcase` + `showcase_get/showcase_save`, `profiles.has_showcase`; UI `components/showcase/*`, `lib/showcase.ts`.
+- Explorar 2.0: `explore_hub()` (caché 30 min en `explore_cache`) + `lib/explore.ts`, `lib/netCache.ts`.
+- Seguridad: `profiles.security_word_hash` (bcrypt, disparador `profiles_security_word` que hashea y vacía `security_word`), `security_word_verify()` (solo service_role), rutas `api/recover` y `api/change-security-word` con respaldo si falta el SQL; bloque de RLS/REVOKE para tablas de economía/membresías.
+- Ahorro: `shell_bootstrap()` + `lib/shellBootstrap.ts`, `profile_stats()`, `lib/liveHub.ts` (canales Realtime que sobreviven al cambio de página), caché de contadores en `AppShell`, `unstable_cache` en `lib/og.ts`, perfil/etiquetas sin recargas completas, `cacheControl` de 1 año en subidas.

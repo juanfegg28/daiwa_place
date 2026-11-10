@@ -14,6 +14,8 @@ const host = supabaseHost();
 const nextConfig: NextConfig = {
   // v1.8.0 · menos peso para Vercel: sin cabecera «X-Powered-By» y con caché largo en los archivos que no cambian
   poweredByHeader: false,
+  // v1.9.0 · en producción se quitan console.log/info/debug/warn del código que viaja al navegador y al servidor (menos peso y menos registros)
+  compiler: { removeConsole: { exclude: ["error"] } },
   async headers() {
     const longCache = [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }];
     return [

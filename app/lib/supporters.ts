@@ -46,8 +46,11 @@ export const TIERS: Record<TierKey, TierInfo> = {
       { label: 'Racha', text: 'Bono de entrada ×1,25, premios de racha +10 % y escudo cada 14 días' },
       { label: 'Misiones', text: '+15 % de Lunas extra en cada misión y en el cofre semanal' },
       { label: 'Banner', text: 'Banner GIF de hasta 12 MB' },
-      { label: 'Extra', text: 'Decoración Halo Naciente', soon: true },
-      { label: 'Título', text: '«Bajo la Luna»', soon: true },
+      { label: 'Decoraciones', text: '3 decoraciones míticas: Halo Naciente, Lazo de seda y perlas y Jardín de luna (10 paletas y color libre)' },
+      { label: 'Tarjeta', text: 'Tarjeta de perfil Velo de Luna' },
+      { label: 'Entrada', text: 'Efecto de entrada Marea de pétalos lunares' },
+      { label: 'Nombre', text: 'Efecto de nombre Luz de luna' },
+      { label: 'Títulos', text: '«Bajo la Luna» y «Sueño de plata»' },
     ],
   },
   llena: {
@@ -61,15 +64,17 @@ export const TIERS: Record<TierKey, TierInfo> = {
       { label: 'Tienda', text: '10 % de descuento en la tienda' },
       { label: 'Misiones', text: '+25 % de Lunas extra en cada misión y en el cofre semanal' },
       { label: 'Racha', text: 'Bono de entrada ×1,5, premios de racha +20 % y escudo cada 10 días' },
-      { label: 'Extra', text: 'Decoración Órbita de Plata', soon: true },
-      { label: 'Tarjeta', text: 'Tarjeta de perfil Marea de Plata', soon: true },
-      { label: 'Título', text: '«Heredero de Selene»', soon: true },
+      { label: 'Decoraciones', text: '5 más: Órbita de plata, Astrolabio de Selene, Polilla lunar, Diadema de Selene y Medusas de medianoche (8 en total)' },
+      { label: 'Tarjetas', text: 'Marea de Plata y Jardín de seda' },
+      { label: 'Entrada', text: 'Efecto de entrada Lluvia de estrellas de plata' },
+      { label: 'Nombre', text: 'Efecto de nombre Seda y perlas' },
+      { label: 'Títulos', text: '«Heredero de Selene» y «Reina de las perlas»' },
     ],
   },
   eclipse: {
     key: 'eclipse', rank: 3, name: 'Eclipse', short: 'Eclipse', priceUsd: 5, weeklyLunas: 2500, stories: 7, discountPct: 15,
     accent: '#F59E0B', glow: 'rgba(245,158,11,.5)',
-    tagline: 'El máximo apoyo. Beneficios exclusivos que llegarán pronto.',
+    tagline: 'El máximo apoyo: todo lo exclusivo del Círculo, 31 cosméticos míticos.',
     includes: 'Incluye todo lo de los niveles anteriores y suma:',
     perks: [
       { label: 'Lunas', text: '2.500 Lunas cada semana' },
@@ -77,11 +82,11 @@ export const TIERS: Record<TierKey, TierInfo> = {
       { label: 'Tienda', text: '15 % de descuento en la tienda' },
       { label: 'Misiones', text: '+40 % de Lunas extra en cada misión y en el cofre semanal' },
       { label: 'Racha', text: 'Bono de entrada ×2, premios de racha +30 % y escudo cada 7 días' },
-      { label: 'Extra', text: 'Decoración animada Corona de Totalidad', soon: true },
-      { label: 'Tarjeta', text: 'Tarjeta de perfil Umbra', soon: true },
-      { label: 'Entrada', text: 'Efecto de entrada Eclipse Total', soon: true },
-      { label: 'Nombre', text: 'Efecto especial para tu nombre', soon: true },
-      { label: 'Título', text: '«Testigo de la Totalidad»', soon: true },
+      { label: 'Decoraciones', text: '6 más, las más espectaculares: Corona de la Totalidad, Cáliz de rosas, Serafín lunar, Reloj de Selene, Cristales de eclipse y Gatita celestial (14 en total)' },
+      { label: 'Tarjetas', text: 'Umbra y Salón de cristal' },
+      { label: 'Entrada', text: 'Efecto de entrada Eclipse Total Lunar' },
+      { label: 'Nombre', text: 'Efecto de nombre Aura de eclipse (corona solar alrededor de tus letras)' },
+      { label: 'Títulos', text: '«Testigo de la Totalidad» y «Soberano del eclipse»' },
     ],
   },
 }
@@ -106,13 +111,13 @@ export type SupporterMe = {
   weekly_granted: boolean
   payments: { tier: TierKey; amount: number; currency: string; source: string; method?: PayMethod | null; status: string; paid_at: string }[]
   requests: { id: string; tier: TierKey; method?: PayMethod | null; status: 'pending' | 'approved' | 'rejected'; created_at: string; review_note: string | null }[]
-  perks: { code: string; kind: string; name: string; min_tier: TierKey; available: boolean; claimed: boolean; unlocked: boolean }[]
+  perks: { code: string; kind: string; name: string; min_tier: TierKey; available: boolean; claimed: boolean; unlocked: boolean; slug?: string | null; palettes?: number }[]
 }
 
 function friendly(message: string | undefined | null): string {
   if (!message) return 'Algo salió mal. Inténtalo de nuevo.'
   if (/Failed to fetch|NetworkError|network/i.test(message)) return 'Parece que no hay internet. Inténtalo de nuevo.'
-  if (/Could not find the function|does not exist|schema cache/i.test(message)) return 'Falta correr el SQL más reciente (v1.7.2) en Supabase.'
+  if (/Could not find the function|does not exist|schema cache/i.test(message)) return 'Falta correr el SQL más reciente (v1.7.3) en Supabase.'
   return message
 }
 
@@ -137,6 +142,13 @@ export async function submitManualRequest(tier: TierKey, reference: string, note
 export async function claimPerk(code: string): Promise<string | null> {
   const { error } = await supabase.rpc('supporter_claim_perk', { p_code: code })
   return error ? friendly(error.message) : null
+}
+
+/** Reclama de una vez todo lo que tu nivel ya desbloquea (v1.7.3). Devuelve cuántas nuevas se entregaron. */
+export async function claimAllPerks(): Promise<{ claimed: number; error: string | null }> {
+  const { data, error } = await supabase.rpc('supporter_claim_all')
+  if (error) return { claimed: 0, error: friendly(error.message) }
+  return { claimed: Number((data as { claimed?: number } | null)?.claimed ?? 0), error: null }
 }
 
 async function authHeader(): Promise<Record<string, string>> {

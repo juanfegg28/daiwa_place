@@ -106,7 +106,7 @@ function ConfigurarContent() {
     let bannerUrl: string | null = null
     if (avatarFile) {
       const path = `${userId}/club-${request.id}-avatar.jpg`
-      const { error: upErr } = await supabase.storage.from('avatars').upload(path, avatarFile, { upsert: true })
+      const { error: upErr } = await supabase.storage.from('avatars').upload(path, avatarFile, { upsert: true, cacheControl: '31536000' })
       if (upErr) {
         setError('No se pudo subir la foto del club: ' + upErr.message)
         setSaving(false)
@@ -116,7 +116,7 @@ function ConfigurarContent() {
     }
     if (bannerFile) {
       const path = `${userId}/club-${request.id}-banner.jpg`
-      const { error: upErr } = await supabase.storage.from('avatars').upload(path, bannerFile, { upsert: true })
+      const { error: upErr } = await supabase.storage.from('avatars').upload(path, bannerFile, { upsert: true, cacheControl: '31536000' })
       if (upErr) {
         setError('No se pudo subir el banner del club: ' + upErr.message)
         setSaving(false)

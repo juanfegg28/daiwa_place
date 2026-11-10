@@ -24,10 +24,12 @@ import DailyQuestionCard, { DAILY_TAG } from './components/DailyQuestionCard'
 import { MissionsInline, MissionsSide, useMissionsPanel } from './components/economy/MissionsPanel'
 import { dayPartFor, firstNameOf, pickGreeting, type DayPart } from './lib/greeting'
 import { prepareImage } from './lib/images'
-import { POST_SELECT, POST_IMAGES_BUCKET, MAX_POST_IMAGES, MAX_POST_LENGTH, fetchFeedItems } from './lib/queries'
+import { POST_SELECT, POST_SELECT_CORE, POST_IMAGES_BUCKET, MAX_POST_IMAGES, MAX_POST_LENGTH, fetchFeedItems } from './lib/queries'
 import MusicChip from './components/MusicChip'
 import MusicPicker from './components/MusicPicker'
-import { MusicIcon } from './components/icons'
+import { MusicIcon, PollIcon } from './components/icons'
+import PollComposer from './components/PollComposer'
+import { EMPTY_POLL, createPoll, pollDraftError, type PollDraft } from './lib/polls'
 import { normalizeTrack, toStoredTrack } from './lib/music'
 import type { Post, PostImage, FeedItem } from './lib/types'
 import { canPostInClub, fetchMyClubs, type MyClub } from './lib/clubs'
@@ -124,6 +126,8 @@ function Feed() {
   const [newPostsAvailable, setNewPostsAvailable] = useState(false)
   const [postMusic, setPostMusic] = useState<ReturnType<typeof toStoredTrack> | null>(null)
   const [musicPickerOpen, setMusicPickerOpen] = useState(false)
+  // v1.9.0 · borrador de encuesta (null = sin encuesta)
+  const [pollDraft, setPollDraft] = useState<PollDraft | null>(null)
 
   // Feed clásico (sin compartidos): solo se usa si todavía no se corrió el SQL de la v1.1.10
   const loadLegacyPosts = async () => {
@@ -140,8 +144,11 @@ function Feed() {
       await new Promise((resolve) => setTimeout(resolve, 1500))
       res = await query(POST_SELECT)
     }
+    if (res.error && /polls|poll_|saved_posts|relationship|schema cache/i.test(res.error.message)) {
+      res = await query(POST_SELECT_CORE)
+    }
     if (res.error && /reposts|posts_visibility|relationship|schema cache/i.test(res.error.message)) {
-      res = await query(POST_SELECT.replace(', reposts(user_id)', '').replace('posts_visibility, ', ''))
+      res = await query(POST_SELECT_CORE.replace(', reposts(user_id)', '').replace('posts_visibility, ', ''))
     }
     if (res.error) console.error('Error cargando posts:', res.error.message)
     return { posts: (res.data as Post[] | null) ?? [], error: res.error?.message ?? '' }
@@ -301,10 +308,22 @@ function Feed() {
   const handlePost = async (e: React.FormEvent) => {
     e.preventDefault()
     if (loading || processingImages) return
-    if (!content.trim() && drafts.length === 0 && !postMusic) return
+    if (!content.trim() && drafts.length === 0 && !postMusic && !pollDraft?.question.trim()) return
     if (content.length > MAX_POST_LENGTH) {
       setPostError(`El texto puede tener máximo ${MAX_POST_LENGTH} caracteres.`)
       return
+    }
+    if (pollDraft) {
+      const pe = pollDraftError(pollDraft)
+      if (pe) {
+        setPostError(pe)
+        return
+      }
+      // una publicación necesita algo de texto: si solo escribiste la pregunta, esa pregunta es el texto
+      if (!content.trim() && drafts.length === 0 && !postMusic && !pollDraft.question.trim()) {
+        setPostError('Escribe algo en la publicación o una pregunta para la encuesta')
+        return
+      }
     }
     setLoading(true)
     setPostError('')
@@ -355,13 +374,15 @@ function Feed() {
 
     // 2) Crear la publicación
     const targetClub = audience ? myClubs.find((c) => c.id === audience) ?? null : null
-    const { error: insertError } = await supabase.from('posts').insert({
+    // con encuesta: si no escribiste texto, la pregunta hace de texto (y no se repite dentro de la encuesta)
+    const pollAsText = !!pollDraft && !content.trim() && drafts.length === 0 && !postMusic
+    const { data: insertedPost, error: insertError } = await supabase.from('posts').insert({
       user_id: user.id,
-      content: content.trim(),
+      content: pollAsText ? (pollDraft?.question.trim() ?? '') : content.trim(),
       images: uploaded,
       music: postMusic && normalizeTrack(postMusic) ? postMusic : null,
       ...(targetClub ? { club_id: targetClub.id, is_announcement: targetClub.leader_id === user.id && asAnnouncement } : {}),
-    })
+    }).select('id').single()
 
     if (insertError) {
       if (uploaded.length > 0) {
@@ -372,10 +393,23 @@ function Feed() {
       return
     }
 
+    // v1.9.0 · la encuesta se crea con la publicación (hereda sus permisos: club, congelada, etc.). Si falla, no queda una publicación a medias.
+    if (pollDraft && insertedPost?.id) {
+      const pollErr = await createPoll((insertedPost as { id: string }).id, pollDraft, pollAsText ? null : pollDraft.question)
+      if (pollErr) {
+        await supabase.from('posts').delete().eq('id', (insertedPost as { id: string }).id)
+        if (uploaded.length > 0) await supabase.storage.from(POST_IMAGES_BUCKET).remove(uploaded.map((u) => u.path))
+        setPostError('No se pudo crear la encuesta: ' + pollErr)
+        setLoading(false)
+        return
+      }
+    }
+
     drafts.forEach((d) => URL.revokeObjectURL(d.previewUrl))
     setDrafts([])
     setContent('')
     setPostMusic(null)
+    setPollDraft(null)
     setLoading(false)
     if (targetClub) {
       // una publicación «solo del club» no sale en el Inicio ni en tu perfil: solo en la página del club
@@ -469,7 +503,7 @@ function Feed() {
 
   const draftImages: PostImage[] = drafts.map((d) => ({ url: d.previewUrl, path: d.id, w: d.w, h: d.h }))
   const canPublish =
-    (content.trim().length > 0 || drafts.length > 0 || !!postMusic) &&
+    (content.trim().length > 0 || drafts.length > 0 || !!postMusic || !!pollDraft?.question.trim()) &&
     content.length <= MAX_POST_LENGTH &&
     !loading &&
     !processingImages
@@ -525,6 +559,12 @@ function Feed() {
           {postMusic && (
             <div className="mt-3">
               <MusicChip track={postMusic} variant="compact" onRemove={() => setPostMusic(null)} />
+            </div>
+          )}
+
+          {pollDraft && (
+            <div className="mt-3">
+              <PollComposer value={pollDraft} onChange={setPollDraft} onRemove={() => setPollDraft(null)} disabled={loading} />
             </div>
           )}
 
@@ -597,6 +637,17 @@ function Feed() {
               >
                 <MusicIcon className="w-5 h-5" />
                 <span className="hidden sm:inline">Canción</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPollDraft((d) => (d ? null : { ...EMPTY_POLL, options: [...EMPTY_POLL.options] }))}
+                disabled={loading}
+                aria-pressed={!!pollDraft}
+                className={`flex items-center gap-1.5 text-sm disabled:opacity-40 rounded-full px-2.5 py-1.5 hover:bg-ink-700 transition ${pollDraft ? 'text-garnet-400' : 'text-neutral-400 hover:text-garnet-400'}`}
+                aria-label="Agregar encuesta"
+              >
+                <PollIcon className="w-5 h-5" />
+                <span className="hidden sm:inline">Encuesta</span>
               </button>
               <button
                 type="button"

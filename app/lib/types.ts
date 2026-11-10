@@ -53,6 +53,10 @@ export type Post = {
   likes: { user_id: string }[]
   /** Quiénes la compartieron (v1.1.10) */
   reposts?: { user_id: string }[]
+  /** v1.9.0 · Encuesta de la publicación (sin normalizar: usa normalizePoll de lib/polls.ts) */
+  poll?: unknown
+  /** v1.9.0 · Una fila si TÚ la tienes guardada (RLS solo deja ver las tuyas) */
+  saved_posts?: { user_id: string }[] | null
   comments: Comment[]
 }
 
@@ -85,6 +89,8 @@ export type NotificationType =
   | 'repost'
   | 'like_story'
   | 'mention_story'
+  | 'event_new'
+  | 'event_reminder'
 
 export type NotificationItem = {
   id: string
@@ -111,6 +117,9 @@ export type NotificationItem = {
   club_request_id?: string | null
   club?: { name: string; slug: string; kind: 'club' | 'pandilla'; avatar_url: string | null } | null
   club_request?: { club_name: string; kind: 'club' | 'pandilla'; decline_reason: string | null } | null
+  /** v1.9.0 · aviso de evento nuevo / recordatorio */
+  event_id?: string | null
+  event?: { title: string; starts_at: string; cancelled_at: string | null } | null
 }
 
 /** Un elemento del feed: una publicación original o un compartido (v1.1.10) */

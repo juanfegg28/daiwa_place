@@ -36,6 +36,8 @@ import FormatToolbar from './FormatToolbar'
 import LikesModal from './LikesModal'
 import MusicChip from './MusicChip'
 import MusicField from './MusicField'
+import PollCard from './PollCard'
+import SaveButton from './SaveButton'
 import ImageLightbox from './ImageLightbox'
 import RoleBadges from './RoleBadge'
 import SupporterBadge from './supporters/SupporterBadge'
@@ -57,6 +59,8 @@ type PostCardProps = {
    * así que la página de perfil le pasa aquí si ESA cuenta está congelada.
    */
   authorIsFrozen?: boolean
+  /** v1.9.0 · avisa cuando se guarda, se mueve de colección o se quita de guardados */
+  onSavedChange?: (post: Post, saved: boolean, collectionId: string | null) => void
   onToggleLike: (post: Post) => void
   onToggleCommentLike: (commentId: string, alreadyLiked: boolean) => void
   onAddComment: (postId: string, text: string, parentCommentId?: string | null) => Promise<void> | void
@@ -488,6 +492,7 @@ function PostCard({
   detail = false,
   defaultExpanded = false,
   authorIsFrozen,
+  onSavedChange,
   onToggleLike,
   onToggleCommentLike,
   onAddComment,
@@ -963,6 +968,12 @@ function PostCard({
         </div>
       )}
 
+      {!editingPost && !!post.poll && (
+        <div className="mb-3">
+          <PollCard raw={post.poll} isAuthor={isMine} disabled={!currentUserId || interactionsDisabled} />
+        </div>
+      )}
+
       {actionError && <p className="text-xs text-garnet-400 mb-3">{actionError}</p>}
 
       {isFrozen && (
@@ -1026,6 +1037,9 @@ function PostCard({
             <RepostIcon className="w-[18px] h-[18px]" />
             <span className="tabular-nums">{repostCount}</span>
           </button>
+        )}
+        {currentUserId && (
+          <SaveButton postId={post.id} initiallySaved={(post.saved_posts?.length ?? 0) > 0} onChange={onSavedChange ? (sv, col) => onSavedChange(post, sv, col) : undefined} />
         )}
       </div>
 

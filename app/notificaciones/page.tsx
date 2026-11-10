@@ -10,7 +10,7 @@ import AppShell, { useAppSession } from '../components/AppShell'
 import { NOTIFICATION_SELECT, NOTIFICATION_SELECT_BASE } from '../lib/queries'
 import { bgToCss, signedStoryUrls, type StoryBg } from '../lib/stories'
 import type { NotificationItem, NotificationType } from '../lib/types'
-import { AtIcon, BellIcon, ClubsIcon, RepostIcon, CloseIcon, CommentIcon, HeartIcon, ReplyIcon, UsersIcon, WhisperIcon } from '../components/icons'
+import { AtIcon, BellIcon, CalendarIcon, ClubsIcon, RepostIcon, CloseIcon, CommentIcon, HeartIcon, ReplyIcon, UsersIcon, WhisperIcon } from '../components/icons'
 import AnonAvatar from '../susurros/AnonAvatar'
 import { ANON_NAME } from '../lib/whispers'
 
@@ -59,6 +59,8 @@ const ACTION_TEXT: Record<NotificationType, string> = {
   club_join_request: 'quiere unirse a tu club',
   club_join_accepted: 'te aceptó en su club',
   repost: 'compartió tu publicación',
+  event_new: 'organizó un evento',
+  event_reminder: 'empieza pronto. ¡Prepárate!',
 }
 
 /** Los avisos de aprobar o declinar un club vienen del equipo, no de una persona en concreto */
@@ -73,6 +75,7 @@ function TypeIcon({ type }: { type: NotificationType }) {
     return <ClubsIcon className={cls} />
   if (type === 'repost') return <RepostIcon className={cls} />
   if (type === 'whisper_comment' || type === 'whisper_reply') return <WhisperIcon className={cls} />
+  if (type === 'event_new' || type === 'event_reminder') return <CalendarIcon className={cls} />
   if (type === 'comment') return <CommentIcon className={cls} />
   if (type === 'reply') return <ReplyIcon className={cls} />
   return <UsersIcon className={cls} />
@@ -85,6 +88,7 @@ function storyAlive(n: NotificationItem): boolean {
 function hrefFor(n: NotificationItem, me: string | null): string {
   if (n.type === 'mention_story') return storyAlive(n) && n.actor ? `/historias/${n.actor.username}?s=${n.story_id}` : '/'
   if (n.type === 'like_story') return storyAlive(n) && me ? `/historias/${me}?s=${n.story_id}&vistas=1` : me ? `/perfil/${me}?historia=vencida` : '/'
+  if (n.type === 'event_new' || n.type === 'event_reminder') return n.event_id ? `/eventos?e=${n.event_id}` : '/eventos'
   if (n.type === 'club_approved') return n.club_request_id ? `/clubes/configurar/${n.club_request_id}` : '/clubes'
   if (n.type === 'club_declined') return '/clubes'
   if (n.type === 'club_join_request' || n.type === 'club_join_accepted') return n.club?.slug ? `/clubes/${n.club.slug}` : '/clubes'
@@ -104,6 +108,11 @@ function hrefFor(n: NotificationItem, me: string | null): string {
 }
 
 function snippetFor(n: NotificationItem): string | null {
+  if (n.type === 'event_new' || n.type === 'event_reminder') {
+    if (!n.event) return null
+    const when = new Date(n.event.starts_at).toLocaleString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' })
+    return `${n.event.title} · ${when}${n.event.cancelled_at ? ' (cancelado)' : ''}`
+  }
   if (n.type === 'club_approved') return n.club_request?.club_name ? `«${n.club_request.club_name}» · Toca para configurarlo` : 'Toca para configurarlo'
   if (n.type === 'club_declined')
     return n.club_request?.decline_reason ? `«${n.club_request.club_name}»: ${shorten(n.club_request.decline_reason)}` : n.club_request?.club_name ? `«${n.club_request.club_name}»` : null
@@ -367,7 +376,8 @@ function NotificacionesContent() {
             // En el Muro, si el comentario es anónimo no se muestra a nadie (ni foto ni @usuario)
             const anon = !!n.anonymous
             const team = isTeamNotice(n.type)
-            const actorName = anon ? ANON_NAME : team ? 'El equipo de DaiwaPlace' : many ? actorLabel(g) : n.actor?.id_student || n.actor?.username || 'Alguien'
+            const reminder = n.type === 'event_reminder'
+            const actorName = anon ? ANON_NAME : reminder ? (n.event?.title ?? 'Un evento') : team ? 'El equipo de DaiwaPlace' : many ? actorLabel(g) : n.actor?.id_student || n.actor?.username || 'Alguien'
             const snippet = snippetFor(n)
             return (
               <li key={g.key} className="relative group">
@@ -383,9 +393,9 @@ function NotificacionesContent() {
                   <div className="relative shrink-0">
                     {anon ? (
                       <AnonAvatar size="w-10 h-10" />
-                    ) : team ? (
+                    ) : team || reminder ? (
                       <div className="relative w-10 h-10 rounded-full overflow-hidden bg-ink-700 flex items-center justify-center text-garnet-300">
-                        <ClubsIcon filled className="w-5 h-5" />
+                        {reminder ? <CalendarIcon className="w-5 h-5" /> : <ClubsIcon filled className="w-5 h-5" />}
                       </div>
                     ) : (
                       <Avatar username={n.actor?.username ?? '?'} avatarUrl={n.actor?.avatar_url} size="w-10 h-10" textSize="text-sm" sizes="48px" />
@@ -398,7 +408,7 @@ function NotificacionesContent() {
                   <div className="min-w-0 flex-1 leading-snug">
                     <p className="text-sm text-neutral-200">
                       <span className="font-bold text-neutral-50">{actorName}</span>{' '}
-                      {!anon && !team && !many && n.actor && <span className="text-neutral-600 text-xs">@{n.actor.username} </span>}
+                      {!anon && !team && !reminder && !many && n.actor && <span className="text-neutral-600 text-xs">@{n.actor.username} </span>}
                       {many ? (PLURAL_ACTION[n.type] ?? ACTION_TEXT[n.type]) : ACTION_TEXT[n.type]}
                     </p>
                     {snippet && (

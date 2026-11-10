@@ -2,10 +2,12 @@ import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
 // Recuperar la cuenta con la palabra secreta.
-// Protecciones (v0.13.5):
+// Protecciones (v0.13.5) + refuerzo de la v1.9.0:
 //  · Límite de intentos: la palabra secreta no se puede adivinar probando una y otra vez.
-//  · Un solo mensaje de error: no se puede averiguar qué usuarios existen.
-//  · Se valida lo que llega (antes, si faltaba un dato la ruta se caía con error 500).
+//  · Un solo mensaje de error: no se puede averiguar qué usuarios existen (y la verificación tarda lo mismo exista o no).
+//  · La palabra YA NO se guarda en texto legible: Supabase solo conserva un hash (bcrypt) y la comprobación se hace allí
+//    (security_word_verify). Si todavía no se corrió el SQL de la 1.9.0, se usa la comparación de antes, sin romper nada.
+//  · Al recuperar la cuenta se cierran las demás sesiones abiertas.
 const MAX_FAILS_PER_USER = 5 // por usuario, cada 15 minutos
 const MAX_FAILS_PER_IP = 15 // por conexión, cada hora
 const GENERIC_ERROR = 'Usuario o palabra secreta incorrectos.'
@@ -33,7 +35,7 @@ export async function POST(request: Request) {
   }
 
   const cleanUsername = username.trim().toLowerCase().slice(0, 40)
-  const cleanSecurityWord = securityWord.trim().toLowerCase()
+  const cleanSecurityWord = securityWord.trim().toLowerCase().slice(0, 100)
   if (!cleanUsername || !cleanSecurityWord) {
     return NextResponse.json({ error: 'Completa todos los campos.' }, { status: 400 })
   }
@@ -62,22 +64,29 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: GENERIC_ERROR }, { status: 400 })
   }
 
-  const { data: profile, error: profileError } = await supabaseAdmin
-    .from('profiles')
-    .select('id, security_word')
-    .eq('username', cleanUsername)
-    .maybeSingle()
+  // 1) Verificación con hash (v1.9.0). Devuelve el id de la cuenta si la palabra es correcta.
+  let userId: string | null = null
+  const verified = await supabaseAdmin.rpc('security_word_verify', { p_username: cleanUsername, p_word: cleanSecurityWord })
+  if (!verified.error) {
+    userId = (verified.data as string | null) ?? null
+  } else if (/security_word_verify|schema cache|does not exist|Could not find the function/i.test(verified.error.message)) {
+    // 2) Respaldo: todavía no se corrió el SQL de la 1.9.0 → comparación de siempre (la palabra aún está en la columna antigua)
+    const { data: profile } = await supabaseAdmin.from('profiles').select('id, security_word').eq('username', cleanUsername).maybeSingle()
+    if (profile?.security_word && profile.security_word.trim().toLowerCase() === cleanSecurityWord) userId = profile.id
+  } else {
+    return NextResponse.json({ error: 'No se pudo comprobar en este momento. Inténtalo de nuevo.' }, { status: 503 })
+  }
 
   // Mismo mensaje y mismo registro de intento si el usuario no existe o la palabra no coincide
-  if (profileError || !profile) return fail()
-  if (!profile.security_word || profile.security_word.trim().toLowerCase() !== cleanSecurityWord) return fail()
+  if (!userId) return fail()
 
-  const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(profile.id, { password: newPassword })
+  const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, { password: newPassword })
   if (updateError) {
     return NextResponse.json({ error: 'No se pudo cambiar la contraseña. Inténtalo de nuevo.' }, { status: 400 })
   }
 
-  // Acierto: se limpian los intentos fallidos de este usuario
+  // Acierto: se cierran las demás sesiones de la cuenta (mejor esfuerzo) y se limpian los intentos fallidos de este usuario
+  await supabaseAdmin.rpc('auth_revoke_sessions', { p_user: userId })
   await supabaseAdmin.from('recovery_attempts').delete().eq('username', cleanUsername)
   return NextResponse.json({ success: true })
 }

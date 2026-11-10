@@ -15,6 +15,39 @@ export const RELEASE_STAGE: 'beta' | 'stable' = 'stable'
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.9.0',
+    date: '2026-11-10',
+    title: 'Constelaciones: estilos del Círculo Lunar, encuestas, eventos, guardados, vitrina y un Explorar nuevo',
+    sections: [
+      {
+        heading: 'Círculo Lunar',
+        items: [
+          'Las 31 decoraciones, tarjetas, efectos de nombre, títulos y entradas exclusivas ya están. Si ya eres miembro, las recibes SOLAS (sin pagar otra vez y sin reclamar); lo que ya habías reclamado se queda contigo.',
+          'Pestaña nueva «Estilos» en /apoyar: todos los cosméticos por nivel, con tu foto y tu nombre, para ver cómo quedarían en TU perfil y combinarlos con sus 10 paletas.',
+          'En Personalizar hay un cajón nuevo «Looks»: guarda tus combinaciones con nombre (2 gratis, 5 · 10 · 20 con Creciente · Llena · Eclipse) y prueba 9 temas listos.',
+        ],
+      },
+      {
+        heading: 'Para toda la comunidad (gratis)',
+        items: [
+          'Encuestas en tus publicaciones (también en las de club): 2 a 6 opciones, duración de 1 hora a 7 días y resultados en porcentaje. Un voto por persona.',
+          'Eventos: calendario con eventos oficiales y de clubes, confirma «Voy» o «Quizá», enlace para participar y un aviso poco antes de que empiecen. Los líderes crean los de su club y el equipo los oficiales.',
+          'Guardados: guarda publicaciones en privado y ordénalas en colecciones (crear, renombrar, eliminar).',
+          'Vitrina opcional en tu perfil: destaca publicaciones, frases, canciones y recuerdos. La activas y la apagas cuando quieras.',
+          'Explorar 2.0: temas del momento, publicaciones populares, clubes para conocer, cuentas nuevas y activas, y la búsqueda ahora también encuentra clubes.',
+          'Menú lateral ordenado en secciones; Eventos y Guardados quedan como accesos rápidos.',
+        ],
+      },
+      {
+        heading: 'Seguridad y ahorro',
+        items: [
+          'La palabra secreta de recuperación ya no se guarda en texto legible: solo un hash. Al recuperar la cuenta se cierran las demás sesiones.',
+          'Menos consumo de Supabase: una sola petición de arranque, canales en tiempo real que no se reabren en cada página, cachés cortas y fotos con caché de un año.',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.8.0',
     date: '2026-11-06',
     title: 'Clubes renovados, racha con escudo, más beneficios y cambio rápido de cuentas',
@@ -1103,4 +1136,4 @@ export const CHANGELOG: Release[] = [
 
 export const LATEST_RELEASE = CHANGELOG[0]
 // Versión que se muestra en la app. Si un parche pequeño (1.0.x) no lleva notas en el changelog, igual se sube este número a mano.
-export const APP_VERSION = '1.8.0'
+export const APP_VERSION = '1.9.0'

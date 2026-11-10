@@ -198,6 +198,7 @@ function PersonalizarContent() {
       dirty={dirtyColors || dirtyLook}
       onSave={save}
       onBuy={buyTrying}
+      onApplyLook={(patch) => setLook((l) => ({ ...l, ...patch }))}
       onDiscard={() => { setDraft(saved); setLook(savedLook) }}
       onClearTrial={() => setLook(savedLook)}
       rain={rain}

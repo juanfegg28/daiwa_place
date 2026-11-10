@@ -108,7 +108,7 @@ export default function ClubManage({
     let bannerUrl = club.banner_url
     if (avatarFile) {
       const path = `${userId}/club-${club.id}-avatar.jpg`
-      const { error } = await supabase.storage.from('avatars').upload(path, avatarFile, { upsert: true })
+      const { error } = await supabase.storage.from('avatars').upload(path, avatarFile, { upsert: true, cacheControl: '31536000' })
       if (error) {
         setInfoMsg('No se pudo subir la foto: ' + error.message)
         setSavingInfo(false)
@@ -118,7 +118,7 @@ export default function ClubManage({
     }
     if (bannerFile) {
       const path = `${userId}/club-${club.id}-banner.jpg`
-      const { error } = await supabase.storage.from('avatars').upload(path, bannerFile, { upsert: true })
+      const { error } = await supabase.storage.from('avatars').upload(path, bannerFile, { upsert: true, cacheControl: '31536000' })
       if (error) {
         setInfoMsg('No se pudo subir el banner: ' + error.message)
         setSavingInfo(false)

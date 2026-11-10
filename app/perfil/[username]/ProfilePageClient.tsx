@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import ProfileHero from './ProfileHero'
+import ShowcaseSection from '../../components/showcase/ShowcaseSection'
 import ProfileStatus from '../../components/ProfileStatus'
 import ProfileCard from '../../components/cosmetics/ProfileCard'
 import IdentitySeal from '../../components/IdentitySeal'
@@ -18,7 +19,7 @@ import { GraduationCapIcon, CalendarIcon, HeartIcon, BlockIcon } from '../../com
 import type { ClubMembershipTag } from '../../lib/clubs'
 import MusicChip from '../../components/MusicChip'
 import { normalizeTrack } from '../../lib/music'
-import { PROFILE_POST_SELECT, attachCosmetics, fetchFeedItems } from '../../lib/queries'
+import { PROFILE_POST_SELECT, PROFILE_POST_SELECT_CORE, attachCosmetics, fetchFeedItems, fetchPostsByIds } from '../../lib/queries'
 import { formatIdentityDetail, identityField, isCommonIdentity } from '../../lib/identities'
 import { SparklesIcon } from '../../components/icons'
 import type { AuthorProfile, FeedItem, Post, RoleBadgeInfo } from '../../lib/types'
@@ -30,6 +31,8 @@ import {
 // El kit de diseños solo se descarga si la persona lleva fondo o efecto de entrada
 const ProfileBackground = dynamic(() => import('../../components/cosmetics/cosmetics').then((m) => m.ProfileBackground), { ssr: false })
 const EntryEffect = dynamic(() => import('../../components/cosmetics/cosmetics').then((m) => m.EntryEffect), { ssr: false })
+
+type ProfileStats = { followers: number; following: number; posts: number; i_follow: boolean; follows_me: boolean; i_blocked: boolean; blocked_me: boolean }
 
 type Profile = {
   id: string
@@ -46,6 +49,8 @@ type Profile = {
   is_frozen: boolean
   posts_visibility: 'public' | 'followers'
   pinned_post_id?: string | null
+  /** v1.9.0 · tiene vitrina activada (solo entonces se pide) */
+  has_showcase?: boolean
   created_at: string
   // v1.3.0: personalización gratis
   profile_color?: string | null
@@ -92,13 +97,19 @@ function EntryOverlay({ effect, allowReplay }: { effect: Equip; allowReplay: boo
 
 // Lista clásica (sin compartidos): solo se usa si todavía no se corrió el SQL de la v1.1.10
 async function loadLegacyProfilePosts(profileId: string, limit: number) {
-  const { data, error } = await supabase
-    .from('posts')
-    .select(PROFILE_POST_SELECT)
-    .eq('user_id', profileId)
-    .order('created_at', { ascending: false })
-    .limit(limit + 1)
+  const run = (sel: string) =>
+    supabase.from('posts').select(sel).eq('user_id', profileId).order('created_at', { ascending: false }).limit(limit + 1)
+  let { data, error } = await run(PROFILE_POST_SELECT)
+  if (error) ({ data, error } = await run(PROFILE_POST_SELECT_CORE)) // sin el SQL de la 1.9.0
   return { posts: (data as unknown as Post[]) ?? [], error: error?.message ?? '' }
+}
+
+// La publicación fijada (con respaldo si todavía no se corrió el SQL de la 1.9.0)
+async function loadPinnedPost(profileId: string, id: string) {
+  const run = (sel: string) => supabase.from('posts').select(sel).eq('id', id).eq('user_id', profileId).maybeSingle()
+  let res = await run(PROFILE_POST_SELECT)
+  if (res.error) res = await run(PROFILE_POST_SELECT_CORE)
+  return res
 }
 
 export default function ProfilePageClient() {
@@ -140,16 +151,19 @@ function ProfileContent() {
   const [loadingMorePosts, setLoadingMorePosts] = useState(false)
 
   // `pinned` = id de la publicación fijada del perfil (por defecto, la que ya tiene cargada el perfil)
-  const loadPosts = async (profileId: string, pinned: string | null) => {
+  // v1.9.0 · `known`: lo que ya está en pantalla no se vuelve a descargar («Ver más» solo trae lo nuevo);
+  // `total`: si ya se sabe el total de publicaciones (viene en profile_stats) no se pide otra vez
+  const loadPosts = async (profileId: string, pinned: string | null, known?: Map<string, Post>, total?: number) => {
     // Publicaciones + compartidos de esta persona, mezclados del más nuevo al más viejo (feed_items).
     // Si falta el SQL de la v1.1.10, se usa la lista de siempre (sin compartidos).
-    const [feed, { count }, { data: pinnedData }] = await Promise.all([
-      fetchFeedItems('profile', postsLimit.current, profileId, (l) => loadLegacyProfilePosts(profileId, l)),
-      supabase.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', profileId).is('club_id', null),
-      pinned
-        ? supabase.from('posts').select(PROFILE_POST_SELECT).eq('id', pinned).eq('user_id', profileId).maybeSingle()
-        : Promise.resolve({ data: null }),
+    const [feed, countRes, { data: pinnedData }] = await Promise.all([
+      fetchFeedItems('profile', postsLimit.current, profileId, (l) => loadLegacyProfilePosts(profileId, l), false, known),
+      total === undefined
+        ? supabase.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', profileId).is('club_id', null)
+        : Promise.resolve({ count: total }),
+      pinned ? loadPinnedPost(profileId, pinned) : Promise.resolve({ data: null }),
     ])
+    const count = countRes.count
     const pinnedPostRow = (pinnedData as unknown as Post | null) ?? null
     if (pinnedPostRow) await attachCosmetics([pinnedPostRow])
     setPinnedPost(pinnedPostRow)
@@ -174,7 +188,8 @@ function ProfileContent() {
     if (!profile) return
     setLoadingMorePosts(true)
     postsLimit.current += 15
-    await loadPosts(profile.id, profile.pinned_post_id ?? null)
+    const known = new Map<string, Post>(items.map((it) => [it.post.id, it.post] as [string, Post]))
+    await loadPosts(profile.id, profile.pinned_post_id ?? null, known, postsTotal)
     setLoadingMorePosts(false)
   }
 
@@ -186,9 +201,27 @@ function ProfileContent() {
   }, [userId])
   const followKey = useRef('')
 
-  const loadFollowState = async (profileId: string) => {
+  // v1.9.0 · seguidores, seguidos, total de publicaciones, ¿lo sigo?, ¿me sigue? y bloqueos: UNA sola llamada (antes 5-6)
+  const fetchStats = async (profileId: string) => {
+    const { data, error } = await supabase.rpc('profile_stats', { p_user: profileId })
+    return error || !data ? null : (data as ProfileStats)
+  }
+
+  const loadFollowState = async (profileId: string, given?: ProfileStats | null) => {
     const userId = userIdRef.current
     followKey.current = `${userId ?? ''}:${profileId}`
+    const stats = given ?? (await fetchStats(profileId))
+    if (stats) {
+      setFollowersCount(stats.followers ?? 0)
+      setFollowingCount(stats.following ?? 0)
+      const other = !!userId && userId !== profileId
+      setIsFollowing(other && !!stats.i_follow)
+      setFollowsMe(other && !!stats.follows_me)
+      setIBlockedThem(other && !!stats.i_blocked)
+      setTheyBlockedMe(other && !!stats.blocked_me)
+      return
+    }
+    // sin el SQL de la 1.9.0: las consultas de siempre
     const [{ count: followers }, { count: following }] = await Promise.all([
       supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_id', profileId),
       supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', profileId),
@@ -226,7 +259,8 @@ function ProfileContent() {
     // v1.4.0: las columnas de la tienda se piden junto con el perfil; si todavía no se corrió el SQL de la 1.4.0, se reintenta sin ellas
     const BASE_COLS = 'id, username, id_student, bio, music, avatar_url, banner_url, birthday, grado, estado_personal, badge_color, is_frozen, posts_visibility, pinned_post_id, created_at, profile_color, name_color, card_color, card_mode'
     const COS_COLS = `${COSMETIC_MINI_COLS}, ${COSMETIC_PROFILE_COLS}`
-    let res = await supabase.from('profiles').select(`${BASE_COLS}, ${COS_COLS}`).eq('username', usernameParam.toLowerCase()).maybeSingle()
+    let res = await supabase.from('profiles').select(`${BASE_COLS}, has_showcase, ${COS_COLS}`).eq('username', usernameParam.toLowerCase()).maybeSingle()
+    if (res.error) res = await supabase.from('profiles').select(`${BASE_COLS}, ${COS_COLS}`).eq('username', usernameParam.toLowerCase()).maybeSingle()
     if (res.error) res = await supabase.from('profiles').select(BASE_COLS).eq('username', usernameParam.toLowerCase()).maybeSingle()
     const profileData = res.data as unknown as Profile | null
     const profileError = res.error
@@ -268,7 +302,8 @@ function ProfileContent() {
     // v1.3.0: cuenta como «visita» para las misiones (la base de datos ignora las propias y limita el total)
     if (userId && userId !== profileData.id) supabase.rpc('track_profile_visit', { p_user: profileData.id }).then(() => {})
     postsLimit.current = 15
-    await Promise.all([loadPosts(profileData.id, profileData.pinned_post_id ?? null), loadFollowState(profileData.id), loadRoles(), loadClubTags(), loadIdentity(), loadCosmeticExtras()])
+    const stats = await fetchStats(profileData.id)
+    await Promise.all([loadPosts(profileData.id, profileData.pinned_post_id ?? null, undefined, stats?.posts), loadFollowState(profileData.id, stats), loadRoles(), loadClubTags(), loadIdentity(), loadCosmeticExtras()])
     setLoading(false)
   }
 
@@ -289,18 +324,23 @@ function ProfileContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, profile?.id, loading])
 
+  // v1.9.0 · me gusta al instante: se cambia solo esa publicación en pantalla (antes cada like volvía a descargar TODA la lista)
+  const patchPost = (id: string, fn: (p: Post) => Post) => {
+    setItems((l) => l.map((it) => (it.post.id === id ? { ...it, post: fn(it.post) } : it)))
+    setPinnedPost((p) => (p && p.id === id ? fn(p) : p))
+  }
+
   const handleLike = async (post: Post) => {
     if (!userId) {
       router.push('/login')
       return
     }
     const alreadyLiked = post.likes.some((l) => l.user_id === userId)
-    if (alreadyLiked) {
-      await supabase.from('likes').delete().eq('post_id', post.id).eq('user_id', userId)
-    } else {
-      await supabase.from('likes').insert({ post_id: post.id, user_id: userId })
-    }
-    if (profile) loadPosts(profile.id, profile.pinned_post_id ?? null)
+    patchPost(post.id, (p) => ({ ...p, likes: alreadyLiked ? p.likes.filter((l) => l.user_id !== userId) : [...p.likes, { user_id: userId }] }))
+    const { error } = alreadyLiked
+      ? await supabase.from('likes').delete().eq('post_id', post.id).eq('user_id', userId)
+      : await supabase.from('likes').insert({ post_id: post.id, user_id: userId })
+    if (error) patchPost(post.id, () => post)
   }
 
   const handleLikeComment = async (commentId: string, alreadyLiked: boolean) => {
@@ -308,12 +348,25 @@ function ProfileContent() {
       router.push('/login')
       return
     }
-    if (alreadyLiked) {
-      await supabase.from('comment_likes').delete().eq('comment_id', commentId).eq('user_id', userId)
-    } else {
-      await supabase.from('comment_likes').insert({ comment_id: commentId, user_id: userId })
+    const owner = [...items.map((it) => it.post), ...(pinnedPost ? [pinnedPost] : [])].find((p) => p.comments.some((c) => c.id === commentId))
+    if (owner) {
+      patchPost(owner.id, (p) => ({
+        ...p,
+        comments: p.comments.map((c) =>
+          c.id !== commentId ? c : { ...c, comment_likes: alreadyLiked ? c.comment_likes.filter((l) => l.user_id !== userId) : [...c.comment_likes, { user_id: userId }] }
+        ),
+      }))
     }
-    if (profile) loadPosts(profile.id, profile.pinned_post_id ?? null)
+    const { error } = alreadyLiked
+      ? await supabase.from('comment_likes').delete().eq('comment_id', commentId).eq('user_id', userId)
+      : await supabase.from('comment_likes').insert({ comment_id: commentId, user_id: userId })
+    if (error && owner) patchPost(owner.id, () => owner)
+  }
+
+  // vuelve a pedir SOLO una publicación (p. ej. tras comentar)
+  const reloadOnePost = async (postId: string) => {
+    const { posts: fresh } = await fetchPostsByIds([postId])
+    if (fresh[0]) patchPost(postId, () => fresh[0])
   }
 
   const handleAddComment = async (postId: string, text: string, parentCommentId?: string | null) => {
@@ -327,7 +380,7 @@ function ProfileContent() {
       content: text,
       parent_comment_id: parentCommentId ?? null,
     })
-    if (profile) loadPosts(profile.id, profile.pinned_post_id ?? null)
+    await reloadOnePost(postId)
   }
 
   const formatJoinDate = (iso: string) =>
@@ -541,6 +594,9 @@ function ProfileContent() {
 
             {/* Destacadas (v1.2.0) */}
             <HighlightsRow profileId={profile.id} username={profile.username} isOwn={isMyProfile} />
+
+            {/* Vitrina (v1.9.0): opcional; solo se pide si está activada */}
+            <ShowcaseSection profileId={profile.id} isOwn={isMyProfile} hasShowcase={!!profile.has_showcase} userId={userId} />
 
             <div className="space-y-4 mt-4">
               {items.length === 0 && !pinnedPost ? (

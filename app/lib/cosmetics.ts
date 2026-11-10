@@ -61,7 +61,7 @@ export type CatalogItem = {
   custom_hue: boolean
   palettes: string[]
   meta: Record<string, unknown>
-  obtainable: 'tienda' | 'gratis' | 'logro' | 'evento' | 'fundador' | 'exclusivo'
+  obtainable: 'tienda' | 'gratis' | 'logro' | 'evento' | 'fundador' | 'exclusivo' | 'supporter'
   release_version: string
   owned: boolean
   /** v1.5.0 · `price` ya es el precio VIGENTE (con oferta si la hay); `base_price` es el de lista. */
@@ -347,6 +347,7 @@ export function howToGet(it: Pick<CatalogItem, 'obtainable' | 'meta'>): string {
   if (it.obtainable === 'fundador') return 'Solo para cuentas de la beta (Pack Fundador)'
   if (it.obtainable === 'logro') return 'Se consigue con un logro'
   if (it.obtainable === 'evento') return 'Se consigue en un evento'
+  if (it.obtainable === 'supporter') return 'Exclusiva de miembros del Círculo Lunar'
   if (it.obtainable === 'exclusivo') return 'Exclusivo de @renshsh (usuario fundador)'
   return ''
 }

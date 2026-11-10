@@ -5,7 +5,9 @@ import { useCallback, useEffect, useState } from 'react'
 import AppShell, { useAppSession } from '../components/AppShell'
 import Logo from '../components/Logo'
 import MoonArt from '../components/supporters/MoonArt'
+import DecoStrip, { MEMBER_DECOS } from '../components/supporters/DecoStrip'
 import PayPalSubscribe from '../components/supporters/PayPalSubscribe'
+import SupporterTabs from '../components/supporters/SupporterTabs'
 import ManualPayment from '../components/supporters/ManualPayment'
 import ManualSteps from '../components/supporters/ManualSteps'
 import ColombiaNotice, { looksColombian } from '../components/supporters/ColombiaNotice'
@@ -88,6 +90,7 @@ function ApoyarContent({ userId }: { userId: string | null }) {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 sm:py-12">
+      <SupporterTabs active="planes" signedIn={!!userId} />
       <section className="text-center max-w-2xl mx-auto">
         <p className="text-[12px] tracking-[0.25em] uppercase text-violet-300/80">Apoya a DaiwaPlace</p>
         <h1 className="font-display text-4xl sm:text-6xl font-semibold mt-2 bg-gradient-to-b from-white to-neutral-400 bg-clip-text text-transparent">Círculo Lunar</h1>
@@ -140,6 +143,10 @@ function ApoyarContent({ userId }: { userId: string | null }) {
                   </li>
                 ))}
               </ul>
+              <div className="mt-4">
+                <p className="text-[11px] uppercase tracking-wide text-neutral-400 mb-1">Decoraciones de este nivel · 10 paletas cada una</p>
+                <DecoStrip decos={MEMBER_DECOS[k]} offset={t.rank * 2} />
+              </div>
               <div className="mt-6">
                 <p className="text-2xl font-semibold text-neutral-50">${t.priceUsd} <span className="text-sm font-normal text-neutral-400">USD / mes</span></p>
                 {hideButtons ? (

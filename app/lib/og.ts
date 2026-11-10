@@ -4,6 +4,7 @@
 // se devuelve la tarjeta genérica del sitio para que Discord no muestre nada privado.
 import type { Metadata } from 'next'
 import { createClient } from '@supabase/supabase-js'
+import { unstable_cache } from 'next/cache'
 
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://daiwaplace.vercel.app'
 export const SITE_NAME = 'DaiwaPlace'
@@ -50,14 +51,50 @@ export function genericCard(path = '/'): Metadata {
   return card({ title: SITE_NAME, description: SITE_DESCRIPTION, path })
 }
 
+// v1.9.0 · Ahorro: cada visita a /post, /perfil o /clubes pedía a Supabase los datos de la vista previa (para Discord, WhatsApp…),
+// aunque quien entraba fuera una persona y no un rastreador. Ahora el resultado se guarda 5 minutos en el servidor de Vercel:
+// las visitas repetidas no tocan Supabase (menos egress, menos registros y menos funciones).
+type PostRow = { author_name: string; author_username: string; content: string; image_url: string | null }
+type ProfileRow = { display_name: string; username: string; bio: string | null; avatar_url: string | null }
+type ClubRow = { name: string; kind: 'club' | 'pandilla'; description: string | null; banner_url: string | null; avatar_url: string | null }
+
+const OG_TTL = 300
+const ogPostRow = unstable_cache(
+  async (id: string): Promise<PostRow | null> => {
+    const sb = serverClient()
+    if (!sb) return null
+    const { data } = await sb.rpc('og_post', { p_id: id })
+    return ((data as PostRow[] | null)?.[0]) ?? null
+  },
+  ['og-post-v1'],
+  { revalidate: OG_TTL }
+)
+const ogProfileRow = unstable_cache(
+  async (username: string): Promise<ProfileRow | null> => {
+    const sb = serverClient()
+    if (!sb) return null
+    const { data } = await sb.rpc('og_profile', { p_username: username })
+    return ((data as ProfileRow[] | null)?.[0]) ?? null
+  },
+  ['og-profile-v1'],
+  { revalidate: OG_TTL }
+)
+const ogClubRow = unstable_cache(
+  async (slug: string): Promise<ClubRow | null> => {
+    const sb = serverClient()
+    if (!sb) return null
+    const { data } = await sb.rpc('og_club', { p_slug: slug })
+    return ((data as ClubRow[] | null)?.[0]) ?? null
+  },
+  ['og-club-v1'],
+  { revalidate: OG_TTL }
+)
+
 export async function postCard(id: string): Promise<Metadata> {
   const path = `/post/${id}`
   try {
     if (!/^[0-9a-f-]{36}$/i.test(id)) return genericCard(path)
-    const sb = serverClient()
-    if (!sb) return genericCard(path)
-    const { data } = await sb.rpc('og_post', { p_id: id })
-    const row = (data as { author_name: string; author_username: string; content: string; image_url: string | null }[] | null)?.[0]
+    const row = await ogPostRow(id)
     if (!row) return genericCard(path)
     return card({
       title: `${row.author_name} en ${SITE_NAME}`,
@@ -74,10 +111,7 @@ export async function postCard(id: string): Promise<Metadata> {
 export async function profileCard(username: string): Promise<Metadata> {
   const path = `/perfil/${username}`
   try {
-    const sb = serverClient()
-    if (!sb) return genericCard(path)
-    const { data } = await sb.rpc('og_profile', { p_username: decodeURIComponent(username) })
-    const row = (data as { display_name: string; username: string; bio: string | null; avatar_url: string | null }[] | null)?.[0]
+    const row = await ogProfileRow(decodeURIComponent(username))
     if (!row) return genericCard(path)
     return card({
       title: `${row.display_name} (@${row.username}) · ${SITE_NAME}`,
@@ -94,10 +128,7 @@ export async function profileCard(username: string): Promise<Metadata> {
 export async function clubCard(slug: string): Promise<Metadata> {
   const path = `/clubes/${slug}`
   try {
-    const sb = serverClient()
-    if (!sb) return genericCard(path)
-    const { data } = await sb.rpc('og_club', { p_slug: decodeURIComponent(slug) })
-    const row = (data as { name: string; kind: 'club' | 'pandilla'; description: string | null; banner_url: string | null; avatar_url: string | null }[] | null)?.[0]
+    const row = await ogClubRow(decodeURIComponent(slug))
     if (!row) return genericCard(path)
     const kind = row.kind === 'pandilla' ? 'Pandilla' : 'Club'
     return card({

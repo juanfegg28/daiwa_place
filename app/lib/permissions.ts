@@ -26,6 +26,7 @@ export const PERMISSION_KEYS = [
   'adjust_coins',
   'moderate_cosmetics',
   'manage_supporters',
+  'manage_events',
 ] as const
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number]
@@ -104,6 +105,11 @@ export const PERMISSION_INFO: Record<PermissionKey, { label: string; level: Perm
     label: 'Administrar Supporters (Círculo Lunar)',
     level: 3,
     description: 'Ve las membresías y los pagos, aprueba o rechaza pagos manuales de PayPal.Me y da o quita membresías con motivo. Todo queda registrado. No da ningún acceso a información privada.',
+  },
+  manage_events: {
+    label: 'Organizar eventos oficiales',
+    level: 2,
+    description: 'Crea, edita y cancela eventos oficiales del calendario (y modera los de los clubes). Cada evento nuevo avisa a la comunidad. No da ningún acceso a información privada.',
   },
   reveal_whisper_authors: {
     label: 'Ver quién escribió un susurro anónimo',

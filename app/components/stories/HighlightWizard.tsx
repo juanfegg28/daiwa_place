@@ -220,7 +220,7 @@ export default function HighlightWizard({
       else if (src) {
         const blob = await bakeCover(src, crop)
         const path = `${userId}/${newId()}.jpg`
-        const up = await supabase.storage.from(COVER_BUCKET).upload(path, blob, { contentType: 'image/jpeg', upsert: false })
+        const up = await supabase.storage.from(COVER_BUCKET).upload(path, blob, { contentType: 'image/jpeg', upsert: false, cacheControl: '31536000' })
         if (up.error) throw new Error(friendlyStoryError(up.error.message))
         cover = { type: 'image', url: supabase.storage.from(COVER_BUCKET).getPublicUrl(path).data.publicUrl }
       } else if (keepOldCover && editing) cover = editing.cover

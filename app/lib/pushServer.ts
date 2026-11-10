@@ -82,6 +82,9 @@ type NotifRow = {
   whisper_comment_id: string | null
   club_request_id: string | null
   club_id: string | null
+  /** v1.9.0 · solo en los avisos de eventos (la ruta los carga aparte) */
+  event_id?: string | null
+  event_title?: string | null
 }
 
 /** Texto y enlace de un aviso. En el Muro de los Susurros NUNCA se nombra a nadie (puede ser anónimo). */
@@ -111,6 +114,8 @@ export function notificationText(n: NotifRow, actorName: string, recipientUserna
     case 'club_declined': return { title: 'DaiwaPlace', body: 'Tu solicitud de club no fue aprobada', url: '/clubes', tag }
     case 'club_join_request': return { title: who, body: 'quiere unirse a tu club', url: clubSlug ? `/clubes/${clubSlug}` : '/clubes', tag }
     case 'club_join_accepted': return { title: 'DaiwaPlace', body: 'Te aceptaron en un club 🎉', url: clubSlug ? `/clubes/${clubSlug}` : '/clubes', tag }
+    case 'event_new': return { title: who, body: n.event_title ? `organizó un evento: «${short(n.event_title, 70)}»` : 'organizó un evento', url: n.event_id ? `/eventos?e=${n.event_id}` : '/eventos', tag: `n-event-${n.event_id || n.id}` }
+    case 'event_reminder': return { title: 'Tu evento empieza pronto', body: n.event_title ? `«${short(n.event_title, 80)}» empieza en menos de una hora` : 'Empieza en menos de una hora', url: n.event_id ? `/eventos?e=${n.event_id}` : '/eventos', tag: `n-event-rem-${n.event_id || n.id}` }
     default: return { title: 'DaiwaPlace', body: 'Tienes un aviso nuevo', url: '/notificaciones', tag }
   }
 }
