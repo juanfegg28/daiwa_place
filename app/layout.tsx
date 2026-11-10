@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Cinzel } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { THEME_INIT_SCRIPT } from "./lib/theme";
 import MusicProvider from './components/MusicProvider'
@@ -17,11 +17,11 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const cinzel = Cinzel({
-  variable: "--font-cinzel",
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
-});
+// v1.9.0 · arreglo de despliegue: Cinzel YA NO se pide con next/font/google. Con Turbopack (Next 16) el build de Vercel
+// fallaba con «next/font/google queries have exactly one entry» / «Can't resolve @vercel/turbopack-next/internal/font/google/font»
+// al procesar los archivos de esta fuente. Ahora se carga con un <link> a Google Fonts (ver <head>, mismos pesos 500/600/700)
+// y la variable --font-cinzel se define en globals.css (es la misma que usaban `font-display`, las historias y los stickers).
+const CINZEL_CSS = "https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&display=swap";
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -54,11 +54,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="es"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} ${cinzel.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
         {/* Aplica el modo claro/oscuro y el acento guardados ANTES de pintar, para no parpadear */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        {/* Cinzel (títulos): se carga desde Google Fonts en el navegador, no durante el build */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="stylesheet" href={CINZEL_CSS} />
         {/* v1.4.0: animaciones de decoraciones, tarjetas y fondos de la tienda (solo lo lanzado) */}
         <CosmeticsStyles />
       </head>

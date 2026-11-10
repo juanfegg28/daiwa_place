@@ -3,6 +3,9 @@
 :root {
   --background: #0c0c0f;
   --foreground: #f2f1ef;
+  /* v1.9.0 · Cinzel ya no sale de next/font/google (rompía el build con Turbopack): la hoja de Google Fonts se enlaza en
+     app/layout.tsx y aquí se deja la variable que usan `font-display`, las historias y los stickers. */
+  --font-cinzel: "Cinzel", "Times New Roman", Georgia, serif;
 }
 
 /* @theme (sin "inline") para que los colores queden como var(--color-x) en las
