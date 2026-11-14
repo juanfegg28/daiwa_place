@@ -49,17 +49,22 @@ function SusurroDetalle() {
     if (!sessionLoading && !userId) router.push('/login')
   }, [sessionLoading, userId, router])
 
-  const load = useCallback(async () => {
+  // v1.10.0 · `full` = carga completa (entrar a la página o tras una acción tuya): comprueba que los susurros sigan activos y trae tus reportes.
+  // Las renovaciones automáticas (cada 90 s) pasan `full = false` y solo piden el susurro y sus comentarios: 2 peticiones en vez de 4
+  // (tus reportes solo cambian por lo que tú hagas aquí, y se actualizan en pantalla al instante).
+  const load = useCallback(async (full = true) => {
     if (!whisperId) return
-    const { data: on } = await supabase.rpc('whispers_enabled')
-    if (on === false) {
-      setState('paused')
-      return
+    if (full) {
+      const { data: on } = await supabase.rpc('whispers_enabled')
+      if (on === false) {
+        setState('paused')
+        return
+      }
     }
     const [{ data: w, error: wErr }, { data: cs, error: cErr }, reports] = await Promise.all([
       supabase.from('whispers').select(WHISPER_SELECT).eq('id', whisperId).maybeSingle(),
       supabase.from('whisper_comments').select(COMMENT_SELECT).eq('whisper_id', whisperId).order('created_at', { ascending: true }),
-      loadMyReports(),
+      full ? loadMyReports() : Promise.resolve(null),
     ])
     if (wErr || cErr) {
       setNotice(friendlyWhisperError((wErr ?? cErr)?.message))
@@ -72,19 +77,21 @@ function SusurroDetalle() {
     }
     setWhisper(w as unknown as WhisperItem)
     setComments((cs as unknown as WhisperComment[]) ?? [])
-    setReportedWhispers(reports.whispers)
-    setReportedComments(reports.comments)
+    if (reports) {
+      setReportedWhispers(reports.whispers)
+      setReportedComments(reports.comments)
+    }
     setState('ready')
   }, [whisperId])
 
   useEffect(() => {
     if (!userId) return
-    function run() {
-      load()
+    function run(full: boolean) {
+      void load(full)
     }
-    run()
-    // v1.6.3 · cada 90 s (antes 30 s), solo si estás mirando y activo, y al volver a la pestaña
-    const stop = startPoll(run, ECO.whisperThreadMs)
+    run(true)
+    // v1.6.3 · cada 90 s (antes 30 s), solo si estás mirando y activo, y al volver a la pestaña. v1.10.0: la renovación pide solo lo que cambia.
+    const stop = startPoll(() => run(false), ECO.whisperThreadMs)
     return () => stop()
   }, [userId, load])
 

@@ -6,7 +6,11 @@
 
 export type ThemeMode = 'dark' | 'light'
 
+// v1.10.0 · El acento predeterminado pasa a ser «Faded Iris» (#4e3559). Quien no eligió color (accent_color = null) lo ve; quien eligió
+// otro (incluido Granate, que ahora se guarda explícito) lo conserva. La rampa del predeterminado está afinada a mano en globals.css
+// (contraste revisado en claro y oscuro); el resto de colores se calculan con hexToAccentShades().
 export const ACCENT_PRESETS: { name: string; hex: string }[] = [
+  { name: 'Faded Iris', hex: '#4e3559' },
   { name: 'Granate', hex: '#c81b3e' },
   { name: 'Azul', hex: '#2563eb' },
   { name: 'Morado', hex: '#7c3aed' },
@@ -18,6 +22,8 @@ export const DEFAULT_ACCENT = ACCENT_PRESETS[0].hex
 
 const THEME_STORAGE_KEY = 'daiwa-theme'
 const ACCENT_STORAGE_KEY = 'daiwa-accent'
+/** Rampa ya calculada (JSON {300..700}) para que el script del <head> pinte TODO el acento antes del primer frame (antes solo fijaba el 500) */
+const ACCENT_RAMP_STORAGE_KEY = 'daiwa-accent-ramp'
 
 export function isValidHex(hex: string): boolean {
   return /^#[0-9a-fA-F]{6}$/.test(hex)
@@ -112,7 +118,9 @@ export function applyTheme(mode: ThemeMode, accentHex?: string | null) {
   root.dataset.theme = mode
   root.style.colorScheme = mode
 
-  const clean = accentHex && isValidHex(accentHex) ? accentHex : null
+  // El acento predeterminado (Faded Iris) NO se sobrescribe: usa la rampa afinada de globals.css (claro y oscuro)
+  const isDefault = !!accentHex && accentHex.toLowerCase() === DEFAULT_ACCENT.toLowerCase()
+  const clean = accentHex && isValidHex(accentHex) && !isDefault ? accentHex : null
   const shades = clean ? hexToAccentShades(clean) : null
 
   const entries: [string, string | null][] = [
@@ -129,12 +137,21 @@ export function applyTheme(mode: ThemeMode, accentHex?: string | null) {
 
   try {
     localStorage.setItem(THEME_STORAGE_KEY, mode)
-    if (clean) localStorage.setItem(ACCENT_STORAGE_KEY, clean)
-    else localStorage.removeItem(ACCENT_STORAGE_KEY)
+    if (clean && shades) {
+      localStorage.setItem(ACCENT_STORAGE_KEY, clean)
+      localStorage.setItem(ACCENT_RAMP_STORAGE_KEY, JSON.stringify(shades))
+    } else {
+      localStorage.removeItem(ACCENT_STORAGE_KEY)
+      localStorage.removeItem(ACCENT_RAMP_STORAGE_KEY)
+    }
   } catch {
     // localStorage puede fallar (modo privado); simplemente no se cachea
   }
 }
 
-/** Script para <head>: aplica el tema guardado ANTES de pintar, para evitar el parpadeo. */
-export const THEME_INIT_SCRIPT = `(function(){try{var m=localStorage.getItem('${THEME_STORAGE_KEY}');var a=localStorage.getItem('${ACCENT_STORAGE_KEY}');var r=document.documentElement;if(m==='light'){r.dataset.theme='light';r.style.colorScheme='light';}if(a){r.style.setProperty('--color-garnet-500',a);}}catch(e){}})();`
+/**
+ * Script para <head>: aplica el tema guardado ANTES de pintar, para evitar el parpadeo.
+ * v1.10.0: ahora fija las 5 variables del acento personalizado (antes solo la 500, y el resto «saltaba» al hidratar).
+ * Sin acento guardado no toca nada: se ve el predeterminado Faded Iris de globals.css.
+ */
+export const THEME_INIT_SCRIPT = `(function(){try{var d=document.documentElement,m=localStorage.getItem('${THEME_STORAGE_KEY}'),r=localStorage.getItem('${ACCENT_RAMP_STORAGE_KEY}'),h=/^#[0-9a-fA-F]{6}$/;if(m==='light'){d.dataset.theme='light';d.style.colorScheme='light';}if(r){var s=JSON.parse(r),k=['300','400','500','600','700'];for(var i=0;i<5;i++){if(h.test(s[k[i]]))d.style.setProperty('--color-garnet-'+k[i],s[k[i]]);}}else{var a=localStorage.getItem('${ACCENT_STORAGE_KEY}');if(a&&h.test(a))d.style.setProperty('--color-garnet-500',a);}}catch(e){}})();`

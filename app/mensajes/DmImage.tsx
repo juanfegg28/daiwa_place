@@ -71,7 +71,7 @@ export default function DmImage({ message, mine }: { message: DmMessage; mine: b
       >
         {url && !failed ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} alt="Foto" draggable={false} className="absolute inset-0 w-full h-full object-cover select-none" onError={() => setFailed(true)} />
+          <img src={url} alt="Foto" draggable={false} loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover select-none" onError={() => setFailed(true)} />
         ) : (
           <span className="absolute inset-0 flex items-center justify-center text-xs text-neutral-500 px-3 text-center">
             {failed ? 'No se pudo cargar la foto' : 'Cargando foto...'}

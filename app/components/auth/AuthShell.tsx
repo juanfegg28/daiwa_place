@@ -55,7 +55,7 @@ export default function AuthShell({ children }: { children: ReactNode }) {
           <div role="tablist" aria-label="Acceso" className="relative mb-7 grid grid-cols-2 rounded-2xl border border-white/10 bg-ink-950/50 p-1">
             <span
               aria-hidden="true"
-              className={`absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] rounded-xl bg-garnet-600 shadow-[0_8px_22px_-8px_rgba(214,40,72,0.8)] transition-transform duration-300 ease-out ${
+              className={`absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] rounded-xl bg-garnet-600 shadow-[0_8px_22px_-8px_color-mix(in_srgb,var(--color-garnet-500)_80%,transparent)] transition-transform duration-300 ease-out ${
                 mode === 'register' ? 'translate-x-full' : ''
               }`}
             />

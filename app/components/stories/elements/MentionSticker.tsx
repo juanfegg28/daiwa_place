@@ -15,7 +15,7 @@ export default function MentionSticker({ el }: { el: StoryMention }) {
   const common: CSSProperties = { fontFamily: font, maxWidth: '88cqw', width: 'max-content', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
 
   if (el.style === 'glass') {
-    const glassBg = el.theme === 'dark' ? 'rgba(0,0,0,.55)' : el.theme === 'accent' ? 'rgba(163,18,46,.5)' : 'rgba(255,255,255,.18)'
+    const glassBg = el.theme === 'dark' ? 'rgba(0,0,0,.55)' : el.theme === 'accent' ? 'rgba(78,53,89,.62)' : 'rgba(255,255,255,.18)'
     return (
       <div data-story-mention={el.username} style={{ ...common, color: '#fff', background: glassBg, backdropFilter: 'blur(18px) saturate(1.4)', border: '1px solid rgba(255,255,255,.28)', borderRadius: '99px', padding: '2cqw 5cqw', fontSize: '4.4cqw', fontWeight: 700, textShadow: '0 1px 1px rgba(0,0,0,.3)' }}>
         {label}
@@ -24,7 +24,7 @@ export default function MentionSticker({ el }: { el: StoryMention }) {
   }
 
   if (el.style === 'neon') {
-    const glow = el.theme === 'accent' ? '#F38BA0' : el.theme === 'dark' ? '#38BDF8' : '#FFFFFF'
+    const glow = el.theme === 'accent' ? '#C8BBE9' : el.theme === 'dark' ? '#38BDF8' : '#FFFFFF'
     return (
       <div data-story-mention={el.username} style={{ ...common, color: '#fff', fontSize: '6cqw', fontWeight: 800, letterSpacing: '0.02em', padding: '1.5cqw 3cqw', textShadow: `0 0 1.2cqw ${glow}, 0 0 3cqw ${glow}, 0 0 6cqw ${glow}` }}>
         {label}

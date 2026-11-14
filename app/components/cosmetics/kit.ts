@@ -4,6 +4,7 @@
 // Aquí se aplican las reglas de la integración: guardia de versiones, caché, y los arreglos del adaptador de referencia.
 // Los diseños devuelven texto SVG/HTML generado por NUESTRO código; lo que escribe la gente se escapa dentro del kit.
 // (sin comprobación de tipos: el kit es JavaScript puro)
+import { LIGHT_CARD_SLUGS } from './lightCards'
 import { AVATAR_DECOS, COLLECTIONS as DECO_COLLECTIONS } from './_kit/avatar/index.js'
 import './_kit/members/register.js' // v1.7.3: lo exclusivo de miembros se registra aquí
 import { renderLayers } from './_kit/avatar/render.js'
@@ -186,6 +187,12 @@ export function skinPartsFor(slug: string, palette?: string, hue = 0): { slug: s
 }
 /** ¿La tarjeta es clara? (su texto es oscuro: el color de nombre elegido para tema oscuro no sirve ahí) */
 export const cardTone = (slug: string): string => cardBySlug(slug)?.tone ?? 'dark'
+// v1.10.0 · el Perfil usa la lista corta de lightCards.ts (sin cargar este archivo); en desarrollo se verifica que siga igual que el kit
+if (process.env.NODE_ENV !== 'production') {
+  for (const c of CARDS) {
+    if ((c.tone === 'light') !== LIGHT_CARD_SLUGS.has(c.slug)) console.error(`[kit] La tarjeta «${c.slug}» tiene tono «${c.tone}» pero lightCards.ts no coincide: actualiza LIGHT_CARD_SLUGS.`)
+  }
+}
 
 // ───────── Paletas y listas por tipo (tienda, inventario, estudio y galería) ─────────
 const LISTS: Record<string, () => any[]> = {

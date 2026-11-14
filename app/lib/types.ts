@@ -57,6 +57,17 @@ export type Post = {
   poll?: unknown
   /** v1.9.0 · Una fila si TÚ la tienes guardada (RLS solo deja ver las tuyas) */
   saved_posts?: { user_id: string }[] | null
+  /**
+   * v1.10.0 · LISTAS LIGERAS. En el Inicio y el perfil la publicación llega sin la lista completa de likes ni de comentarios
+   * (eso era lo que más datos movía): `likes`/`reposts` traen solo TU fila, `comments` viene vacío y los contadores salen de la tabla post_counters.
+   * Cuando abres los comentarios se piden en ese momento (lib/queries.ts → fetchPostComments). Si falta el SQL de la 1.10.0
+   * estos campos no existen y todo funciona como en la 1.9.0 (se usan las longitudes de los arreglos).
+   */
+  likes_count?: number
+  comments_count?: number
+  reposts_count?: number
+  /** false = los comentarios todavía no se pidieron (se cargan al abrirlos). undefined/true = ya están en `comments`. */
+  comments_loaded?: boolean
   comments: Comment[]
 }
 

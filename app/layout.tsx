@@ -1,27 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { THEME_INIT_SCRIPT } from "./lib/theme";
 import MusicProvider from './components/MusicProvider'
 import CosmeticsStyles from './components/cosmetics/CosmeticsStyles'
 import PwaRegister from './components/PwaRegister'
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, DEFAULT_OG_IMAGE } from './lib/og'
+import { geistSans, geistMono, cinzel } from './lib/fonts'
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-// v1.9.0 · arreglo de despliegue: Cinzel YA NO se pide con next/font/google. Con Turbopack (Next 16) el build de Vercel
-// fallaba con «next/font/google queries have exactly one entry» / «Can't resolve @vercel/turbopack-next/internal/font/google/font»
-// al procesar los archivos de esta fuente. Ahora se carga con un <link> a Google Fonts (ver <head>, mismos pesos 500/600/700)
-// y la variable --font-cinzel se define en globals.css (es la misma que usaban `font-display`, las historias y los stickers).
-const CINZEL_CSS = "https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&display=swap";
+// v1.10.0 · Geist, Geist Mono y Cinzel ahora se alojan en el propio proyecto con next/font/local (ver app/lib/fonts.ts y app/fonts/LICENCIAS.md):
+// sin pedir nada a Google ni al compilar ni en el navegador. Se conserva la corrección de la v1.9.0 (Cinzel NO usa next/font/google).
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -54,15 +41,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="es"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${cinzel.variable} h-full antialiased`}
     >
       <head>
         {/* Aplica el modo claro/oscuro y el acento guardados ANTES de pintar, para no parpadear */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-        {/* Cinzel (títulos): se carga desde Google Fonts en el navegador, no durante el build */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link rel="stylesheet" href={CINZEL_CSS} />
         {/* v1.4.0: animaciones de decoraciones, tarjetas y fondos de la tienda (solo lo lanzado) */}
         <CosmeticsStyles />
       </head>

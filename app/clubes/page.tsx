@@ -1,5 +1,6 @@
 'use client'
 
+import ScrollCarousel from '../components/ScrollCarousel'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '../lib/supabaseClient'
@@ -224,13 +225,13 @@ function ClubesContent() {
                 ) : clubs.length === 0 ? (
                   <p className="text-xs text-neutral-500">{clubsError || 'Todavía no hay clubes. ¡Sé el primero en pedir el tuyo!'}</p>
                 ) : (
-                  <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x">
+                  <ScrollCarousel label="Clubes y pandillas" prevLabel="Ver clubes anteriores" nextLabel="Ver más clubes" className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 snap-x">
                     {clubs.map((c) => (
                       <div key={c.id} className="snap-start">
                         <ClubCard club={c} variant="tile" />
                       </div>
                     ))}
-                  </div>
+                  </ScrollCarousel>
                 )}
               </section>
 

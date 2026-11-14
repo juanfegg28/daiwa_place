@@ -20,7 +20,7 @@ import { ArchiveIcon, EditIcon, PaletteIcon, PlusIcon, SnowflakeIcon, UsersIcon 
 import type { ClubMembershipTag } from '../../lib/clubs'
 import type { RoleBadgeInfo } from '../../lib/types'
 import { useCosmeticFont, type Equip, type NameStyle } from '../../lib/cosmetics'
-import { cardTone } from '../../components/cosmetics/kit'
+import { cardTone } from '../../components/cosmetics/lightCards'
 
 // El kit de diseños solo se descarga si la persona lleva algo de la tienda
 const SkinCard = dynamic(() => import('../../components/cosmetics/cosmetics').then((m) => m.SkinCard), { ssr: false })

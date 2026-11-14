@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { PAY_METHOD_LABEL, TIERS, TIER_KEYS, tierName, type PayMethod, type TierKey } from '../lib/supporters'
 
@@ -153,8 +153,11 @@ function Subscribers({ onChanged }: { onChanged: () => void }) {
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
 
+  const listSeq = useRef(0) // v1.10.0 · solo cuenta la respuesta de la última búsqueda
   const load = useCallback(async () => {
+    const mine = ++listSeq.current
     const { data, error } = await supabase.rpc('supporter_admin_list', { p_query: q || null, p_limit: 60 })
+    if (mine !== listSeq.current) return
     if (error) setMsg(err(error.message))
     else setRows((data as Sub[]) ?? [])
   }, [q])

@@ -135,7 +135,7 @@ export default function AparienciaTab({
       <section className="surface-card rounded-2xl p-5">
         <h2 className="text-base font-semibold text-neutral-50 mb-1">Color de acento</h2>
         <p className="text-sm text-neutral-500 mb-4">
-          Es el color de los botones y los detalles de toda la página (por defecto, granate). Elige uno de
+          Es el color de los botones y los detalles de toda la página (por defecto, Faded Iris). Elige uno de
           estos o pon el tuyo.
         </p>
         <div className="flex flex-wrap gap-2 mb-4">
@@ -172,7 +172,7 @@ export default function AparienciaTab({
               setCustomHex(v)
               if (isValidHex(v)) setAccent(v)
             }}
-            placeholder="#c81b3e"
+            placeholder="#4e3559"
             className="w-32 bg-ink-900 border border-ink-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-garnet-600"
           />
         </div>

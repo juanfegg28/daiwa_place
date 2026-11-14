@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useRouter } from 'next/navigation'
 import { useAppSession } from '../AppShell'
 import MoonRain from '../economy/MoonRain'
-import ItemSheet from '../cosmetics/ItemSheet'
+import dynamic from 'next/dynamic'
 import { useShopData, type Worn } from '../cosmetics/useShopData'
 import type { PreviewSubject } from '../cosmetics/ItemPreview'
 import { supabase } from '../../lib/supabaseClient'
@@ -12,6 +12,9 @@ import { refreshWallet, subscribeWallet, type WalletSummary } from '../../lib/ec
 import { shopFeaturesActive, shopSalesActive, shopWishToggle, type CatalogItem, type ShopCollection, type ShopFeature, type ShopSale } from '../../lib/cosmetics'
 import { featureItems } from './shopUtil'
 import { allShopKeys, markShopEntered, readSeenTabs, shopKeysFrom, type ShopNoveltyKeys } from '../../lib/novelty'
+
+// v1.10.0 · la hoja de detalle de un objeto (y con ella el kit de cosméticos) se descarga solo cuando abres un objeto
+const ItemSheet = dynamic(() => import('../cosmetics/ItemSheet'), { ssr: false })
 
 export type ShopCtx = {
   userId: string | null

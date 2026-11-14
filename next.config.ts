@@ -20,6 +20,8 @@ const nextConfig: NextConfig = {
     const longCache = [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }];
     return [
       { source: "/icons/:path*", headers: longCache },
+      // v1.10.0 · CSS de cosméticos como archivo (la dirección lleva ?v=hash, así que puede guardarse un año)
+      { source: "/cosmetics.css", headers: longCache },
       { source: "/:file(.*\\.(?:png|jpg|jpeg|webp|svg|ico|woff2))", headers: longCache },
     ];
   },

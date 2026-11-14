@@ -1,11 +1,11 @@
-/* DaiwaPlace · service worker (v1.7.2)
+/* DaiwaPlace · service worker (v1.10.0)
  * Hace dos cosas, nada más:
  *   1) Guarda lo que NO cambia (código con hash, fuentes, íconos) para que la app abra más rápido.
  *   2) Si no hay internet, muestra una pantalla de «sin conexión» en vez del error del navegador.
  * NO guarda páginas, publicaciones, mensajes ni nada que venga de Supabase: lo tuyo siempre se pide al servidor, así que
  * nunca verás datos viejos ni de otra persona.
  *   3) (v1.6.1) Muestra las NOTIFICACIONES push (mensajes y avisos) aunque la app esté cerrada, y las abre al tocarlas. */
-const VERSION = 'v1.9.0'
+const VERSION = 'v1.10.0'
 const CACHE = `daiwa-static-${VERSION}`
 const PRECACHE = ['/offline.html', '/icons/icon-192.png', '/brand-moon.png']
 
@@ -36,7 +36,8 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Código con hash, fuentes e íconos (no cambian): primero lo guardado
-  if (url.pathname.startsWith('/_next/static/') || url.pathname.startsWith('/fonts/') || url.pathname.startsWith('/icons/')) {
+  // (v1.10.0: también /cosmetics.css, cuya dirección lleva un hash del contenido)
+  if (url.pathname.startsWith('/_next/static/') || url.pathname.startsWith('/fonts/') || url.pathname.startsWith('/icons/') || url.pathname === '/cosmetics.css') {
     event.respondWith(
       caches.match(req).then(
         (hit) =>

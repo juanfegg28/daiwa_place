@@ -27,6 +27,7 @@ export const PERMISSION_KEYS = [
   'moderate_cosmetics',
   'manage_supporters',
   'manage_events',
+  'recover_accounts',
 ] as const
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[number]
@@ -110,6 +111,12 @@ export const PERMISSION_INFO: Record<PermissionKey, { label: string; level: Perm
     label: 'Organizar eventos oficiales',
     level: 2,
     description: 'Crea, edita y cancela eventos oficiales del calendario (y modera los de los clubes). Cada evento nuevo avisa a la comunidad. No da ningún acceso a información privada.',
+  },
+  recover_accounts: {
+    label: 'Recuperar cuentas (generar enlaces de acceso)',
+    level: 3,
+    description:
+      'Puede buscar una cuenta y generar un enlace temporal (4 horas, de un solo uso) para que su dueño ponga una contraseña y una palabra secreta nuevas cuando olvidó las dos. Solo debe darse a personas de total confianza: no puede recuperar cuentas del staff. Todo queda en un registro de auditoría.',
   },
   reveal_whisper_authors: {
     label: 'Ver quién escribió un susurro anónimo',

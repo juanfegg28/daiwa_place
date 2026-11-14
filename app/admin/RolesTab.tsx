@@ -116,15 +116,20 @@ export default function RolesTab() {
       clear()
       return
     }
+    // v1.10.0 · si escribes otra letra mientras la búsqueda anterior sigue en camino, su respuesta se descarta
+    let alive = true
     const timer = window.setTimeout(async () => {
       const { data } = await supabase
         .from('profiles')
         .select('id, username, id_student')
         .or(`id_student.ilike.%${q}%,username.ilike.%${q}%`)
         .limit(8)
-      setResults((data as UserSearchResult[]) ?? [])
+      if (alive) setResults((data as UserSearchResult[]) ?? [])
     }, 300)
-    return () => window.clearTimeout(timer)
+    return () => {
+      alive = false
+      window.clearTimeout(timer)
+    }
   }, [query])
 
   const pickUser = async (u: UserSearchResult) => {

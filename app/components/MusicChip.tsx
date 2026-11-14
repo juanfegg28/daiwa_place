@@ -48,7 +48,7 @@ export function PlayButton({
       aria-label={playing ? 'Pausar canción' : 'Escuchar fragmento de la canción'}
       title={disabled ? 'La música está desactivada en Configuración' : disabledNoPreview ? 'Sin vista previa' : undefined}
       className={`relative shrink-0 ${size} rounded-full flex items-center justify-center transition ${
-        blocked ? 'bg-ink-700 text-neutral-500' : 'bg-garnet-600 hover:bg-garnet-500 text-white shadow-[0_3px_10px_-4px_rgba(214,40,72,0.55)]'
+        blocked ? 'bg-ink-700 text-neutral-500' : 'bg-garnet-600 hover:bg-garnet-500 text-white shadow-[0_3px_10px_-4px_color-mix(in_srgb,var(--color-garnet-500)_55%,transparent)]'
       }`}
     >
       <svg viewBox="0 0 44 44" className="absolute inset-0 w-full h-full -rotate-90" aria-hidden="true">

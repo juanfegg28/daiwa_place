@@ -18,7 +18,7 @@ import { hubChannel, hubClose, hubCloseAll, hubJoined, hubOpen } from '../lib/li
 import { loadBootstrap } from '../lib/shellBootstrap'
 import { applyTheme, type ThemeMode } from '../lib/theme'
 import Logo from './Logo'
-import { APP_VERSION } from '../lib/changelog'
+import { APP_VERSION } from '../lib/version'
 import { lockBodyScroll, releaseStaleScrollLocks } from '../lib/scrollLock'
 import { isSupremeAdmin, mergePermissions, type Permissions } from '../lib/permissions'
 import {

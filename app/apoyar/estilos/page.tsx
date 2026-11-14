@@ -10,7 +10,7 @@ import Logo from '../../components/Logo'
 import ItemPreview, { type PreviewSubject } from '../../components/cosmetics/ItemPreview'
 import ProfileMock, { EMPTY_COMBO, type Combo } from '../../components/supporters/ProfileMock'
 import SupporterTabs from '../../components/supporters/SupporterTabs'
-import { palettesOf } from '../../components/cosmetics/kit'
+import { useKit, type Kit } from '../../components/cosmetics/useKit'
 import { CloseIcon } from '../../components/icons'
 import { supabase } from '../../lib/supabaseClient'
 import { cached } from '../../lib/netCache'
@@ -72,7 +72,12 @@ async function loadMyRank(): Promise<number> {
   return m?.active && (m.tier === 'creciente' || m.tier === 'llena' || m.tier === 'eclipse') ? tierRank(m.tier) : 0
 }
 
+const NO_PALETTES: Kit['palettesOf'] = () => []
+
 function Gallery({ me, signedIn }: { me: PreviewSubject & { name: string }; signedIn: boolean }) {
+  // v1.10.0 · el kit (≈650 KB) llega justo después de pintar la página, en vez de estar en el JavaScript inicial
+  const kit = useKit()
+  const palettesOf = kit?.palettesOf ?? NO_PALETTES
   const [tier, setTier] = useState<MemberTier>('creciente')
   const [type, setType] = useState<MemberType | 'all'>('all')
   const [myRank, setMyRank] = useState(0)

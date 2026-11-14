@@ -20,6 +20,10 @@ const watchedFetch: typeof fetch = async (input, init) => {
         if (path && (path.startsWith('rpc/') ? RPC_ACTIONS.test(path) : !IGNORE_TABLES.test(path))) {
           window.dispatchEvent(new Event('daiwa:action'))
         }
+        // v1.10.0 · seguir/dejar de seguir y silenciar/ocultar cambian QUÉ se ve en el Inicio: se descarta la copia en memoria del feed (lib/feedCache.ts)
+        if (path && /^(?:follows|muted_users|rpc\/(?:hide|unhide|mute|unmute)[a-z_]*)$/.test(path)) {
+          window.dispatchEvent(new Event('daiwa:feed-dirty'))
+        }
       }
     }
   } catch {

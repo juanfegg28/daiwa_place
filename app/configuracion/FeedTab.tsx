@@ -1,5 +1,6 @@
 'use client'
 
+import { clearFeedCache } from '../lib/feedCache'
 import Avatar from '../components/cosmetics/Avatar'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -35,6 +36,7 @@ export default function FeedTab({ profile, onUpdate }: { profile: ConfigProfile;
       setMessage(/feed_pref|column|schema cache/i.test(error.message) ? 'Falta correr el SQL de la v1.1.10 en Supabase.' : error.message)
       return
     }
+    clearFeedCache() // v1.10.0 · el Inicio guardado en memoria era de la preferencia anterior
     onUpdate({ ...profile, feed_pref: pref })
     setMessage('Guardado ✓ El Inicio ya usa esta preferencia.')
   }

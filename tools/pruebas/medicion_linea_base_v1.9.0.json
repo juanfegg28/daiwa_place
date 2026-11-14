@@ -1,0 +1,332 @@
+{
+  "generado": "2026-11-10T06:37:26.570Z",
+  "compartidoPorTodas": {
+    "chunks": 8,
+    "raw": 714862,
+    "gzip": 203652,
+    "br": 174366
+  },
+  "totalJsEstatico": {
+    "files": 95,
+    "raw": 3915261,
+    "gzip": 1178433,
+    "br": 1009834
+  },
+  "rutas": [
+    {
+      "route": "/admin",
+      "chunks": 17,
+      "raw": 1880608,
+      "gzip": 529545,
+      "br": 437314
+    },
+    {
+      "route": "/perfil/[username]",
+      "chunks": 19,
+      "raw": 1812530,
+      "gzip": 521336,
+      "br": 432507
+    },
+    {
+      "route": "/personalizar",
+      "chunks": 15,
+      "raw": 1693152,
+      "gzip": 486179,
+      "br": 400996
+    },
+    {
+      "route": "/tienda",
+      "chunks": 16,
+      "raw": 1674945,
+      "gzip": 477312,
+      "br": 392813
+    },
+    {
+      "route": "/tienda/descuentos",
+      "chunks": 16,
+      "raw": 1666545,
+      "gzip": 475177,
+      "br": 390833
+    },
+    {
+      "route": "/dev/tienda",
+      "chunks": 15,
+      "raw": 1664680,
+      "gzip": 474841,
+      "br": 390674
+    },
+    {
+      "route": "/tienda/seleccion/[slug]",
+      "chunks": 16,
+      "raw": 1663777,
+      "gzip": 474352,
+      "br": 390147
+    },
+    {
+      "route": "/tienda/coleccion/[id]",
+      "chunks": 16,
+      "raw": 1663700,
+      "gzip": 474314,
+      "br": 390128
+    },
+    {
+      "route": "/tienda/explorar/[[...tipo]]",
+      "chunks": 15,
+      "raw": 1628146,
+      "gzip": 464190,
+      "br": 381508
+    },
+    {
+      "route": "/tienda/deseos",
+      "chunks": 15,
+      "raw": 1625012,
+      "gzip": 463238,
+      "br": 380698
+    },
+    {
+      "route": "/tienda/colecciones",
+      "chunks": 15,
+      "raw": 1622319,
+      "gzip": 462627,
+      "br": 380174
+    },
+    {
+      "route": "/tienda/inventario",
+      "chunks": 15,
+      "raw": 1621476,
+      "gzip": 462335,
+      "br": 379874
+    },
+    {
+      "route": "/tienda/canjear",
+      "chunks": 15,
+      "raw": 1620128,
+      "gzip": 462027,
+      "br": 379606
+    },
+    {
+      "route": "/apoyar/estilos",
+      "chunks": 13,
+      "raw": 1604718,
+      "gzip": 456123,
+      "br": 374490
+    },
+    {
+      "route": "/dev/closet",
+      "chunks": 14,
+      "raw": 1577303,
+      "gzip": 447936,
+      "br": 367301
+    },
+    {
+      "route": "/dev/cosmeticos",
+      "chunks": 14,
+      "raw": 1552134,
+      "gzip": 439907,
+      "br": 360421
+    },
+    {
+      "route": "/",
+      "chunks": 16,
+      "raw": 1095918,
+      "gzip": 322930,
+      "br": 279473
+    },
+    {
+      "route": "/clubes/[slug]",
+      "chunks": 16,
+      "raw": 1083921,
+      "gzip": 317738,
+      "br": 274810
+    },
+    {
+      "route": "/clubes",
+      "chunks": 15,
+      "raw": 1044738,
+      "gzip": 307765,
+      "br": 266093
+    },
+    {
+      "route": "/guardados",
+      "chunks": 15,
+      "raw": 1033443,
+      "gzip": 304546,
+      "br": 263326
+    },
+    {
+      "route": "/tag/[hashtag]",
+      "chunks": 15,
+      "raw": 1027712,
+      "gzip": 302824,
+      "br": 261743
+    },
+    {
+      "route": "/post/[id]",
+      "chunks": 15,
+      "raw": 1026965,
+      "gzip": 302541,
+      "br": 261479
+    },
+    {
+      "route": "/mensajes/[[...id]]",
+      "chunks": 14,
+      "raw": 1019648,
+      "gzip": 297043,
+      "br": 255995
+    },
+    {
+      "route": "/configuracion",
+      "chunks": 13,
+      "raw": 956209,
+      "gzip": 275840,
+      "br": 237533
+    },
+    {
+      "route": "/susurros/[id]",
+      "chunks": 13,
+      "raw": 953344,
+      "gzip": 277681,
+      "br": 239227
+    },
+    {
+      "route": "/susurros",
+      "chunks": 13,
+      "raw": 951076,
+      "gzip": 277845,
+      "br": 239435
+    },
+    {
+      "route": "/editar-perfil",
+      "chunks": 13,
+      "raw": 949276,
+      "gzip": 276276,
+      "br": 238092
+    },
+    {
+      "route": "/notificaciones",
+      "chunks": 13,
+      "raw": 946293,
+      "gzip": 276380,
+      "br": 238117
+    },
+    {
+      "route": "/apoyar",
+      "chunks": 13,
+      "raw": 945172,
+      "gzip": 275081,
+      "br": 236997
+    },
+    {
+      "route": "/historias/nueva",
+      "chunks": 13,
+      "raw": 941037,
+      "gzip": 269671,
+      "br": 231824
+    },
+    {
+      "route": "/eventos",
+      "chunks": 12,
+      "raw": 936152,
+      "gzip": 272077,
+      "br": 234371
+    },
+    {
+      "route": "/apoyar/mi-membresia",
+      "chunks": 12,
+      "raw": 934942,
+      "gzip": 271926,
+      "br": 234274
+    },
+    {
+      "route": "/clubes/configurar/[request]",
+      "chunks": 12,
+      "raw": 928218,
+      "gzip": 270825,
+      "br": 233279
+    },
+    {
+      "route": "/explorar",
+      "chunks": 12,
+      "raw": 927145,
+      "gzip": 269794,
+      "br": 232342
+    },
+    {
+      "route": "/misiones",
+      "chunks": 12,
+      "raw": 925978,
+      "gzip": 269260,
+      "br": 231916
+    },
+    {
+      "route": "/perfil/[username]/seguidores",
+      "chunks": 12,
+      "raw": 917472,
+      "gzip": 267052,
+      "br": 229929
+    },
+    {
+      "route": "/monedas",
+      "chunks": 12,
+      "raw": 914695,
+      "gzip": 266120,
+      "br": 229103
+    },
+    {
+      "route": "/descargar",
+      "chunks": 12,
+      "raw": 914526,
+      "gzip": 265773,
+      "br": 228772
+    },
+    {
+      "route": "/novedades",
+      "chunks": 12,
+      "raw": 911193,
+      "gzip": 264751,
+      "br": 227853
+    },
+    {
+      "route": "/historias/[username]",
+      "chunks": 13,
+      "raw": 886286,
+      "gzip": 254385,
+      "br": 219320
+    },
+    {
+      "route": "/register",
+      "chunks": 12,
+      "raw": 817364,
+      "gzip": 233035,
+      "br": 200207
+    },
+    {
+      "route": "/historias/archivo",
+      "chunks": 11,
+      "raw": 813471,
+      "gzip": 229985,
+      "br": 197597
+    },
+    {
+      "route": "/login",
+      "chunks": 12,
+      "raw": 786194,
+      "gzip": 223559,
+      "br": 191812
+    },
+    {
+      "route": "/recuperar",
+      "chunks": 10,
+      "raw": 779751,
+      "gzip": 220574,
+      "br": 189182
+    },
+    {
+      "route": "/_not-found",
+      "chunks": 8,
+      "raw": 714862,
+      "gzip": 203652,
+      "br": 174366
+    }
+  ]
+}

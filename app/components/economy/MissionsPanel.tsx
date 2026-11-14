@@ -1,9 +1,11 @@
 'use client'
 
 // v1.5.8 · Misiones en el Inicio.
-// PC grande (≥ 1280 px): columna a la derecha del feed con las misiones DIARIAS y SEMANALES en dos bloques que se pueden
-// minimizar, y se reclaman ahí mismo. Pantallas más chicas: una tarjeta plegable (cerrada de entrada) encima de la caja de publicar.
+// PC grande (≥ 1024 px): columna a la derecha del feed. Pantallas más chicas: una tarjeta plegable (cerrada de entrada) encima de la caja de publicar.
 // Un solo hook (useMissionsPanel) pide los datos; las dos vistas solo los pintan.
+// v1.10.0 · Rediseño MINIMALISTA del panel (mismas funciones, mucho menos espacio): una sola tarjeta con divisores finos; racha pequeña;
+// «Por reclamar» (acceso rápido a los premios que están en secciones plegadas); Diarias abiertas en compacto y Semanales/Racha plegables,
+// con barras de progreso delgadas; enlace a /misiones y el Círculo Lunar en una línea discreta al pie.
 import Link from 'next/link'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { supabase } from '../../lib/supabaseClient'
@@ -16,13 +18,14 @@ import { ClaimDot } from './ClaimDot'
 import MoonRain from './MoonRain'
 import Toast from './Toast'
 
-type Collapsed = { day: boolean; week: boolean; card: boolean }
-const STORE_KEY = 'daiwa_home_missions_v1'
+type Collapsed = { day: boolean; week: boolean; streak: boolean; card: boolean }
+// v1.10.0 · clave nueva: así todos estrenan los valores por defecto del panel compacto (la v1 guardaba «todo abierto»)
+const STORE_KEY = 'daiwa_home_missions_v2'
 const CACHE_KEY = 'daiwa_home_missions_cache_v1'
 type Cached = { uid: string; day: DayMissions; week: WeekMissions; at: number }
 let memCache: Cached | null = null
-// De entrada: en PC los dos bloques abiertos; la tarjeta de pantallas chicas, cerrada
-const DEFAULTS: Collapsed = { day: false, week: false, card: true }
+// De entrada: solo las Diarias abiertas (compactas); Semanales y Racha plegadas; la tarjeta de pantallas chicas, cerrada
+const DEFAULTS: Collapsed = { day: false, week: true, streak: true, card: true }
 
 export type MissionsPanelState = {
   ready: boolean
@@ -297,47 +300,60 @@ const Chevron = ({ open }: { open: boolean }) => (
   </svg>
 )
 
-function Row({ m, mult, busy, onClaim }: { m: Mission; mult: number; busy: boolean; onClaim: (m: Mission) => void }) {
-  const pct = Math.min(100, Math.round((m.progress / m.target) * 100))
+/** Barra de progreso delgada y discreta */
+function Bar({ pct, className = 'bg-garnet-500', label }: { pct: number; className?: string; label: string }) {
   return (
-    <li className={`rounded-xl border px-3 py-2.5 ${m.claimed ? 'border-ink-800 bg-ink-900/30 opacity-65' : m.claimable ? 'border-amber-500/45 bg-amber-500/8' : 'border-ink-700 bg-ink-900/50'}`}>
-      <div className="flex items-start gap-2">
-        <p className="flex-1 min-w-0 text-[13px] leading-snug text-neutral-100">{m.text}</p>
-        <span className="shrink-0 inline-flex items-center gap-0.5 rounded-full bg-amber-500/10 border border-amber-500/25 text-amber-300 text-[11px] font-semibold px-2 py-0.5 tabular-nums">
-          <MoonCoinIcon className="w-3 h-3" />+{effectiveReward(m, mult)}{mult !== 1 && m.period !== 'achievement' ? <span className="ml-0.5 text-[10px] opacity-80">×{mult}</span> : null}
+    <div className="h-1 rounded-full bg-ink-800 overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={label}>
+      <div className={`h-full rounded-full transition-all ${className}`} style={{ width: `${pct}%` }} />
+    </div>
+  )
+}
+
+/** Avance medio de una lista de misiones (las ya reclamadas cuentan completas) */
+const pctOf = (ms: Mission[]) =>
+  ms.length ? Math.round((ms.reduce((a, m) => a + (m.claimed ? 1 : Math.min(1, m.progress / Math.max(1, m.target))), 0) / ms.length) * 100) : 0
+
+const CLAIM_BTN = 'press shrink-0 rounded-full bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-ink-950 text-[11.5px] font-bold px-2.5 py-0.5 transition touch-manipulation'
+
+function Row({ m, mult, busy, onClaim }: { m: Mission; mult: number; busy: boolean; onClaim: (m: Mission) => void }) {
+  const pct = m.claimed ? 100 : Math.min(100, Math.round((m.progress / m.target) * 100))
+  return (
+    <li className="py-1.5">
+      <div className="flex items-center gap-2">
+        <p className={`flex-1 min-w-0 text-[12.5px] leading-snug ${m.claimed ? 'text-neutral-500' : 'text-neutral-100'}`}>{m.text}</p>
+        <span className="shrink-0 inline-flex items-center gap-0.5 text-[11px] font-semibold text-amber-300 tabular-nums">
+          <MoonCoinIcon className="w-3 h-3" />{effectiveReward(m, mult)}{mult !== 1 && m.period !== 'achievement' ? <span className="ml-0.5 text-[10px] opacity-70">×{mult}</span> : null}
         </span>
-      </div>
-      <div className="mt-2 flex items-center gap-2">
-        <div className="flex-1 h-1.5 rounded-full bg-ink-800 overflow-hidden" role="progressbar" aria-valuenow={m.progress} aria-valuemin={0} aria-valuemax={m.target} aria-label="Progreso de la misión">
-          <div className={`h-full rounded-full transition-all ${m.claimed ? 'bg-emerald-500' : 'bg-garnet-500'}`} style={{ width: `${pct}%` }} />
-        </div>
-        <span className="text-[11px] text-neutral-400 tabular-nums">{m.progress}/{m.target}</span>
         {m.claimed ? (
-          <span className="inline-flex items-center gap-0.5 text-[11.5px] text-emerald-400 font-medium"><CheckIcon className="w-3.5 h-3.5" /> Lista</span>
+          <CheckIcon className="w-4 h-4 shrink-0 text-emerald-400" aria-label="Reclamada" />
         ) : m.claimable ? (
-          <button type="button" onClick={() => onClaim(m)} disabled={busy} className="press rounded-full bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-ink-950 text-[12px] font-bold px-3 py-1 transition touch-manipulation">
-            Reclamar
-          </button>
+          <button type="button" onClick={() => onClaim(m)} disabled={busy} className={CLAIM_BTN}>Reclamar</button>
         ) : m.go_href ? (
-          <Link href={m.go_href} className="rounded-full border border-ink-600 text-neutral-200 text-[11.5px] px-2.5 py-0.5 hover:bg-ink-800 transition">Ir</Link>
+          <Link href={m.go_href} className="shrink-0 text-[11.5px] text-garnet-400 hover:text-garnet-300 px-1">Ir</Link>
         ) : null}
+      </div>
+      <div className="mt-1 flex items-center gap-2">
+        <div className="flex-1"><Bar pct={pct} className={m.claimed ? 'bg-emerald-500' : 'bg-garnet-500'} label="Progreso de la misión" /></div>
+        <span className="text-[10.5px] text-neutral-500 tabular-nums">{m.progress}/{m.target}</span>
       </div>
     </li>
   )
 }
 
-function Block({ title, sub, open, onToggle, dot, children }: { title: string; sub: string; open: boolean; onToggle: () => void; dot: boolean; children: ReactNode }) {
+/** Sección plegable: una línea (título · resumen · barra · flecha) y, al abrirla, el detalle */
+function Section({ id, title, summary, pct, barClass, open, onToggle, dot, children }: { id: string; title: ReactNode; summary?: string; pct: number; barClass?: string; open: boolean; onToggle: () => void; dot: boolean; children: ReactNode }) {
   return (
-    <section className="rounded-2xl border border-ink-700 bg-ink-900/60">
-      <button type="button" onClick={onToggle} aria-expanded={open} className="w-full flex items-center gap-2 px-3.5 py-3 text-left touch-manipulation">
-        <span className="relative">
-          <span className="font-display text-[15px] font-semibold text-neutral-50">{title}</span>
-          {dot && <ClaimDot className="-top-0.5 -right-3 w-2.5 h-2.5" label={`${title}: tienes premios por reclamar`} />}
+    <section className="border-t border-ink-800 first:border-t-0">
+      <button type="button" onClick={onToggle} aria-expanded={open} aria-controls={id} className="w-full flex items-center gap-2 py-2.5 text-left touch-manipulation">
+        <span className="relative text-[13px] font-semibold text-neutral-100">
+          {title}
+          {dot && <ClaimDot className="-top-0.5 -right-3 w-2 h-2" label="Tienes premios por reclamar" />}
         </span>
-        <span className="ml-auto text-[11.5px] text-neutral-500 tabular-nums">{sub}</span>
-        <span className="text-neutral-400"><Chevron open={open} /></span>
+        {summary && <span className="text-[11px] text-neutral-500 tabular-nums">{summary}</span>}
+        <span className="ml-auto w-14"><Bar pct={pct} className={barClass} label="Avance" /></span>
+        <span className="text-neutral-500"><Chevron open={open} /></span>
       </button>
-      {open && <div className="px-3 pb-3">{children}</div>}
+      {open && <div id={id} className="pb-2.5">{children}</div>}
     </section>
   )
 }
@@ -348,8 +364,43 @@ function streakLeft(st: StreakOverview, loadedAt: number): string {
   return countdown(st.ends_at, st.server_now, loadedAt)
 }
 
-/** v1.8.0 · Racha: días, cuándo se apaga, escudo, bono de entrada y premios por hito */
-function StreakBlock({ s }: { s: MissionsPanelState }) {
+type Pending = { key: string; text: string; amount: number; action: string; run: () => void; icon?: string }
+
+/** Premios listos que están en secciones plegadas: se pueden reclamar sin abrirlas */
+function PendingRewards({ s }: { s: MissionsPanelState }) {
+  const { day, week, streak: st } = s
+  if (!day || !week) return null
+  const items: Pending[] = []
+  if (s.collapsed.streak && st) {
+    if (!st.daily.claimed) items.push({ key: 'bono', text: 'Bono diario', amount: st.daily.amount, action: 'Reclamar', run: s.claimDaily, icon: '🎁' })
+    for (const m of st.milestones) if (m.reached && !m.claimed) items.push({ key: `r${m.day}`, text: `Racha de ${m.day} días`, amount: m.amount, action: 'Reclamar', run: () => s.claimStreak(m.day), icon: '🔥' })
+  }
+  if (s.collapsed.day) for (const m of day.missions) if (m.claimable) items.push({ key: `d${m.id}`, text: m.text, amount: effectiveReward(m, day.multiplier), action: 'Reclamar', run: () => s.claim(m) })
+  if (s.collapsed.week) {
+    for (const m of week.missions) if (m.claimable) items.push({ key: `w${m.id}`, text: m.text, amount: effectiveReward(m, week.multiplier), action: 'Reclamar', run: () => s.claim(m) })
+    if (week.chest_ready && !week.chest_paid) items.push({ key: 'cofre', text: 'Cofre semanal', amount: week.chest_amount, action: 'Abrir', run: s.openChest, icon: '🎁' })
+  }
+  if (!items.length) return null
+  const shown = items.slice(0, 4)
+  return (
+    <section aria-label="Premios por reclamar" className="mb-1 rounded-xl bg-amber-500/8 px-2.5 py-1.5">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-amber-300/90">Por reclamar</p>
+      <ul>
+        {shown.map((p) => (
+          <li key={p.key} className="flex items-center gap-2 py-1">
+            <p className="flex-1 min-w-0 truncate text-[12.5px] text-neutral-100">{p.icon ? <span aria-hidden="true">{p.icon} </span> : null}{p.text}</p>
+            <span className="shrink-0 inline-flex items-center gap-0.5 text-[11px] font-semibold text-amber-300 tabular-nums"><MoonCoinIcon className="w-3 h-3" />{p.amount}</span>
+            <button type="button" onClick={p.run} disabled={s.busy} className={CLAIM_BTN}>{p.action}</button>
+          </li>
+        ))}
+      </ul>
+      {items.length > shown.length && <p className="pb-0.5 text-[10.5px] text-neutral-400">y {items.length - shown.length} más dentro de las secciones</p>}
+    </section>
+  )
+}
+
+/** v1.8.0 · Racha: días, cuándo se apaga, escudo, bono de entrada y premios por hito (v1.10.0: detalle dentro de una sección plegable) */
+function StreakSection({ s }: { s: MissionsPanelState }) {
   const st = s.streak
   if (!st) return null
   const next = st.milestones.find((m) => !m.reached) ?? null
@@ -357,72 +408,62 @@ function StreakBlock({ s }: { s: MissionsPanelState }) {
   const alive = st.current > 0
   const prev = [...st.milestones].reverse().find((m) => m.reached)?.day ?? 0
   const pct = next ? Math.min(100, Math.round(((st.cycle_day - prev) / (next.day - prev)) * 100)) : 100
+  const pending = (!st.daily.claimed ? 1 : 0) + claimable.length > 0
   return (
-    <section className={`rounded-2xl border px-3.5 py-3 ${alive ? 'border-orange-400/40 bg-gradient-to-br from-orange-500/12 via-ink-900/60 to-transparent' : 'border-ink-700 bg-ink-900/60'}`} aria-label="Racha">
-      <div className="flex items-center gap-2">
-        <span className={`text-xl leading-none ${alive ? '' : 'grayscale opacity-60'}`} aria-hidden="true">🔥</span>
-        <div className="min-w-0 flex-1 leading-tight">
-          <p className="font-display text-[15px] font-semibold text-neutral-50">
-            {alive ? `${st.current} ${st.current === 1 ? 'día' : 'días'} de racha` : 'Sin racha todavía'}
-          </p>
-          <p className="text-[11.5px] text-neutral-400">
-            {alive
-              ? st.today_done
-                ? `Hoy ya cuenta ✓ · se apaga en ${streakLeft(st, s.loadedAt)} si no entras`
-                : `¡Entra hoy para mantenerla! Se apaga en ${streakLeft(st, s.loadedAt)}`
-              : 'Entra cada día y empieza una. Se apaga si faltas un día.'}
-          </p>
-        </div>
-        <span className="text-[10.5px] text-neutral-500 text-right leading-tight">Mejor<br /><b className="text-neutral-300 tabular-nums">{st.best}</b></span>
-      </div>
-
-      {st.saved_by_shield && <p className="mt-2 text-[11.5px] text-sky-300">🛡️ Tu escudo salvó tu racha: entra hoy y se mantiene.</p>}
-
+    <Section
+      id="misiones-racha"
+      title={<><span aria-hidden="true" className={alive ? '' : 'grayscale opacity-60'}>🔥</span> {alive ? `${st.current} ${st.current === 1 ? 'día' : 'días'}` : 'Racha'}</>}
+      summary={alive ? (st.today_done ? 'hoy ✓' : '¡entra hoy!') : 'sin racha'}
+      pct={pct}
+      barClass="bg-orange-400"
+      open={!s.collapsed.streak}
+      onToggle={() => s.toggle('streak')}
+      dot={pending && s.collapsed.streak}
+    >
+      <p className="text-[11.5px] leading-snug text-neutral-400">
+        {alive
+          ? st.today_done
+            ? `Hoy ya cuenta ✓ · se apaga en ${streakLeft(st, s.loadedAt)} si no entras. Mejor racha: ${st.best}.`
+            : `¡Entra hoy para mantenerla! Se apaga en ${streakLeft(st, s.loadedAt)}. Mejor racha: ${st.best}.`
+          : 'Entra cada día y empieza una. Se apaga si faltas un día.'}
+      </p>
+      {st.saved_by_shield && <p className="mt-1.5 text-[11.5px] text-sky-300">🛡️ Tu escudo salvó tu racha: entra hoy y se mantiene.</p>}
       {next && (
-        <div className="mt-2.5">
+        <div className="mt-2">
           <div className="flex items-center justify-between text-[11px] text-neutral-400 mb-1">
             <span>Próximo premio: día {next.day}</span>
             <span className="text-amber-300 font-semibold tabular-nums">+{next.amount} ☾{st.boost_pct > 0 ? <span className="opacity-70"> (+{st.boost_pct} %)</span> : null}</span>
           </div>
-          <div className="h-1.5 rounded-full bg-ink-800 overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Avance al próximo premio de racha">
-            <div className="h-full rounded-full bg-orange-400 transition-all" style={{ width: `${pct}%` }} />
-          </div>
+          <Bar pct={pct} className="bg-orange-400" label="Avance al próximo premio de racha" />
         </div>
       )}
-
-      <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2">
-        <span className="text-lg" aria-hidden="true">🎁</span>
-        <div className="min-w-0 flex-1 leading-tight">
-          <p className="text-[12.5px] font-semibold text-neutral-50">Bono de entrada</p>
-          <p className="text-[11px] text-neutral-400">+{st.daily.amount} ☾{st.daily.mult > 1 ? ` · ×${st.daily.mult} por apoyar` : ' · crece con tu racha'}</p>
-        </div>
+      <div className="mt-2 flex items-center gap-2">
+        <span aria-hidden="true">🎁</span>
+        <p className="flex-1 min-w-0 text-[12px] text-neutral-200 leading-tight">
+          Bono de entrada <span className="text-neutral-500 whitespace-nowrap">· +{st.daily.amount} ☾</span>
+          {st.daily.mult > 1 ? <span className="text-neutral-500"> · ×{st.daily.mult} por apoyar</span> : null}
+        </p>
         {st.daily.claimed ? (
-          <span className="text-[12px] text-emerald-400 font-medium">Cobrado ✓</span>
+          <span className="text-[11.5px] text-emerald-400 font-medium">Cobrado ✓</span>
         ) : (
-          <button type="button" onClick={s.claimDaily} disabled={s.busy} className="press rounded-full bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-ink-950 text-[12px] font-bold px-3.5 py-1.5 transition touch-manipulation">
-            Reclamar
-          </button>
+          <button type="button" onClick={s.claimDaily} disabled={s.busy} className={CLAIM_BTN}>Reclamar</button>
         )}
       </div>
-
       {claimable.length > 0 && (
-        <ul className="mt-2 space-y-1.5">
+        <ul className="mt-1">
           {claimable.map((m) => (
-            <li key={m.day} className="flex items-center gap-2 rounded-xl border border-orange-400/40 bg-orange-500/8 px-3 py-2">
-              <span className="text-[12.5px] text-neutral-100 flex-1">Racha de {m.day} días</span>
-              <span className="text-[11.5px] text-amber-300 font-semibold tabular-nums">+{m.amount} ☾</span>
-              <button type="button" onClick={() => s.claimStreak(m.day)} disabled={s.busy} className="press rounded-full bg-orange-400 hover:bg-orange-300 disabled:opacity-50 text-ink-950 text-[12px] font-bold px-3 py-1 transition touch-manipulation">
-                Reclamar
-              </button>
+            <li key={m.day} className="flex items-center gap-2 py-1">
+              <span className="text-[12px] text-neutral-100 flex-1">Racha de {m.day} días</span>
+              <span className="text-[11px] text-amber-300 font-semibold tabular-nums">+{m.amount} ☾</span>
+              <button type="button" onClick={() => s.claimStreak(m.day)} disabled={s.busy} className={CLAIM_BTN}>Reclamar</button>
             </li>
           ))}
         </ul>
       )}
-
       <p className="mt-2 text-[10.5px] text-neutral-500 leading-snug">
         🛡️ Escudo de racha: {st.shield_ready ? 'listo (salva 1 día perdido si tu racha es de 3 o más)' : `recargándose (se renueva cada ${st.shield_days} días)`}.
       </p>
-    </section>
+    </Section>
   )
 }
 
@@ -432,38 +473,39 @@ function Blocks({ s }: { s: MissionsPanelState }) {
   const done = day.missions.filter((m) => m.claimed).length
   const weekDone = week.missions.filter((m) => m.claimed).length
   return (
-    <div className="space-y-2.5">
-      <StreakBlock s={s} />
-      <Block title="Diarias" sub={`${done}/${day.missions.length} · ${countdown(day.ends_at, day.server_now, s.loadedAt)}`} open={!s.collapsed.day} onToggle={() => s.toggle('day')} dot={s.dayClaimable > 0}>
-        <ul className="space-y-2">
+    <div className="rounded-2xl border border-ink-700 bg-ink-900/50 px-3 py-1.5">
+      <PendingRewards s={s} />
+      <StreakSection s={s} />
+      <Section id="misiones-diarias" title="Diarias" summary={`${done}/${day.missions.length}`} pct={pctOf(day.missions)} open={!s.collapsed.day} onToggle={() => s.toggle('day')} dot={s.dayClaimable > 0 && s.collapsed.day}>
+        <ul className="divide-y divide-ink-800/70">
           {day.missions.map((m) => <Row key={m.id} m={m} mult={day.multiplier} busy={s.busy} onClaim={s.claim} />)}
         </ul>
-        <p className="mt-2 text-[11px] text-neutral-500">
-          Bono por las {day.missions.length}: +{day.bonus_amount} ☾{day.bonus_paid ? ' ✓' : ''}
+        <p className="mt-1.5 text-[10.5px] text-neutral-500">
+          Se renueva en {countdown(day.ends_at, day.server_now, s.loadedAt)} · Bono por las {day.missions.length}: <span className="whitespace-nowrap">+{day.bonus_amount} ☾{day.bonus_paid ? ' ✓' : ''}</span>
           {day.multiplier !== 1 && <span className="text-amber-300"> · ¡Lunas x{day.multiplier}!</span>}
         </p>
-      </Block>
-      <Block title="Semanales" sub={`${weekDone}/${week.missions.length} · ${countdown(week.ends_at, week.server_now, s.loadedAt)}`} open={!s.collapsed.week} onToggle={() => s.toggle('week')} dot={s.weekClaimable > 0}>
-        <ul className="space-y-2">
+      </Section>
+      <Section id="misiones-semanales" title="Semanales" summary={`${weekDone}/${week.missions.length}`} pct={pctOf(week.missions)} open={!s.collapsed.week} onToggle={() => s.toggle('week')} dot={s.weekClaimable > 0 && s.collapsed.week}>
+        <ul className="divide-y divide-ink-800/70">
           {week.missions.map((m) => <Row key={m.id} m={m} mult={week.multiplier} busy={s.busy} onClaim={s.claim} />)}
         </ul>
-        <div className="mt-2.5 flex items-center gap-2.5 rounded-xl border border-amber-500/30 bg-amber-500/5 px-3 py-2.5">
-          <GiftIcon className="w-6 h-6 text-amber-300 shrink-0" />
-          <div className="min-w-0 flex-1 leading-tight">
-            <p className="text-[13px] font-semibold text-neutral-50">Cofre semanal</p>
-            <p className="text-[11px] text-neutral-400">+{week.chest_amount} ☾ al reclamar las {week.missions.length}</p>
-          </div>
+        <div className="mt-1.5 flex items-center gap-2">
+          <GiftIcon className="w-5 h-5 text-amber-300 shrink-0" />
+          <p className="flex-1 min-w-0 text-[12px] text-neutral-200 leading-tight">
+            Cofre semanal <span className="text-neutral-500"><span className="whitespace-nowrap">· +{week.chest_amount} ☾</span> al reclamar las {week.missions.length}</span>
+          </p>
           {week.chest_paid ? (
-            <span className="text-[12px] text-emerald-400 font-medium">Abierto ✓</span>
+            <span className="text-[11.5px] text-emerald-400 font-medium">Abierto ✓</span>
           ) : (
-            <button type="button" onClick={s.openChest} disabled={s.busy || !week.chest_ready} className="press rounded-full bg-amber-500 hover:bg-amber-400 disabled:opacity-40 disabled:hover:bg-amber-500 text-ink-950 text-[12px] font-bold px-3.5 py-1.5 transition touch-manipulation">
-              Abrir
-            </button>
+            <button type="button" onClick={s.openChest} disabled={s.busy || !week.chest_ready} className={`${CLAIM_BTN} disabled:opacity-40`}>Abrir</button>
           )}
         </div>
-      </Block>
-      <Link href="/misiones" className="block text-center text-[12.5px] text-amber-300 hover:text-amber-200 py-1">Ver todas las misiones, logros y racha →</Link>
-      <SupportBanner />
+        <p className="mt-1.5 text-[10.5px] text-neutral-500">Se renuevan en {countdown(week.ends_at, week.server_now, s.loadedAt)}</p>
+      </Section>
+      <div className="border-t border-ink-800 flex flex-wrap items-center gap-x-3 gap-y-1 pt-2 pb-1">
+        <Link href="/misiones" className="text-[12px] text-amber-300 hover:text-amber-200 transition whitespace-nowrap">Todas las misiones →</Link>
+        <SupportBanner compact className="ml-auto" />
+      </div>
     </div>
   )
 }
@@ -473,48 +515,52 @@ export function MissionsSide({ state }: { state: MissionsPanelState }) {
   if (state.failed) return null
   if (!state.ready) {
     return (
-      <aside aria-hidden="true" className="hidden lg:block w-[268px] xl:w-[300px] shrink-0 sticky top-6 space-y-2.5">
-        <div className="h-6 w-28 rounded-lg bg-ink-800/70 animate-pulse" />
-        <div className="h-14 rounded-2xl bg-ink-900/60 border border-ink-800 animate-pulse" />
-        <div className="h-14 rounded-2xl bg-ink-900/60 border border-ink-800 animate-pulse" />
+      <aside aria-hidden="true" className="hidden lg:block w-[268px] xl:w-[300px] shrink-0 sticky top-6 space-y-2">
+        <div className="h-5 w-24 rounded-lg bg-ink-800/70 animate-pulse" />
+        <div className="h-40 rounded-2xl bg-ink-900/60 border border-ink-800 animate-pulse" />
       </aside>
     )
   }
   return (
     <aside aria-label="Misiones" className="hidden lg:block w-[268px] xl:w-[300px] shrink-0 sticky top-6 max-h-[calc(100dvh-3rem)] overflow-y-auto overscroll-contain pr-0.5 story-scroll-hide">
-      <div className="flex items-center gap-2 px-1 mb-2.5">
-        <TargetIcon className="w-5 h-5 text-garnet-400" />
-        <h2 className="font-display text-lg font-semibold text-neutral-50">Misiones</h2>
-        {state.anyClaimable && <span className="ml-auto text-[10.5px] font-semibold uppercase tracking-wide text-amber-300">¡Hay premios!</span>}
+      <div className="flex items-center gap-2 px-1 mb-2">
+        <TargetIcon className="w-4 h-4 text-garnet-400" />
+        <h2 className="font-display text-base font-semibold text-neutral-50">Misiones</h2>
+        {state.anyClaimable && <span className="ml-auto text-[10px] font-semibold uppercase tracking-wide text-amber-300">¡Hay premios!</span>}
       </div>
       <Blocks s={state} />
     </aside>
   )
 }
 
-/** Pantallas más chicas: tarjeta plegable encima de la caja de publicar */
+/** Pantallas más chicas: tarjeta plegable encima de la caja de publicar (cerrada = una línea con el resumen) */
 export function MissionsInline({ state }: { state: MissionsPanelState }) {
-  if (state.failed || !state.ready) return null
+  if (state.failed || !state.ready || !state.day) return null
   const open = !state.collapsed.card
+  const done = state.day.missions.filter((m) => m.claimed).length
+  const total = state.day.missions.length
+  const alive = (state.streak?.current ?? 0) > 0
   return (
-    <section aria-label="Misiones" className="lg:hidden mb-4 sm:mb-5">
+    <section aria-label="Misiones" className="lg:hidden mb-3 sm:mb-4">
       <button
         type="button"
         onClick={() => state.toggle('card')}
         aria-expanded={open}
-        className={`w-full flex items-center gap-2.5 rounded-2xl border px-3.5 py-3 text-left transition touch-manipulation ${state.anyClaimable ? 'border-amber-400/50 bg-gradient-to-r from-amber-400/12 to-transparent' : 'border-ink-700 bg-ink-900/60'}`}
+        aria-controls="misiones-inline"
+        className={`w-full flex items-center gap-2.5 rounded-2xl border px-3 py-2.5 text-left transition touch-manipulation ${state.anyClaimable ? 'border-amber-400/45 bg-amber-400/6' : 'border-ink-700 bg-ink-900/50'}`}
       >
         <span className="relative">
-          <TargetIcon className="w-5 h-5 text-garnet-400" />
-          {state.anyClaimable && <ClaimDot className="-top-1 -right-1 w-2.5 h-2.5" label="Tienes premios por reclamar" />}
+          <TargetIcon className="w-4 h-4 text-garnet-400" />
+          {state.anyClaimable && <ClaimDot className="-top-1 -right-1 w-2 h-2" label="Tienes premios por reclamar" />}
         </span>
-        <span className="font-display text-[15px] font-semibold text-neutral-50">Misiones</span>
-        <span className="text-[12px] text-neutral-400 truncate">
-          {state.anyClaimable ? <b className="text-amber-300 font-semibold">¡Tienes premios por reclamar!</b> : 'Diarias y semanales'}
+        <span className="font-display text-[14px] font-semibold text-neutral-50">Misiones</span>
+        <span className="text-[11.5px] text-neutral-400 truncate">
+          {state.anyClaimable ? <b className="text-amber-300 font-semibold">¡Premios por reclamar!</b> : `${done}/${total} diarias${alive ? ` · 🔥 ${state.streak?.current}` : ''}`}
         </span>
-        <span className="ml-auto text-neutral-400"><Chevron open={open} /></span>
+        <span className="ml-auto w-12 shrink-0"><Bar pct={pctOf(state.day.missions)} label="Avance de las misiones diarias" /></span>
+        <span className="text-neutral-400"><Chevron open={open} /></span>
       </button>
-      {open && <div className="mt-2.5"><Blocks s={state} /></div>}
+      {open && <div id="misiones-inline" className="mt-2"><Blocks s={state} /></div>}
     </section>
   )
 }

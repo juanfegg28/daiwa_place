@@ -1,11 +1,11 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '../lib/supabaseClient'
 import { useAppSession } from '../components/AppShell'
 import PostCard from '../components/PostCard'
-import { fetchPostsByIds } from '../lib/queries'
-import { usePostActions } from '../lib/usePostActions'
+import { fetchPostComments, fetchPostsByIds } from '../lib/queries'
 import { friendlyClubError } from '../lib/clubs'
 import type { Post } from '../lib/types'
 
@@ -18,6 +18,7 @@ const FEED_PAGE = 15
  */
 export default function ClubFeed({ clubId = null, emptyText }: { clubId?: string | null; emptyText?: string }) {
   const { userId } = useAppSession()
+  const router = useRouter()
   const [posts, setPosts] = useState<Post[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -44,7 +45,8 @@ export default function ClubFeed({ clubId = null, emptyText }: { clubId?: string
       setLoading(false)
       return
     }
-    const { posts: found, error: postsError } = await fetchPostsByIds(pageIds)
+    // v1.10.0 · tarjetas ligeras (contadores + tu like); los comentarios se piden al abrirlos
+    const { posts: found, error: postsError } = await fetchPostsByIds(pageIds, false, 'light')
     if (postsError) setError(friendlyClubError(postsError))
     else setError('')
     // etiquetas pequeñas: ¿es anuncio?, ¿de qué club? (una sola consulta liviana)
@@ -77,7 +79,67 @@ export default function ClubFeed({ clubId = null, emptyText }: { clubId?: string
     setLoadingMore(false)
   }
 
-  const { toggleLike, toggleCommentLike, addComment } = usePostActions(userId, loadPosts)
+  // v1.10.0 · me gusta y comentarios AL INSTANTE: se cambia solo esa publicación en pantalla (antes cada toque volvía a pedir el feed entero:
+  // la lista de ids, todas las publicaciones con sus comentarios y las etiquetas)
+  const patchPost = (id: string, fn: (p: Post) => Post) => setPosts((l) => l.map((p) => (p.id === id ? fn(p) : p)))
+
+  const toggleLike = async (post: Post) => {
+    if (!userId) {
+      router.push('/login')
+      return
+    }
+    const liked = post.likes.some((l) => l.user_id === userId)
+    patchPost(post.id, (p) => ({
+      ...p,
+      likes: liked ? p.likes.filter((l) => l.user_id !== userId) : [...p.likes, { user_id: userId }],
+      ...(p.likes_count !== undefined ? { likes_count: Math.max(0, p.likes_count + (liked ? -1 : 1)) } : {}),
+    }))
+    const { error: e } = liked
+      ? await supabase.from('likes').delete().eq('post_id', post.id).eq('user_id', userId)
+      : await supabase.from('likes').insert({ post_id: post.id, user_id: userId })
+    if (e) patchPost(post.id, () => post)
+  }
+
+  const toggleCommentLike = async (commentId: string, liked: boolean) => {
+    if (!userId) {
+      router.push('/login')
+      return
+    }
+    const owner = posts.find((p) => p.comments.some((c) => c.id === commentId))
+    if (owner) {
+      patchPost(owner.id, (p) => ({
+        ...p,
+        comments: p.comments.map((c) =>
+          c.id !== commentId ? c : { ...c, comment_likes: liked ? c.comment_likes.filter((l) => l.user_id !== userId) : [...c.comment_likes, { user_id: userId }] }
+        ),
+      }))
+    }
+    const { error: e } = liked
+      ? await supabase.from('comment_likes').delete().eq('comment_id', commentId).eq('user_id', userId)
+      : await supabase.from('comment_likes').insert({ comment_id: commentId, user_id: userId })
+    if (e && owner) patchPost(owner.id, () => owner)
+  }
+
+  // comentarios bajo demanda: solo los de la publicación que abres (o a la que acabas de comentar)
+  const loadCommentsFor = async (postId: string) => {
+    const { comments, error: e } = await fetchPostComments(postId)
+    patchPost(postId, (p) => ({ ...p, comments: e ? p.comments : comments, comments_loaded: true, comments_count: e ? p.comments_count : comments.length }))
+  }
+
+  // tras editar o borrar UNA publicación (o un comentario suyo) se renueva solo esa tarjeta
+  const reloadOne = async (postId: string) => {
+    const { posts: fresh, error: e } = await fetchPostsByIds([postId], false, 'detail')
+    if (!e && fresh[0]) patchPost(postId, () => fresh[0])
+  }
+
+  const addComment = async (postId: string, text: string, parentCommentId?: string | null) => {
+    if (!userId) {
+      router.push('/login')
+      return
+    }
+    await supabase.from('comments').insert({ post_id: postId, user_id: userId, content: text, parent_comment_id: parentCommentId ?? null })
+    await loadCommentsFor(postId)
+  }
 
   if (loading) return <p className="text-neutral-500 text-sm text-center py-10">Cargando publicaciones...</p>
   if (error) return <p className="text-xs text-garnet-400 text-center py-6">{error}</p>
@@ -113,7 +175,8 @@ export default function ClubFeed({ clubId = null, emptyText }: { clubId?: string
               onToggleLike={toggleLike}
               onToggleCommentLike={toggleCommentLike}
               onAddComment={addComment}
-              onRefresh={loadPosts}
+              onRefresh={(id) => (id ? reloadOne(id) : loadPosts())}
+              onExpandComments={(p) => void loadCommentsFor(p.id)}
             />
           </div>
         )

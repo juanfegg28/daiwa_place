@@ -33,7 +33,7 @@ export default function LocationSticker({ el }: { el: StoryLocation }) {
   }
 
   if (el.style === 'glass') {
-    const glassBg = el.theme === 'dark' ? 'rgba(0,0,0,.55)' : el.theme === 'accent' ? 'rgba(163,18,46,.5)' : el.theme === 'color' ? `${el.color || '#38BDF8'}88` : 'rgba(255,255,255,.16)'
+    const glassBg = el.theme === 'dark' ? 'rgba(0,0,0,.55)' : el.theme === 'accent' ? 'rgba(78,53,89,.62)' : el.theme === 'color' ? `${el.color || '#38BDF8'}88` : 'rgba(255,255,255,.16)'
     return (
       <div style={{ fontFamily: font, color: '#fff', background: glassBg, backdropFilter: 'blur(18px) saturate(1.4)', border: '1px solid rgba(255,255,255,.28)', borderRadius: '99px', display: 'flex', alignItems: 'center', gap: '2cqw', padding: '1.2cqw 4.2cqw 1.2cqw 1.2cqw', fontSize: '4cqw', fontWeight: 700, maxWidth: '88cqw', width: 'max-content', textShadow: '0 1px 1px rgba(0,0,0,.3)' }}>
         <span style={{ width: '6.4cqw', height: '6.4cqw', borderRadius: '50%', background: 'var(--color-garnet-600)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>

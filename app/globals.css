@@ -3,9 +3,7 @@
 :root {
   --background: #0c0c0f;
   --foreground: #f2f1ef;
-  /* v1.9.0 · Cinzel ya no sale de next/font/google (rompía el build con Turbopack): la hoja de Google Fonts se enlaza en
-     app/layout.tsx y aquí se deja la variable que usan `font-display`, las historias y los stickers. */
-  --font-cinzel: "Cinzel", "Times New Roman", Georgia, serif;
+  /* v1.10.0 · las fuentes (Geist, Geist Mono y Cinzel) se declaran con next/font/local en app/lib/fonts.ts: cada una define su variable (--font-geist-sans, --font-geist-mono, --font-cinzel) en <html>. */
 }
 
 /* @theme (sin "inline") para que los colores queden como var(--color-x) en las
@@ -28,11 +26,16 @@
 
   /* Rojo granate propio (mas oscuro y particular que un rojo de boton generico).
      Se puede sobreescribir por completo con un color de acento personalizado. */
-  --color-garnet-700: #7a0f24;
-  --color-garnet-600: #a3122e;
-  --color-garnet-500: #c81b3e;
-  --color-garnet-400: #e6435f;
-  --color-garnet-300: #f38ba0;
+  /* v1.10.0 · Acento predeterminado «Faded Iris» (paleta: Faded Iris #4e3559 · Raven Black #080d10 · Gothic Plum #571947 ·
+     Royal Lilac #9166a6 · Lavender #c8bbe9). Las variables siguen llamándose «garnet-*» para no tocar los cientos de clases que
+     las usan (bg-garnet-600, text-garnet-400…). 600 = Faded Iris (botones, texto blanco encima: contraste 10,6:1), 500 = Royal
+     Lilac (hover/foco), 400 y 300 = lilas claros para texto sobre fondos oscuros (≥ 5,3:1 y ≥ 8,6:1), 700 = Faded Iris más profundo.
+     Quien eligió otro color en Configuración lo conserva: applyTheme() sobrescribe estas variables con su rampa. */
+  --color-garnet-700: #3a2644;
+  --color-garnet-600: #4e3559;
+  --color-garnet-500: #9166a6;
+  --color-garnet-400: #b08ac4;
+  --color-garnet-300: #c8bbe9;
 }
 
 /* ---------- Modo claro ---------- */
@@ -57,6 +60,13 @@
   --color-neutral-400: #6d6e75;
   --color-neutral-500: #85868d;
   --color-neutral-600: #9c9da3;
+
+  /* v1.10.0 · En modo claro los lilas del acento se oscurecen para que el TEXTO (text-garnet-300/400/500) cumpla contraste ≥ 4,5:1
+     sobre los fondos claros (4,9 · 5,7 · 5,4 sobre #f6f4f1/#fff). Los botones (600) y sus hover (500, texto blanco 5,4:1) siguen legibles.
+     Si el usuario tiene un acento personalizado, su rampa (style inline en <html>) tiene prioridad sobre estas variables. */
+  --color-garnet-300: #84599b;
+  --color-garnet-400: #7a4f93;
+  --color-garnet-500: #85599b;
 }
 
 body {
@@ -671,3 +681,7 @@ html {
   0%, 100% { opacity: .85; transform: scale(1); }
   50% { opacity: 1; transform: scale(1.05); }
 }
+
+/* v1.10.0 · flechas de los carruseles (ScrollCarousel): solo con ratón/trackpad; en el celular se desliza con el dedo */
+.carousel-arrow { display: none; }
+@media (hover: hover) and (pointer: fine) { .carousel-arrow { display: inline-flex; } }

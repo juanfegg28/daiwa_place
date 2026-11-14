@@ -2,6 +2,7 @@
 
 // v1.9.0 · Vitrina del perfil: publicaciones, frases, canciones y recuerdos que la persona quiere destacar.
 // Es opcional (la activa/desactiva su dueña), se pide SOLO si el perfil la tiene activada y en celular es un carrusel compacto.
+import ScrollCarousel from '../ScrollCarousel'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import MusicChip from '../MusicChip'
@@ -115,11 +116,11 @@ export default function ShowcaseSection({ profileId, isOwn, hasShowcase, userId 
               </button>
             )}
           </div>
-          <div className="-mx-4 sm:mx-0 px-4 sm:px-0 flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 [scrollbar-width:none] overscroll-x-contain">
+          <ScrollCarousel label="Vitrina" prevLabel="Ver objetos anteriores" nextLabel="Ver más objetos" className="-mx-4 sm:mx-0 px-4 sm:px-0 flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 [scrollbar-width:none] overscroll-x-contain">
             {items.map((it) => (
               <ItemCard key={it.id} item={it} />
             ))}
-          </div>
+          </ScrollCarousel>
         </>
       ) : (
         isOwn &&

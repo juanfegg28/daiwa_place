@@ -1,9 +1,10 @@
 'use client'
 
 import Avatar from './components/cosmetics/Avatar'
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from './lib/supabaseClient'
+import { readFeedCache, setFeedScroll, writeFeedCache } from './lib/feedCache'
 import AppShell, { useAppSession } from './components/AppShell'
 import PostCard from './components/PostCard'
 import AnnouncementBanner from './components/AnnouncementBanner'
@@ -24,7 +25,7 @@ import DailyQuestionCard, { DAILY_TAG } from './components/DailyQuestionCard'
 import { MissionsInline, MissionsSide, useMissionsPanel } from './components/economy/MissionsPanel'
 import { dayPartFor, firstNameOf, pickGreeting, type DayPart } from './lib/greeting'
 import { prepareImage } from './lib/images'
-import { POST_SELECT, POST_SELECT_CORE, POST_IMAGES_BUCKET, MAX_POST_IMAGES, MAX_POST_LENGTH, fetchFeedItems } from './lib/queries'
+import { POST_SELECT, POST_SELECT_CORE, POST_IMAGES_BUCKET, MAX_POST_IMAGES, MAX_POST_LENGTH, fetchFeedItems, fetchPostComments, fetchPostsByIds } from './lib/queries'
 import MusicChip from './components/MusicChip'
 import MusicPicker from './components/MusicPicker'
 import { MusicIcon, PollIcon } from './components/icons'
@@ -121,6 +122,12 @@ function Feed() {
   // Se pide una de más para saber si todavía quedan por mostrar.
   const feedLimit = useRef(FEED_PAGE)
   const newestSeen = useRef<string | null>(null)
+  // caché del feed en memoria (ver más abajo): cuándo llegaron datos de Supabase, scroll por restaurar, y si ya se decidió caché/carga inicial
+  const serverStamp = useRef(0)
+  const pendingScroll = useRef<number | null>(null)
+  const cacheChecked = useRef(false)
+  const restoredFromCache = useRef(false)
+  const initialLoadStarted = useRef(false)
   const [hasMoreFeed, setHasMoreFeed] = useState(false)
   const [loadingMoreFeed, setLoadingMoreFeed] = useState(false)
   const [newPostsAvailable, setNewPostsAvailable] = useState(false)
@@ -163,13 +170,15 @@ function Feed() {
   }, [items])
   const loadPosts = async (reuse = false) => {
     const known = reuse && itemsRef.current.length > 0 ? new Map<string, Post>(itemsRef.current.map((it): [string, Post] => [it.post.id, it.post])) : undefined
-    const res = await fetchFeedItems('home', feedLimit.current, null, loadLegacyPosts, false, known)
+    // v1.10.0 · tarjetas ligeras: contadores + tu like, sin la lista completa de likes ni de comentarios (se piden al abrirlos)
+    const res = await fetchFeedItems('home', feedLimit.current, null, loadLegacyPosts, false, known, 'light')
     if (res.error) console.error('Error cargando posts:', res.error)
     setHasMoreFeed(res.hasMore)
     setItems(res.items)
     newestSeen.current = res.items[0]?.sortAt ?? null
     setNewPostsAvailable(false)
     setLoadingPosts(false)
+    serverStamp.current = Date.now() // estos datos acaban de llegar de Supabase (ver caché del feed más abajo)
   }
 
   const loadMoreFeed = async () => {
@@ -210,11 +219,78 @@ function Feed() {
     return rows.sort((a, b) => b.at - a.at)
   }, [items, statuses, hasMoreFeed])
 
-  useEffect(() => {
-    function run() {
-      loadPosts()
+  // v1.10.0 · CACHÉ DEL FEED EN MEMORIA: al volver al Inicio (cerrar una publicación, cambiar de sección) reaparece al instante, en el mismo punto
+  // donde ibas. Si es muy reciente no se pide nada; si es algo más vieja se muestra y se renueva por debajo. Solo se usa para la MISMA cuenta.
+  // (lib/feedCache.ts). Los «me gusta» y demás cambios locales quedan guardados porque la caché sigue a `items`.
+  useLayoutEffect(() => {
+    if (cacheChecked.current || !userId) return
+    cacheChecked.current = true
+    if (initialLoadStarted.current) return // el feed ya se está pidiendo (la sesión llegó tarde): no se pisa con una copia vieja
+    const c = readFeedCache(userId)
+    if (!c || c.items.length === 0) return
+    restoredFromCache.current = true
+    initialLoadStarted.current = true
+    feedLimit.current = c.limit
+    newestSeen.current = c.newestSeen
+    /* eslint-disable react-hooks/set-state-in-effect -- restaurar la copia en memoria ANTES de pintar (useLayoutEffect) para que no se vea el esqueleto */
+    setItems(c.items)
+    setHasMoreFeed(c.hasMore)
+    setLoadingPosts(false)
+    /* eslint-enable react-hooks/set-state-in-effect */
+    pendingScroll.current = c.scrollY
+    if (!c.fresh) void loadPosts() // algo vieja: se muestra y se renueva por debajo
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId])
+
+  // posición del scroll: se restaura apenas se pinta la lista guardada (y se reintenta unos instantes por si las imágenes todavía no tienen su alto)
+  useLayoutEffect(() => {
+    const y = pendingScroll.current
+    if (y == null || items.length === 0) return
+    pendingScroll.current = null
+    if (y < 8) return
+    let tries = 0
+    let stop = false
+    const cancel = () => {
+      stop = true
     }
-    run()
+    window.addEventListener('wheel', cancel, { once: true, passive: true })
+    window.addEventListener('touchstart', cancel, { once: true, passive: true })
+    window.addEventListener('keydown', cancel, { once: true })
+    const apply = () => {
+      if (stop) return
+      window.scrollTo(0, y)
+      if (Math.abs(window.scrollY - y) > 2 && ++tries < 8) window.setTimeout(apply, 80)
+    }
+    apply()
+  }, [items])
+
+  useEffect(() => {
+    if (!userId || loadingPosts) return
+    writeFeedCache({ userId, items, hasMore: hasMoreFeed, limit: feedLimit.current, newestSeen: newestSeen.current }, serverStamp.current > 0)
+    serverStamp.current = 0
+  }, [userId, items, hasMoreFeed, loadingPosts])
+
+  useEffect(() => {
+    let raf = 0
+    const onScroll = () => {
+      if (raf) return
+      raf = requestAnimationFrame(() => {
+        raf = 0
+        setFeedScroll(window.scrollY)
+      })
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      if (raf) cancelAnimationFrame(raf)
+      window.removeEventListener('scroll', onScroll)
+    }
+  }, [])
+
+  useEffect(() => {
+    // sin caché de esta cuenta: se pide el feed como siempre. Con caché reciente no se hace ninguna petición; con caché algo vieja ya se renovó arriba.
+    if (restoredFromCache.current || initialLoadStarted.current) return
+    initialLoadStarted.current = true
+    void loadPosts()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -431,6 +507,33 @@ function Feed() {
     void loadPostsRef.current()
   }, [])
 
+  // v1.10.0 · Comentarios bajo demanda: las tarjetas del feed son ligeras (sin comentarios); al abrirlos se piden SOLO los de esa publicación.
+  const loadCommentsFor = useCallback(async (postId: string) => {
+    const { comments, error } = await fetchPostComments(postId)
+    setItems((prev) =>
+      prev.map((it) =>
+        it.post.id === postId
+          ? { ...it, post: { ...it.post, comments: error ? it.post.comments : comments, comments_loaded: true, comments_count: error ? it.post.comments_count : comments.length } }
+          : it
+      )
+    )
+  }, [])
+  const loadComments = useCallback((post: Post) => void loadCommentsFor(post.id), [loadCommentsFor])
+  // v1.10.0 · tras editar o borrar UNA publicación (o un comentario suyo) se renueva solo esa tarjeta en vez de recargar todo el feed
+  const refreshPost = useCallback(
+    async (postId?: string) => {
+      if (!postId) {
+        reload()
+        return
+      }
+      const { posts: fresh, error } = await fetchPostsByIds([postId], false, 'detail')
+      if (error) return
+      const p = fresh[0]
+      setItems((prev) => (p ? prev.map((it) => (it.post.id === postId ? { ...it, post: p } : it)) : prev.filter((it) => it.post.id !== postId)))
+    },
+    [reload]
+  )
+
   const handleLike = useCallback(
     async (post: Post) => {
       if (!userId) {
@@ -441,7 +544,14 @@ function Feed() {
       setItems((prev) =>
         prev.map((it) =>
           it.post.id === post.id
-            ? { ...it, post: { ...it.post, likes: alreadyLiked ? it.post.likes.filter((l) => l.user_id !== userId) : [...it.post.likes, { user_id: userId }] } }
+            ? {
+                ...it,
+                post: {
+                  ...it.post,
+                  likes: alreadyLiked ? it.post.likes.filter((l) => l.user_id !== userId) : [...it.post.likes, { user_id: userId }],
+                  ...(it.post.likes_count !== undefined ? { likes_count: Math.max(0, it.post.likes_count + (alreadyLiked ? -1 : 1)) } : {}),
+                },
+              }
             : it
         )
       )
@@ -496,9 +606,10 @@ function Feed() {
         content: text,
         parent_comment_id: parentCommentId ?? null,
       })
-      reload()
+      // v1.10.0 · antes cada comentario volvía a pedir TODO el feed; ahora solo se actualizan los comentarios de esa publicación
+      await loadCommentsFor(postId)
     },
-    [userId, router, reload]
+    [userId, router, loadCommentsFor]
   )
 
   const draftImages: PostImage[] = drafts.map((d) => ({ url: d.previewUrl, path: d.id, w: d.w, h: d.h }))
@@ -734,7 +845,8 @@ function Feed() {
                   onToggleLike={handleLike}
                   onToggleCommentLike={handleLikeComment}
                   onAddComment={handleAddComment}
-                  onRefresh={reload}
+                  onRefresh={refreshPost}
+                  onExpandComments={loadComments}
                 />
               ) : (
                 <StatusCard key={`${row.st.user_id}-${row.st.updated_at}`} item={row.st} mine={row.st.user_id === userId} onEdit={() => setStatusOpen(true)} />

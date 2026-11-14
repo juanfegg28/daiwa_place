@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { supabase } from '../../lib/supabaseClient'
 import AppShell, { useAppSession } from '../../components/AppShell'
 import PostCard from '../../components/PostCard'
-import { fetchPostsByIds } from '../../lib/queries'
+import { fetchPostComments, fetchPostsByIds } from '../../lib/queries'
 import type { Post } from '../../lib/types'
 
 export default function TagPage() {
@@ -34,7 +34,8 @@ function TagContent() {
       .is('club_id', null) // v1.8.0 · las publicaciones solo del club no salen en etiquetas
       .limit(60)
       .order('created_at', { ascending: false })
-    const { posts: found, error } = await fetchPostsByIds(((idRows as { id: string }[] | null) ?? []).map((r) => r.id))
+    // v1.10.0 · tarjetas ligeras (contadores + tu like); los comentarios se piden al abrirlos
+    const { posts: found, error } = await fetchPostsByIds(((idRows as { id: string }[] | null) ?? []).map((r) => r.id), false, 'light')
     if (error) console.error('Error cargando la tendencia:', error)
     // fetchPostsByIds no garantiza el orden: se ordena del más nuevo al más viejo
     setPosts([...found].sort((a, b) => b.created_at.localeCompare(a.created_at)))
@@ -58,7 +59,11 @@ function TagContent() {
       return
     }
     const alreadyLiked = post.likes.some((l) => l.user_id === userId)
-    patchPost(post.id, (p) => ({ ...p, likes: alreadyLiked ? p.likes.filter((l) => l.user_id !== userId) : [...p.likes, { user_id: userId }] }))
+    patchPost(post.id, (p) => ({
+      ...p,
+      likes: alreadyLiked ? p.likes.filter((l) => l.user_id !== userId) : [...p.likes, { user_id: userId }],
+      ...(p.likes_count !== undefined ? { likes_count: Math.max(0, p.likes_count + (alreadyLiked ? -1 : 1)) } : {}),
+    }))
     const { error } = alreadyLiked
       ? await supabase.from('likes').delete().eq('post_id', post.id).eq('user_id', userId)
       : await supabase.from('likes').insert({ post_id: post.id, user_id: userId })
@@ -86,8 +91,14 @@ function TagContent() {
   }
 
   const reloadOne = async (postId: string) => {
-    const { posts: fresh } = await fetchPostsByIds([postId])
-    if (fresh[0]) patchPost(postId, () => fresh[0])
+    const { posts: fresh, error } = await fetchPostsByIds([postId], false, 'detail')
+    if (!error && fresh[0]) patchPost(postId, () => fresh[0])
+  }
+
+  // v1.10.0 · comentarios bajo demanda: solo los de la publicación que abres (o a la que acabas de comentar)
+  const loadCommentsFor = async (postId: string) => {
+    const { comments, error } = await fetchPostComments(postId)
+    patchPost(postId, (p) => ({ ...p, comments: error ? p.comments : comments, comments_loaded: true, comments_count: error ? p.comments_count : comments.length }))
   }
 
   const handleAddComment = async (postId: string, text: string, parentCommentId?: string | null) => {
@@ -101,7 +112,7 @@ function TagContent() {
       content: text,
       parent_comment_id: parentCommentId ?? null,
     })
-    await reloadOne(postId)
+    await loadCommentsFor(postId)
   }
 
   return (
@@ -128,7 +139,8 @@ function TagContent() {
               onToggleLike={handleLike}
               onToggleCommentLike={handleLikeComment}
               onAddComment={handleAddComment}
-              onRefresh={loadPosts}
+              onRefresh={(id) => (id ? reloadOne(id) : loadPosts())}
+              onExpandComments={(p) => void loadCommentsFor(p.id)}
             />
           ))
         )}

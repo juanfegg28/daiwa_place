@@ -20,7 +20,7 @@ import { useHoverPlay } from '../components/cosmetics/usePlay'
 import { palettesOf, DECO_COLLECTIONS } from '../components/cosmetics/kit'
 import { CustomColorPicker } from '../components/ColorPicker'
 import MoonRain from '../components/economy/MoonRain'
-import { CARD_MODES, PROFILE_PALETTE, profileThemeVars, type CardMode } from '../lib/color'
+import { CARD_MODES, PROFILE_PALETTE, profileThemeVars } from '../lib/color'
 import { HeartIcon } from '../components/icons'
 import { formatNumber } from '../lib/economy'
 import LooksPanel from './LooksPanel'
@@ -30,22 +30,10 @@ const NameFx = dynamic(() => import('../components/cosmetics/cosmetics').then((m
 const TitlePill = dynamic(() => import('../components/cosmetics/cosmetics').then((m) => m.TitlePill), { ssr: false })
 const EntryEffect = dynamic(() => import('../components/cosmetics/cosmetics').then((m) => m.EntryEffect), { ssr: false })
 
-// ───────── Tipos compartidos con la página ─────────
-export type Tab = 'color' | 'nombre' | 'avatar' | 'tarjeta' | 'entrada' | 'fondo' | 'titulo' | 'looks'
-export type Draft = { profile_color: string | null; name_color: string | null; card_color: string | null; card_mode: CardMode }
-export type Look = { avatar_deco: Equip | null; font: string | null; effect: Equip | null; title: Equip | null; card: Equip | null; entry: Equip | null; bg: Equip | null }
-export const EMPTY_LOOK: Look = { avatar_deco: null, font: null, effect: null, title: null, card: null, entry: null, bg: null }
-export type ClosetInfo = { id_student: string | null; avatar_url: string | null; bio: string | null; grado: string | null; banner_url: string | null; created_at: string }
-
-/** pestaña → tipo de cosmético y pieza del look */
-export const SLOT: Record<Exclude<Tab, 'color' | 'looks'>, { type: CosmeticType; key: keyof Look }> = {
-  nombre: { type: 'name_effect', key: 'effect' },
-  avatar: { type: 'avatar_decoration', key: 'avatar_deco' },
-  tarjeta: { type: 'profile_card', key: 'card' },
-  entrada: { type: 'entry_effect', key: 'entry' },
-  fondo: { type: 'background', key: 'bg' },
-  titulo: { type: 'title', key: 'title' },
-}
+// ───────── Tipos compartidos con la página (ahora en closetShared.ts; se reexportan por compatibilidad) ─────────
+import { SLOT, type Tab, type Look, type Draft, type ClosetInfo } from './closetShared'
+export { EMPTY_LOOK, SLOT } from './closetShared'
+export type { Tab, Draft, Look, ClosetInfo } from './closetShared'
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'color', label: 'Color', icon: '🎨' },

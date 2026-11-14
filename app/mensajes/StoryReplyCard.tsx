@@ -39,7 +39,7 @@ export default function StoryReplyCard({ storyId, mine, ownerName }: { storyId: 
       <span className="w-9 h-12 rounded-lg overflow-hidden bg-ink-700 shrink-0 flex items-center justify-center text-[10px] text-neutral-500" style={card && card.kind === 'text' ? { background: bgToCss(card.bg) } : undefined}>
         {card && card.kind === 'photo' && url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} alt="" draggable={false} className="w-full h-full object-cover" />
+          <img src={url} alt="" draggable={false} loading="lazy" decoding="async" className="w-full h-full object-cover" />
         ) : card === null ? (
           '—'
         ) : null}

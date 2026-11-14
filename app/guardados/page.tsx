@@ -9,7 +9,7 @@ import AppShell, { useAppSession } from '../components/AppShell'
 import PostCard from '../components/PostCard'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { BookmarkIcon, FolderIcon, PlusIcon } from '../components/icons'
-import { fetchPostsByIds } from '../lib/queries'
+import { fetchPostComments, fetchPostsByIds } from '../lib/queries'
 import type { Post } from '../lib/types'
 import {
   createCollection,
@@ -75,7 +75,8 @@ function SavedContent() {
         return
       }
       const slice = page.slice(0, PAGE)
-      const { posts: fetched } = await fetchPostsByIds(slice.map((r) => r.post_id))
+      // v1.10.0 · tarjetas ligeras; los comentarios se piden al abrirlos
+      const { posts: fetched } = await fetchPostsByIds(slice.map((r) => r.post_id), false, 'light')
       if (my !== seq.current) return
       setPosts((prev) => {
         const next = append ? new Map(prev) : new Map<string, Post>()
@@ -117,7 +118,11 @@ function SavedContent() {
   const handleLike = async (post: Post) => {
     if (!userId) return router.push('/login')
     const liked = post.likes.some((l) => l.user_id === userId)
-    mutatePost(post.id, (p) => ({ ...p, likes: liked ? p.likes.filter((l) => l.user_id !== userId) : [...p.likes, { user_id: userId }] }))
+    mutatePost(post.id, (p) => ({
+      ...p,
+      likes: liked ? p.likes.filter((l) => l.user_id !== userId) : [...p.likes, { user_id: userId }],
+      ...(p.likes_count !== undefined ? { likes_count: Math.max(0, p.likes_count + (liked ? -1 : 1)) } : {}),
+    }))
     const { error: e } = liked
       ? await supabase.from('likes').delete().eq('post_id', post.id).eq('user_id', userId)
       : await supabase.from('likes').insert({ post_id: post.id, user_id: userId })
@@ -138,13 +143,18 @@ function SavedContent() {
     else await supabase.from('comment_likes').insert({ comment_id: commentId, user_id: userId })
   }
   const reloadOne = async (postId: string) => {
-    const { posts: f } = await fetchPostsByIds([postId])
-    if (f[0]) mutatePost(postId, () => f[0])
+    const { posts: f, error } = await fetchPostsByIds([postId], false, 'detail')
+    if (!error && f[0]) mutatePost(postId, () => f[0])
+  }
+  // v1.10.0 · comentarios bajo demanda: solo los de la publicación que abres (o a la que acabas de comentar)
+  const loadCommentsFor = async (postId: string) => {
+    const { comments, error } = await fetchPostComments(postId)
+    mutatePost(postId, (p) => ({ ...p, comments: error ? p.comments : comments, comments_loaded: true, comments_count: error ? p.comments_count : comments.length }))
   }
   const handleAddComment = async (postId: string, text: string, parent?: string | null) => {
     if (!userId) return router.push('/login')
     await supabase.from('comments').insert({ post_id: postId, user_id: userId, content: text, parent_comment_id: parent ?? null })
-    await reloadOne(postId)
+    await loadCommentsFor(postId)
   }
 
   // guardar / mover / quitar desde la tarjeta
@@ -279,7 +289,8 @@ function SavedContent() {
                 onToggleLike={handleLike}
                 onToggleCommentLike={handleLikeComment}
                 onAddComment={handleAddComment}
-                onRefresh={() => load(false)}
+                onRefresh={(id) => (id ? reloadOne(id) : load(false))}
+                onExpandComments={(p) => void loadCommentsFor(p.id)}
                 onSavedChange={onSavedChange}
               />
             )

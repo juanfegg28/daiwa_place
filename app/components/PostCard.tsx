@@ -65,7 +65,9 @@ type PostCardProps = {
   onToggleCommentLike: (commentId: string, alreadyLiked: boolean) => void
   onAddComment: (postId: string, text: string, parentCommentId?: string | null) => Promise<void> | void
   /** Se llama después de editar o borrar para volver a cargar los datos */
-  onRefresh: () => void | Promise<void>
+  onRefresh: (postId?: string) => void | Promise<void>
+  /** v1.10.0 · el padre carga los comentarios cuando abres una publicación ligera (comments_loaded === false) */
+  onExpandComments?: (post: Post) => void
   /** Se llama cuando el dueño borra la publicación (por defecto usa onRefresh) */
   onPostDeleted?: () => void
   /**
@@ -497,6 +499,7 @@ function PostCard({
   onToggleCommentLike,
   onAddComment,
   onRefresh,
+  onExpandComments,
   onPostDeleted,
   onProfilePage = false,
   priorityImages = false,
@@ -560,13 +563,27 @@ function PostCard({
     }
   }, [detail, focusCommentId])
 
+  // v1.10.0 · al abrir los comentarios de una tarjeta ligera, se piden en ese momento (una sola vez por publicación)
+  const lazyRef = useRef({ onExpandComments, post })
+  useEffect(() => {
+    lazyRef.current = { onExpandComments, post }
+  })
+  const needsComments = expanded && post.comments_loaded === false
+  useEffect(() => {
+    if (needsComments) lazyRef.current.onExpandComments?.(lazyRef.current.post)
+  }, [needsComments, post.id])
+
   const likedByMe = currentUserId ? post.likes.some((l) => l.user_id === currentUserId) : false
+  // v1.10.0 · en las listas ligeras `likes` solo trae tu fila: los totales salen de los contadores (si no existen, de la longitud como antes)
+  const likeCount = post.likes_count ?? post.likes.length
+  const commentsPending = post.comments_loaded === false
+  const commentCount = commentsPending ? (post.comments_count ?? 0) : post.comments.length
   const author = post.profiles
   const isMine = !!currentUserId && post.user_id === currentUserId
   const supTier = useSupporterTier(post.user_id)   // v1.7.0 · lunita de Supporter
   const blockedIds = useBlockedIds(currentUserId)
   const [repostBusy, setRepostBusy] = useState(false)
-  const repostCount = post.reposts?.length ?? 0
+  const repostCount = post.reposts_count ?? post.reposts?.length ?? 0
   const repostedByMe = !!currentUserId && !!post.reposts?.some((r) => r.user_id === currentUserId)
   // Las cuentas «solo seguidores» / privadas no se pueden compartir: el botón ni se muestra
   const authorIsPrivate = (author?.posts_visibility ?? authorVisibility) === 'followers'
@@ -708,7 +725,7 @@ function PostCard({
       return
     }
     setEditingPost(false)
-    await onRefresh()
+    await onRefresh(post.id)
   }
 
   const deletePost = async () => {
@@ -729,7 +746,7 @@ function PostCard({
     setDeletingPost(false)
     setConfirmDeletePost(false)
     if (onPostDeleted) onPostDeleted()
-    else await onRefresh()
+    else await onRefresh(post.id)
   }
 
   /* --- acciones de comentarios (las usa CommentThread por contexto) --- */
@@ -742,7 +759,7 @@ function PostCard({
       .select('id')
     if (error) return error.message
     if (!data || data.length === 0) return EDIT_ERROR_HINT
-    await onRefresh()
+    await onRefresh(post.id)
     return null
   }
 
@@ -750,7 +767,7 @@ function PostCard({
     const { data, error } = await supabase.from('comments').delete().eq('id', id).select('id')
     if (error) return error.message
     if (!data || data.length === 0) return EDIT_ERROR_HINT
-    await onRefresh()
+    await onRefresh(post.id)
     return null
   }
 
@@ -993,16 +1010,16 @@ function PostCard({
         >
           <HeartIcon filled={likedByMe} className="w-[18px] h-[18px]" />
         </button>
-        {post.likes.length > 0 ? (
+        {likeCount > 0 ? (
           <button
             type="button"
             onClick={() => setShowLikes(true)}
-            aria-label={`Ver las ${post.likes.length} personas a las que les gustó`}
+            aria-label={`Ver las ${likeCount} personas a las que les gustó`}
             className={`-ml-3.5 text-sm tabular-nums rounded-full px-1.5 py-0.5 hover:bg-ink-700 transition ${
               likedByMe ? 'text-garnet-500' : 'hover:text-garnet-400'
             }`}
           >
-            {post.likes.length}
+            {likeCount}
           </button>
         ) : (
           <span className="-ml-3.5 text-sm tabular-nums px-1.5">0</span>
@@ -1012,7 +1029,7 @@ function PostCard({
           className="flex items-center gap-1.5 text-sm hover:text-garnet-400 transition"
         >
           <CommentIcon className="w-[18px] h-[18px]" />
-          {post.comments.length}
+          {commentCount}
         </button>
         {canShowRepost && (
           <button
@@ -1068,9 +1085,12 @@ function PostCard({
           }}
         >
           <div className="mt-4 pt-4 border-t border-ink-700 space-y-3">
-            {rootComments.length === 0 && (
-              <p className="text-xs text-neutral-500">Todavía no hay comentarios. Sé el primero.</p>
-            )}
+            {rootComments.length === 0 &&
+              (commentsPending ? (
+                <p className="text-xs text-neutral-500" role="status" aria-busy="true">Cargando comentarios…</p>
+              ) : (
+                <p className="text-xs text-neutral-500">Todavía no hay comentarios. Sé el primero.</p>
+              ))}
 
             {visibleRoots.map((c) => (
               <CommentThread key={c.id} comment={c} depth={0} />
@@ -1133,7 +1153,7 @@ function PostCard({
 
       {lightbox !== null && <ImageLightbox images={images} startIndex={lightbox} onClose={closeLightbox} />}
 
-      {showLikes && <LikesModal postId={post.id} total={post.likes.length} onClose={() => setShowLikes(false)} />}
+      {showLikes && <LikesModal postId={post.id} total={likeCount} onClose={() => setShowLikes(false)} />}
 
       {currentUserId && author && (
         <ReportDialog

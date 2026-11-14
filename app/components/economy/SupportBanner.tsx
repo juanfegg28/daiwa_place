@@ -11,7 +11,7 @@ const HIDE_KEY = 'daiwa_support_banner_hidden_until'
  * v1.8.0 · Anuncio «Apoya a DaiwaPlace» debajo de las Misiones (columna derecha en PC, tarjeta en celular).
  * Lleva al Círculo Lunar (/apoyar). Quien ya apoya ve un agradecimiento corto con sus ventajas; se puede ocultar 7 días.
  */
-export default function SupportBanner({ className = '' }: { className?: string }) {
+export default function SupportBanner({ className = '', compact = false }: { className?: string; compact?: boolean }) {
   const [perks, setPerks] = useState<MyPerks>(FREE_PERKS)
   const [hidden, setHidden] = useState(true)
 
@@ -43,6 +43,18 @@ export default function SupportBanner({ className = '' }: { className?: string }
     } catch {
       /* sin almacenamiento */
     }
+  }
+
+  // v1.10.0 · versión discreta (panel de misiones): una sola línea con enlace al Círculo Lunar; se puede ocultar 7 días igual que la completa
+  if (compact) {
+    return (
+      <span className={`inline-flex items-center gap-1 ${className}`}>
+        <Link href={supporter ? '/apoyar/mi-membresia' : '/apoyar'} className="text-[11.5px] font-semibold text-violet-300 hover:text-violet-200 whitespace-nowrap transition">
+          ☾ Círculo Lunar{supporter ? '' : ' · Apoyar'}
+        </Link>
+        <button type="button" onClick={hide} aria-label="Ocultar por 7 días" title="Ocultar por 7 días" className="h-5 w-5 rounded-full text-neutral-600 hover:text-neutral-300 text-xs leading-none">×</button>
+      </span>
+    )
   }
 
   return (

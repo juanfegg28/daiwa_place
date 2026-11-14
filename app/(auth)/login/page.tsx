@@ -103,7 +103,7 @@ export default function LoginPage() {
         className={`w-full rounded-2xl py-3.5 text-[15px] font-semibold transition-all duration-200 disabled:cursor-not-allowed ${
           blocked
             ? 'bg-ink-700 text-neutral-400'
-            : 'bg-garnet-600 text-white shadow-[0_12px_30px_-12px_rgba(214,40,72,0.9)] hover:bg-garnet-500 active:scale-[0.98] disabled:opacity-50 disabled:shadow-none'
+            : 'bg-garnet-600 text-white shadow-[0_12px_30px_-12px_color-mix(in_srgb,var(--color-garnet-500)_90%,transparent)] hover:bg-garnet-500 active:scale-[0.98] disabled:opacity-50 disabled:shadow-none'
         }`}
       >
         {blocked ? `Demasiados intentos. Tómate un respiro de ${brake.secondsLeft}s ☕` : loading ? 'Entrando...' : 'Entrar'}

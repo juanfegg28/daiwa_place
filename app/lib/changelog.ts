@@ -15,8 +15,42 @@ export const RELEASE_STAGE: 'beta' | 'stable' = 'stable'
 
 export const CHANGELOG: Release[] = [
   {
+    version: '1.10.0',
+    date: '2026-11-12',
+    title: 'IRIS: mucho más rápida, nuevo color Faded Iris y un panel de misiones más pequeño',
+    sections: [
+      {
+        heading: 'Más rápida (sobre todo en el celular)',
+        items: [
+          'Las publicaciones del Inicio, tu perfil, Guardados, las etiquetas y los clubes llegan ligeras: ya no se descargan TODOS los likes y TODOS los comentarios de cada tarjeta. Los comentarios se cargan cuando los abres.',
+          'Dar like, comentar, editar o borrar actualiza solo esa publicación (antes se volvía a pedir todo el Inicio cada vez).',
+          'Volver al Inicio después de abrir una publicación o de pasar por otra sección es instantáneo y te deja en el mismo lugar donde ibas.',
+          'Cada página descarga bastante menos código: el Perfil y la Tienda casi un 40 % menos, el Centro de Mando más de la mitad, y el HTML de cada página pesa unas 10 veces menos.',
+          'Las fuentes (Geist y Cinzel, además de las de historias) ya salen del propio sitio: no se piden a Google y la página no depende de servidores externos para pintarse.',
+          'Las búsquedas ya no muestran resultados atrasados si sigues escribiendo.',
+        ],
+      },
+      {
+        heading: 'Nuevo aspecto',
+        items: [
+          'Faded Iris es el nuevo color predeterminado de DaiwaPlace, con contraste revisado en modo claro y oscuro. Si ya habías elegido otro color en Configuración, lo conservas (Granate sigue disponible).',
+          'Flechas para moverte por los carruseles (sugerencias de amistad, clubes y pandillas, vitrinas y tienda) en computadora; en el celular se sigue deslizando con el dedo. Funcionan con teclado y lector de pantalla.',
+          'El panel de misiones del Inicio es mucho más pequeño: resumen de diarias con barra de progreso, tu racha en una línea, los premios por reclamar a un toque y secciones plegables para Semanales y Racha. Mismas funciones, menos espacio.',
+        ],
+      },
+      {
+        heading: 'Para el equipo',
+        items: [
+          'Centro de Mando → «Recuperación de cuentas»: para quien olvidó contraseña Y palabra secreta. El staff autorizado busca la cuenta, verifica a la persona por un canal privado y genera un enlace de un solo uso que vence a las 4 horas. Con él la persona elige contraseña y palabra secreta nuevas. Todo queda en un registro de auditoría. La recuperación normal por palabra secreta sigue igual.',
+          'Nuevo permiso «Recuperar cuentas» en el Taller de roles (el Admin Supremo ya lo tiene). Solo el Admin Supremo puede recuperar cuentas del staff.',
+          'Cada pestaña del Centro de Mando se descarga solo cuando la abres.',
+        ],
+      },
+    ],
+  },
+  {
     version: '1.9.0',
-    date: '2026-11-10',
+    date: '2026-11-09',
     title: 'Constelaciones: estilos del Círculo Lunar, encuestas, eventos, guardados, vitrina y un Explorar nuevo',
     sections: [
       {
@@ -1136,4 +1170,5 @@ export const CHANGELOG: Release[] = [
 
 export const LATEST_RELEASE = CHANGELOG[0]
 // Versión que se muestra en la app. Si un parche pequeño (1.0.x) no lleva notas en el changelog, igual se sube este número a mano.
-export const APP_VERSION = '1.9.0'
+// La versión vive en lib/version.ts (para no cargar este archivo entero en cada página); se reexporta por compatibilidad.
+export { APP_VERSION } from './version'

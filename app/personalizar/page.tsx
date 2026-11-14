@@ -4,14 +4,25 @@ import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import AppShell, { useAppSession } from '../components/AppShell'
 import { useShopData } from '../components/cosmetics/useShopData'
-import { palettesOf } from '../components/cosmetics/kit'
 import { supabase } from '../lib/supabaseClient'
 import { type CardMode } from '../lib/color'
 import { isValidHex } from '../lib/theme'
 import { refreshWallet, subscribeWallet, type WalletSummary } from '../lib/economy'
 import { setAllowNextKits } from '../lib/cosmeticsRelease'
 import { saveLook, shopBuy, type CatalogItem, type CosmeticType, type Equip, type LookConfig } from '../lib/cosmetics'
-import ClosetView, { EMPTY_LOOK, SLOT, type ClosetInfo, type Draft, type Look, type Tab } from './Closet'
+import dynamic from 'next/dynamic'
+import { EMPTY_LOOK, SLOT, type ClosetInfo, type Draft, type Look, type Tab } from './closetShared'
+
+// v1.10.0 · el Closet (previsualizaciones + kit de cosméticos, ≈650 KB) se descarga después de pintar la página, no antes
+const ClosetView = dynamic(() => import('./Closet'), {
+  ssr: false,
+  loading: () => (
+    <div className="max-w-3xl mx-auto py-8 px-4 space-y-3" role="status" aria-busy="true" aria-label="Cargando el closet">
+      <div className="h-40 rounded-2xl bg-ink-900/60 animate-pulse" />
+      <div className="h-24 rounded-2xl bg-ink-900/40 animate-pulse" />
+    </div>
+  ),
+})
 
 export default function PersonalizarPage() {
   return (
@@ -87,8 +98,9 @@ function PersonalizarContent() {
   const bySlug = (type: CosmeticType, slug: string | null | undefined) => (slug ? all.find((i) => i.type === type && i.slug === slug) ?? null : null)
 
   // elegir un cosmético: si no es mío, se PRUEBA (borrador) y se puede comprar desde la barra de abajo
-  function pick(item: CatalogItem, palette?: string, hue = 0) {
-    const pal = palette ?? palettesOf(item.type, item.slug)[0]?.id
+  async function pick(item: CatalogItem, palette?: string, hue = 0) {
+    // la paleta por defecto sale del kit, que se carga solo cuando hace falta (no en el JS inicial de la página)
+    const pal = palette ?? (await import('../components/cosmetics/kit')).palettesOf(item.type, item.slug)[0]?.id
     const eq: Equip = { id: item.slug, ...(pal ? { palette: pal } : {}), ...(hue ? { hue } : {}) }
     setLook((l) => {
       if (item.type === 'font') return { ...l, font: item.slug === 'clasica' ? null : item.slug }

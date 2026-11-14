@@ -19,7 +19,7 @@ import { GraduationCapIcon, CalendarIcon, HeartIcon, BlockIcon } from '../../com
 import type { ClubMembershipTag } from '../../lib/clubs'
 import MusicChip from '../../components/MusicChip'
 import { normalizeTrack } from '../../lib/music'
-import { PROFILE_POST_SELECT, PROFILE_POST_SELECT_CORE, attachCosmetics, fetchFeedItems, fetchPostsByIds } from '../../lib/queries'
+import { PROFILE_POST_SELECT, PROFILE_POST_SELECT_CORE, attachCosmetics, fetchFeedItems, fetchPostComments, fetchPostsByIds } from '../../lib/queries'
 import { formatIdentityDetail, identityField, isCommonIdentity } from '../../lib/identities'
 import { SparklesIcon } from '../../components/icons'
 import type { AuthorProfile, FeedItem, Post, RoleBadgeInfo } from '../../lib/types'
@@ -104,12 +104,12 @@ async function loadLegacyProfilePosts(profileId: string, limit: number) {
   return { posts: (data as unknown as Post[]) ?? [], error: error?.message ?? '' }
 }
 
-// La publicación fijada (con respaldo si todavía no se corrió el SQL de la 1.9.0)
+// La publicación fijada. v1.10.0: tarjeta ligera (contadores y comentarios al abrirlos); fetchPostsByIds cae sola a la consulta de siempre
+// si todavía no se corrió el SQL de la 1.10.0 (o el de la 1.9.0).
 async function loadPinnedPost(profileId: string, id: string) {
-  const run = (sel: string) => supabase.from('posts').select(sel).eq('id', id).eq('user_id', profileId).maybeSingle()
-  let res = await run(PROFILE_POST_SELECT)
-  if (res.error) res = await run(PROFILE_POST_SELECT_CORE)
-  return res
+  const { posts } = await fetchPostsByIds([id], true, 'light')
+  const p = posts[0]
+  return { data: p && p.user_id === profileId ? p : null }
 }
 
 export default function ProfilePageClient() {
@@ -147,6 +147,8 @@ function ProfileContent() {
   // Se cargan de 15 en 15 ("Ver más"); el total sale aparte para que el contador del perfil sea el real
   const postsLimit = useRef(15)
   const [postsTotal, setPostsTotal] = useState(0)
+  // v1.10.0 · el encabezado del perfil se muestra apenas llegan sus datos; las publicaciones cargan debajo (con esqueleto) sin hacerlo esperar
+  const [postsReady, setPostsReady] = useState(false)
   const [badges, setBadges] = useState<{ slug: string; name: string }[]>([])
   const [loadingMorePosts, setLoadingMorePosts] = useState(false)
 
@@ -157,7 +159,7 @@ function ProfileContent() {
     // Publicaciones + compartidos de esta persona, mezclados del más nuevo al más viejo (feed_items).
     // Si falta el SQL de la v1.1.10, se usa la lista de siempre (sin compartidos).
     const [feed, countRes, { data: pinnedData }] = await Promise.all([
-      fetchFeedItems('profile', postsLimit.current, profileId, (l) => loadLegacyProfilePosts(profileId, l), false, known),
+      fetchFeedItems('profile', postsLimit.current, profileId, (l) => loadLegacyProfilePosts(profileId, l), false, known, 'light'),
       total === undefined
         ? supabase.from('posts').select('id', { count: 'exact', head: true }).eq('user_id', profileId).is('club_id', null)
         : Promise.resolve({ count: total }),
@@ -303,8 +305,12 @@ function ProfileContent() {
     if (userId && userId !== profileData.id) supabase.rpc('track_profile_visit', { p_user: profileData.id }).then(() => {})
     postsLimit.current = 15
     const stats = await fetchStats(profileData.id)
-    await Promise.all([loadPosts(profileData.id, profileData.pinned_post_id ?? null, undefined, stats?.posts), loadFollowState(profileData.id, stats), loadRoles(), loadClubTags(), loadIdentity(), loadCosmeticExtras()])
+    // v1.10.0 · las publicaciones arrancan YA, en paralelo con lo del encabezado; el perfil se muestra cuando está lo del encabezado (sin esperar al feed)
+    setPostsReady(false)
+    const postsPart = loadPosts(profileData.id, profileData.pinned_post_id ?? null, undefined, stats?.posts).finally(() => setPostsReady(true))
+    await Promise.all([loadFollowState(profileData.id, stats), loadRoles(), loadClubTags(), loadIdentity(), loadCosmeticExtras()])
     setLoading(false)
+    await postsPart
   }
 
   useEffect(() => {
@@ -336,7 +342,11 @@ function ProfileContent() {
       return
     }
     const alreadyLiked = post.likes.some((l) => l.user_id === userId)
-    patchPost(post.id, (p) => ({ ...p, likes: alreadyLiked ? p.likes.filter((l) => l.user_id !== userId) : [...p.likes, { user_id: userId }] }))
+    patchPost(post.id, (p) => ({
+      ...p,
+      likes: alreadyLiked ? p.likes.filter((l) => l.user_id !== userId) : [...p.likes, { user_id: userId }],
+      ...(p.likes_count !== undefined ? { likes_count: Math.max(0, p.likes_count + (alreadyLiked ? -1 : 1)) } : {}),
+    }))
     const { error } = alreadyLiked
       ? await supabase.from('likes').delete().eq('post_id', post.id).eq('user_id', userId)
       : await supabase.from('likes').insert({ post_id: post.id, user_id: userId })
@@ -363,10 +373,16 @@ function ProfileContent() {
     if (error && owner) patchPost(owner.id, () => owner)
   }
 
-  // vuelve a pedir SOLO una publicación (p. ej. tras comentar)
+  // vuelve a pedir SOLO una publicación (tras editarla, o editar/borrar uno de sus comentarios): ligera + sus comentarios
   const reloadOnePost = async (postId: string) => {
-    const { posts: fresh } = await fetchPostsByIds([postId])
-    if (fresh[0]) patchPost(postId, () => fresh[0])
+    const { posts: fresh, error } = await fetchPostsByIds([postId], false, 'detail')
+    if (!error && fresh[0]) patchPost(postId, () => fresh[0])
+  }
+
+  // v1.10.0 · comentarios bajo demanda: se piden SOLO los de la publicación que abres (o a la que acabas de comentar)
+  const loadCommentsFor = async (postId: string) => {
+    const { comments, error } = await fetchPostComments(postId)
+    patchPost(postId, (p) => ({ ...p, comments: error ? p.comments : comments, comments_loaded: true, comments_count: error ? p.comments_count : comments.length }))
   }
 
   const handleAddComment = async (postId: string, text: string, parentCommentId?: string | null) => {
@@ -380,7 +396,7 @@ function ProfileContent() {
       content: text,
       parent_comment_id: parentCommentId ?? null,
     })
-    await reloadOnePost(postId)
+    await loadCommentsFor(postId)
   }
 
   const formatJoinDate = (iso: string) =>
@@ -598,8 +614,13 @@ function ProfileContent() {
             {/* Vitrina (v1.9.0): opcional; solo se pide si está activada */}
             <ShowcaseSection profileId={profile.id} isOwn={isMyProfile} hasShowcase={!!profile.has_showcase} userId={userId} />
 
-            <div className="space-y-4 mt-4">
-              {items.length === 0 && !pinnedPost ? (
+            <div className="space-y-4 mt-4" aria-busy={!postsReady}>
+              {!postsReady && items.length === 0 && !pinnedPost ? (
+                <div aria-hidden="true" className="space-y-4">
+                  <div className="h-36 rounded-2xl bg-ink-900/60 border border-ink-800 animate-pulse" />
+                  <div className="h-28 rounded-2xl bg-ink-900/40 border border-ink-800 animate-pulse" />
+                </div>
+              ) : items.length === 0 && !pinnedPost ? (
                 <p className="text-neutral-500 text-sm text-center py-10">
                   {isMyProfile
                     ? 'Todavía no has publicado nada.'
@@ -625,7 +646,8 @@ function ProfileContent() {
                     onAddComment={handleAddComment}
                     // loadPosts solo se ejecuta al tocar (no durante el render), el aviso del lint es un falso positivo
                     // eslint-disable-next-line react-hooks/refs
-                    onRefresh={() => loadPosts(profile.id, pinnedPost?.id ?? null)}
+                    onRefresh={(id) => (id ? reloadOnePost(id) : loadPosts(profile.id, pinnedPost?.id ?? null))}
+                    onExpandComments={(p) => void loadCommentsFor(p.id)}
                     onPostDeleted={async () => {
                       // si borra la fijada, el perfil queda sin fijada (la base de datos ya la suelta sola)
                       const stillPinned = post.id === pinnedPost?.id ? null : (profile.pinned_post_id ?? null)

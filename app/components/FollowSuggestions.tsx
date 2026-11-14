@@ -1,5 +1,6 @@
 'use client'
 
+import ScrollCarousel from './ScrollCarousel'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
@@ -71,7 +72,7 @@ export default function FollowSuggestions({ userId }: { userId: string }) {
           <CloseIcon className="w-4 h-4" />
         </button>
       </div>
-      <div className="flex gap-2.5 overflow-x-auto snap-x snap-mandatory px-3 sm:px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-x-contain">
+      <ScrollCarousel label="Personas que quizás conozcas" prevLabel="Ver sugerencias anteriores" nextLabel="Ver más sugerencias" className="flex gap-2.5 overflow-x-auto snap-x snap-mandatory px-3 sm:px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden overscroll-x-contain">
         {list.map((s) => {
           const name = s.id_student?.trim() || s.username
           const isFollowed = followed.has(s.user_id)
@@ -106,7 +107,7 @@ export default function FollowSuggestions({ userId }: { userId: string }) {
             </div>
           )
         })}
-      </div>
+      </ScrollCarousel>
       {error && <p className="text-xs text-garnet-400 px-4 mt-2">{error}</p>}
     </section>
   )

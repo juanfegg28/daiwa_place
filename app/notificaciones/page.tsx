@@ -429,7 +429,7 @@ function NotificacionesContent() {
                     >
                       {storyAlive(n) && n.story?.media_path && thumbs[n.story.media_path] ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={thumbs[n.story.media_path as string]} alt="" draggable={false} className="w-full h-full object-cover" />
+                        <img src={thumbs[n.story.media_path as string]} alt="" draggable={false} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                       ) : !storyAlive(n) ? (
                         <HeartIcon filled className="w-5 h-5" />
                       ) : null}

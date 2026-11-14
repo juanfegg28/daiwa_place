@@ -4,20 +4,52 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AppShell, { useAppSession } from '../components/AppShell'
 import { hasAny, type Permissions } from '../lib/permissions'
-import { CalendarIcon, FlagIcon, ShieldAdminIcon, UserCogIcon, MegaphoneIcon, WrenchIcon, WhisperIcon, MessageIcon, SparklesIcon, ClubsIcon, MoonCoinIcon, StoreIcon, CrescentMoonIcon } from '../components/icons'
-import ReportesTab from './ReportesTab'
-import RolesTab from './RolesTab'
-import IdentidadesTab from './IdentidadesTab'
-import AnunciosTab from './AnunciosTab'
-import PreguntaTab from './PreguntaTab'
-import SistemaTab from './SistemaTab'
-import SusurrosTab from './SusurrosTab'
-import MensajesTab from './MensajesTab'
-import ClubesTab from './ClubesTab'
-import TiendaLunasTab from './TiendaLunasTab'
-import TiendaCatalogoTab from './TiendaCatalogoTab'
-import SupportersTab from './SupportersTab'
-import EventosTab from './EventosTab'
+import { KeyIcon, CalendarIcon, FlagIcon, ShieldAdminIcon, UserCogIcon, MegaphoneIcon, WrenchIcon, WhisperIcon, MessageIcon, SparklesIcon, ClubsIcon, MoonCoinIcon, StoreIcon, CrescentMoonIcon } from '../components/icons'
+import dynamic from 'next/dynamic'
+
+// v1.10.0 · Cada pestaña del Centro de Mando es su propio paquete de JavaScript: al entrar solo se descarga la que estás viendo
+// (antes se descargaban las 13 juntas, ≈1,1 MB sin comprimir, incluido el kit de cosméticos de la tienda). Al pasar el cursor / enfocar
+// una pestaña se precarga su código, así que al hacer clic ya suele estar listo.
+function TabLoading() {
+  return (
+    <div className="space-y-3" role="status" aria-busy="true" aria-label="Cargando herramienta">
+      <div className="h-20 rounded-2xl bg-ink-800/60 animate-pulse" />
+      <div className="h-32 rounded-2xl bg-ink-800/40 animate-pulse" />
+    </div>
+  )
+}
+const ReportesTab = dynamic(() => import('./ReportesTab'), { loading: TabLoading })
+const RolesTab = dynamic(() => import('./RolesTab'), { loading: TabLoading })
+const IdentidadesTab = dynamic(() => import('./IdentidadesTab'), { loading: TabLoading })
+const AnunciosTab = dynamic(() => import('./AnunciosTab'), { loading: TabLoading })
+const PreguntaTab = dynamic(() => import('./PreguntaTab'), { loading: TabLoading })
+const SistemaTab = dynamic(() => import('./SistemaTab'), { loading: TabLoading })
+const RecuperacionTab = dynamic(() => import('./RecuperacionTab'), { loading: TabLoading })
+const SusurrosTab = dynamic(() => import('./SusurrosTab'), { loading: TabLoading })
+const MensajesTab = dynamic(() => import('./MensajesTab'), { loading: TabLoading })
+const ClubesTab = dynamic(() => import('./ClubesTab'), { loading: TabLoading })
+const TiendaLunasTab = dynamic(() => import('./TiendaLunasTab'), { loading: TabLoading })
+const TiendaCatalogoTab = dynamic(() => import('./TiendaCatalogoTab'), { loading: TabLoading })
+const SupportersTab = dynamic(() => import('./SupportersTab'), { loading: TabLoading })
+const EventosTab = dynamic(() => import('./EventosTab'), { loading: TabLoading })
+
+/** Precarga el código de una pestaña (sin dibujarla) */
+const PRELOAD: Record<string, () => Promise<unknown>> = {
+  reportes: () => import('./ReportesTab'),
+  mensajes: () => import('./MensajesTab'),
+  susurros: () => import('./SusurrosTab'),
+  clubes: () => import('./ClubesTab'),
+  roles: () => import('./RolesTab'),
+  identidades: () => import('./IdentidadesTab'),
+  anuncios: () => import('./AnunciosTab'),
+  pregunta: () => import('./PreguntaTab'),
+  tienda: () => import('./TiendaLunasTab'),
+  catalogo: () => import('./TiendaCatalogoTab'),
+  supporters: () => import('./SupportersTab'),
+  eventos: () => import('./EventosTab'),
+  sistema: () => import('./SistemaTab'),
+  recuperacion: () => import('./RecuperacionTab'),
+}
 
 const TAB_DEFS = [
   {
@@ -94,6 +126,13 @@ const TAB_DEFS = [
     check: (p: Permissions, sup: boolean) => sup || hasAny(p, ['manage_supporters']),
   },
   {
+    // v1.10.0 · solo el Admin Supremo o un rol con el permiso «recover_accounts» (nunca cualquier miembro del staff)
+    id: 'recuperacion' as const,
+    label: 'Recuperación de cuentas',
+    icon: KeyIcon,
+    check: (p: Permissions, sup: boolean) => sup || hasAny(p, ['recover_accounts']),
+  },
+  {
     id: 'sistema' as const,
     label: 'Sistema',
     icon: WrenchIcon,
@@ -163,6 +202,8 @@ function AdminContent() {
                   key={t.id}
                   type="button"
                   onClick={() => setTab(t.id)}
+                  onPointerEnter={() => void PRELOAD[t.id]?.()}
+                  onFocus={() => void PRELOAD[t.id]?.()}
                   className={`flex items-center gap-1.5 whitespace-nowrap text-sm rounded-full px-3.5 py-2 transition ${
                     active ? 'bg-garnet-600 text-white' : 'bg-ink-800 text-neutral-300 hover:bg-ink-700'
                   }`}
@@ -186,6 +227,7 @@ function AdminContent() {
           {tab === 'catalogo' && <TiendaCatalogoTab />}
           {tab === 'supporters' && <SupportersTab />}
           {tab === 'eventos' && <EventosTab />}
+          {tab === 'recuperacion' && <RecuperacionTab />}
           {tab === 'sistema' && <SistemaTab />}
         </>
       )}

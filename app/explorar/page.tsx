@@ -3,6 +3,7 @@
 // Explorar 2.0 (v1.9.0): buscar personas y clubes + descubrir temas, publicaciones populares, clubes y cuentas.
 // Todo el descubrimiento sale de UN paquete (explore_hub) guardado 30 min en Supabase y 10 min en el dispositivo:
 // abrir Explorar casi nunca cuesta una consulta. Sin algoritmos por persona.
+import ScrollCarousel from '../components/ScrollCarousel'
 import Avatar from '../components/cosmetics/Avatar'
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
@@ -148,6 +149,8 @@ function ExplorarContent() {
   useEffect(() => {
     const q = query.trim()
     if (!q) return // sin texto no se muestra la búsqueda: no hace falta limpiar nada
+    // v1.10.0 · respuestas desactualizadas: si escribes otra letra mientras la búsqueda anterior sigue en camino, su resultado se descarta
+    let alive = true
     const flag = window.setTimeout(() => setSearching(true), 0)
     const timer = window.setTimeout(async () => {
       // Se quitan %, comas y paréntesis: en el filtro de Supabase rompían la búsqueda
@@ -167,11 +170,13 @@ function ExplorarContent() {
           .limit(20),
         supabase.from('clubs').select('id, slug, name, kind, color, avatar_url').ilike('name', `%${safe}%`).limit(6),
       ])
+      if (!alive) return
       setResults(((people.data as SearchResult[]) ?? []).filter((r) => !blocked.has(r.id)))
       setClubResults((clubs.data as ClubHit[]) ?? [])
       setSearching(false)
     }, 350)
     return () => {
+      alive = false
       window.clearTimeout(flag)
       window.clearTimeout(timer)
     }
@@ -205,11 +210,11 @@ function ExplorarContent() {
           {clubResults.length > 0 && (
             <section>
               <SectionTitle icon={<ClubsIcon className="w-4 h-4 text-garnet-400" />}>Clubes y pandillas</SectionTitle>
-              <div className="-mx-4 px-4 flex gap-3 overflow-x-auto snap-x pb-2 [scrollbar-width:none]">
+              <ScrollCarousel label="Clubes y pandillas encontrados" prevLabel="Ver clubes anteriores" nextLabel="Ver más clubes" className="-mx-4 px-4 flex gap-3 overflow-x-auto snap-x pb-2 [scrollbar-width:none]">
                 {clubResults.map((c) => (
                   <ClubTile key={c.id} c={c} />
                 ))}
-              </div>
+              </ScrollCarousel>
             </section>
           )}
           <div className="surface-card rounded-2xl overflow-hidden">
@@ -273,11 +278,11 @@ function ExplorarContent() {
               <SectionTitle icon={<ClubsIcon className="w-4 h-4 text-garnet-400" />} hint="Comunidades con más miembros. Entra a una y únete.">
                 Clubes para conocer
               </SectionTitle>
-              <div className="-mx-4 px-4 flex gap-3 overflow-x-auto snap-x pb-2 [scrollbar-width:none]">
+              <ScrollCarousel label="Clubes y pandillas para conocer" prevLabel="Ver clubes anteriores" nextLabel="Ver más clubes" className="-mx-4 px-4 flex gap-3 overflow-x-auto snap-x pb-2 [scrollbar-width:none]">
                 {hub.clubs.map((c) => (
                   <ClubTile key={c.id} c={c} />
                 ))}
-              </div>
+              </ScrollCarousel>
             </section>
           )}
 

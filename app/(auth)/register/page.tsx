@@ -478,7 +478,7 @@ export default function RegisterPage() {
           disabled={!step1Ok}
           className={`w-full rounded-2xl py-3.5 text-[15px] font-semibold transition-all duration-200 disabled:cursor-not-allowed ${
             step1Ok
-              ? 'bg-garnet-600 text-white shadow-[0_12px_30px_-12px_rgba(214,40,72,0.9)] hover:bg-garnet-500 active:scale-[0.98]'
+              ? 'bg-garnet-600 text-white shadow-[0_12px_30px_-12px_color-mix(in_srgb,var(--color-garnet-500)_90%,transparent)] hover:bg-garnet-500 active:scale-[0.98]'
               : 'bg-ink-700 text-neutral-500'
           }`}
         >
@@ -499,7 +499,7 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 rounded-2xl bg-garnet-600 py-3.5 text-[15px] font-semibold text-white shadow-[0_12px_30px_-12px_rgba(214,40,72,0.9)] transition hover:bg-garnet-500 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex-1 rounded-2xl bg-garnet-600 py-3.5 text-[15px] font-semibold text-white shadow-[0_12px_30px_-12px_color-mix(in_srgb,var(--color-garnet-500)_90%,transparent)] transition hover:bg-garnet-500 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? 'Creando tu cuenta...' : 'Crear mi cuenta'}
           </button>

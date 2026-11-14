@@ -406,11 +406,15 @@ function AdjustPanel() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (q.trim().length < 2) { setRes([]); return }
+    let alive = true // v1.10.0 · se descarta la respuesta de una búsqueda anterior si ya escribiste otra letra
     const t = setTimeout(async () => {
       const { data } = await supabase.rpc('admin_user_search', { p_q: q })
-      setRes((data as typeof res) ?? [])
+      if (alive) setRes((data as typeof res) ?? [])
     }, 250)
-    return () => clearTimeout(t)
+    return () => {
+      alive = false
+      clearTimeout(t)
+    }
   }, [q])
 
   async function pick(u: { id: string; username: string }) {

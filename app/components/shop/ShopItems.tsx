@@ -1,10 +1,10 @@
 'use client'
 
+import ScrollCarousel from '../ScrollCarousel'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import ItemPreview from '../cosmetics/ItemPreview'
 import ShopItemCard from '../cosmetics/ShopItemCard'
 import { useHoverPlay } from '../cosmetics/usePlay'
-import { ChevronLeftIcon, ChevronRightIcon } from '../icons'
 import { PriceLine, SalePill } from './ShopBits'
 import { useShop } from './ShopProvider'
 import { RARITY_STYLE, onSale, salePct, type CatalogItem } from '../../lib/cosmetics'
@@ -60,15 +60,11 @@ export function MiniItem({ item, size = 'md' }: { item: CatalogItem; size?: 'sm'
   )
 }
 
-/** Carril horizontal con flechas en PC y deslizar en el celular */
+/** Carril horizontal con flechas en PC y deslizar en el celular (v1.10.0: ahora es el ScrollCarousel común, con estados deshabilitados y teclado) */
 export function Rail({ children, label }: { children: ReactNode; label: string }) {
-  const ref = useRef<HTMLDivElement>(null)
-  const go = (dir: number) => ref.current?.scrollBy({ left: dir * (ref.current.clientWidth * 0.8), behavior: 'smooth' })
   return (
-    <div className="relative group/rail" role="region" aria-label={label}>
-      <div ref={ref} className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-1 px-1 scroll-smooth [scrollbar-width:thin]">{children}</div>
-      <button type="button" onClick={() => go(-1)} aria-label="Anterior" className="hidden md:inline-flex absolute left-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-ink-950/85 border border-ink-600 items-center justify-center text-neutral-100 opacity-0 group-hover/rail:opacity-100 focus:opacity-100 transition"><ChevronLeftIcon className="w-5 h-5" /></button>
-      <button type="button" onClick={() => go(1)} aria-label="Siguiente" className="hidden md:inline-flex absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-ink-950/85 border border-ink-600 items-center justify-center text-neutral-100 opacity-0 group-hover/rail:opacity-100 focus:opacity-100 transition"><ChevronRightIcon className="w-5 h-5" /></button>
-    </div>
+    <ScrollCarousel label={label} className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 -mx-1 px-1 scroll-smooth [scrollbar-width:thin]">
+      {children}
+    </ScrollCarousel>
   )
 }
